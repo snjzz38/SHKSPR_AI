@@ -782,8 +782,8 @@
   }
   const currentModel = MODELS_TO_TRY[modelIndex];
   try {
-    // Changed the fetch URL to point to the absolute path of your Vercel serverless function
-    const response = await fetch('/AI Humanizer/api/Humanizer_API.js', {
+    // Changed the fetch URL to point to the new, simpler API endpoint
+    const response = await fetch('/api/humanizer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
