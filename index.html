@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NeuroLearn | AI Study Suite</title>
+  <style>
+    :root {
+      --bg-primary: #000;
+      --bg-secondary: #0b0b0b;
+      --text-primary: #fff;
+      --accent: #00f6ff;
+      --card-bg: #141414;
+      --link-hover: #ffffff;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      transition: background-color 0.6s, color 0.6s;
+      min-height: 100vh;
+    }
+
+    .transition-all {
+      transition: all 0.6s ease;
+    }
+
+    @keyframes backgroundShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .animated-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, #00f6ff33, #000, #00f6ff11);
+      background-size: 400% 400%;
+      animation: backgroundShift 40s ease infinite;
+      opacity: 0.2;
+      filter: blur(100px);
+      z-index: -1;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 10%;
+      background-color: var(--bg-secondary);
+      box-shadow: 0 0 15px var(--accent);
+      transition: background-color 0.6s, color 0.6s;
+    }
+
+    .site-title {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--accent);
+      text-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+    }
+
+    .theme-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      position: relative;
+    }
+
+    .theme-button {
+      background: var(--card-bg);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+
+    .theme-button:hover {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .theme-dropdown {
+      position: relative;
+    }
+
+    .theme-dropdown:hover .theme-options,
+    .theme-options:hover {
+      display: block;
+    }
+
+    .theme-options {
+      display: none;
+      position: absolute;
+      top: 130%;
+      right: 0;
+      background-color: var(--card-bg);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 15px var(--accent);
+      min-width: 150px;
+      z-index: 10;
+    }
+
+    .theme-options button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      padding: 8px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font-size: 0.9rem;
+    }
+
+    .theme-options button:hover {
+      background: rgba(0, 246, 255, 0.1);
+      border-radius: 4px;
+      color: var(--link-hover);
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 100px 20px 60px 20px;
+    }
+
+    .hero h1 {
+      font-size: 3.2rem;
+      color: var(--text-primary);
+      text-shadow: 0 0 20px var(--accent);
+      margin-bottom: 30px;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 50px;
+      text-shadow: 0 0 8px var(--accent);
+      max-width: 600px;
+    }
+
+    .tools-container {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      align-items: center;
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .tools-container {
+        flex-direction: row;
+        justify-content: center;
+      }
+    }
+
+    .tool-button {
+      padding: 20px 40px;
+      background-color: var(--card-bg);
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 200px;
+      box-shadow: 0 0 15px rgba(0, 246, 255, 0.3);
+    }
+
+    .tool-button:hover {
+      transform: scale(1.05);
+      background-color: var(--accent);
+      color: var(--bg-primary);
+      box-shadow: 0 0 25px var(--accent);
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      text-shadow: 0 0 5px var(--accent);
+      background-color: var(--bg-secondary);
+      transition: background-color 0.6s, color 0.6s;
+    }
+  </style>
+</head>
+<body class="theme-blackwhite transition-all">
+  <div class="animated-bg"></div>
+
+  <header class="transition-all">
+    <div class="site-title">NeuroLearn</div>
+    <div class="theme-controls">
+      <div class="theme-dropdown">
+        <button class="theme-button">🎨 Themes</button>
+        <div class="theme-options">
+          <button onclick="setTheme('theme-blackwhite')">Black & White</button>
+          <button onclick="setTheme('theme-purple')">Purple</button>
+          <button onclick="setTheme('theme-green')">Green</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>NeuroLearn AI Suite</h1>
+    <p>Powerful tools to enhance your AI-generated content. Built to work across all your devices.</p>
+
+    <div class="tools-container">
+      <button class="tool-button" onclick="window.location.href='Humanizer.html'">AI Humanizer</button>
+      <button class="tool-button" onclick="window.location.href='Grader.html'">AI Grader</button>
+    </div>
+  </section>
+
+  <footer class="transition-all">
+    <p>&copy; 2025 NeuroLearn. All rights reserved.</p>
+  </footer>
+
+  <script>
+    function setTheme(theme) {
+      document.body.className = theme + ' transition-all';
+      applyTheme(theme);
+    }
+
+    function applyTheme(theme) {
+      const styles = {
+        'theme-blackwhite': {
+          '--bg-primary': '#000',
+          '--bg-secondary': '#0b0b0b',
+          '--text-primary': '#fff',
+          '--accent': '#00f6ff',
+          '--card-bg': '#141414'
+        },
+        'theme-purple': {
+          '--bg-primary': '#0d001a',
+          '--bg-secondary': '#14002b',
+          '--text-primary': '#ffe6ff',
+          '--accent': '#cc66ff',
+          '--card-bg': '#1d0036'
+        },
+        'theme-green': {
+          '--bg-primary': '#001a00',
+          '--bg-secondary': '#002b00',
+          '--text-primary': '#e6ffe6',
+          '--accent': '#66ff66',
+          '--card-bg': '#003600'
+        }
+      };
+
+      const root = document.documentElement;
+      const current = styles[theme];
+      for (let key in current) {
+        root.style.setProperty(key, current[key]);
+      }
+    }
+
+    // Apply default on load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTheme('theme-blackwhite');
+    });
+  </script>
+</body>
+</html>
