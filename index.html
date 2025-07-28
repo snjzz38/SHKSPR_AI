@@ -26,12 +26,15 @@
       transition: background-color 0.6s, color 0.6s;
       min-height: 100vh;
     }
+
+    /* === THEMES === */
+
     body.theme-cyan {
-      --bg-primary: #000;
-      --bg-secondary: #0b0b0b;
+      --bg-primary: #00131a; /* subtle cyan-blue tint for body bg */
+      --bg-secondary: #0b1820; /* header/footer bg */
       --text-primary: #fff;
       --accent: #00f6ff;
-      --card-bg: #141414;
+      --card-bg: #142127; /* card bg */
     }
     body.theme-purple {
       --bg-primary: #0d001a;
@@ -56,8 +59,7 @@
       --card-bg: #222;
     }
 
-    /* Glow intensity for Black & White theme - reduced intensity */
-    /* Adjust these text-shadow blur values to increase or decrease glow intensity */
+    /* === Glow for Black & White === */
     body.theme-blackwhite .logo {
       text-shadow: 
         0 0 2px #fff, 
@@ -76,6 +78,88 @@
       text-shadow: 0 0 2px #fff;
     }
 
+    /* === Glow for Cyan theme (similar to purple & green) === */
+    body.theme-cyan .logo {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent),
+        0 0 60px var(--accent);
+    }
+    body.theme-cyan .hero h1 {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent);
+    }
+    body.theme-cyan .hero p {
+      text-shadow: 0 0 8px var(--accent);
+    }
+    body.theme-cyan .theme-options button {
+      text-shadow:
+        0 0 3px var(--accent),
+        0 0 6px var(--accent);
+    }
+
+    /* === Glow for Purple theme === */
+    body.theme-purple .logo {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent),
+        0 0 60px var(--accent);
+    }
+    body.theme-purple .hero h1 {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent);
+    }
+    body.theme-purple .hero p {
+      text-shadow: 0 0 8px var(--accent);
+    }
+    body.theme-purple .theme-options button {
+      text-shadow:
+        0 0 3px var(--accent),
+        0 0 6px var(--accent);
+    }
+
+    /* === Glow for Green theme === */
+    body.theme-green .logo {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent),
+        0 0 60px var(--accent);
+    }
+    body.theme-green .hero h1 {
+      text-shadow:
+        0 0 10px var(--accent),
+        0 0 20px var(--accent),
+        0 0 30px var(--accent),
+        0 0 40px var(--accent),
+        0 0 50px var(--accent);
+    }
+    body.theme-green .hero p {
+      text-shadow: 0 0 8px var(--accent);
+    }
+    body.theme-green .theme-options button {
+      text-shadow:
+        0 0 3px var(--accent),
+        0 0 6px var(--accent);
+    }
+
+    /* === General styles === */
     .transition-all {
       transition: all 0.6s ease;
     }
@@ -111,13 +195,7 @@
       font-size: 2.5rem;
       font-weight: bold;
       color: var(--text-primary);
-      text-shadow: 
-        0 0 10px var(--accent), 
-        0 0 20px var(--accent), 
-        0 0 30px var(--accent), 
-        0 0 40px var(--accent),
-        0 0 50px var(--accent),
-        0 0 60px var(--accent);
+      /* Default glow for all themes except blackwhite handled above */
       text-decoration: none;
       transition: all 0.6s ease;
     }
@@ -130,7 +208,7 @@
     .theme-button {
       background: var(--card-bg);
       color: var(--text-primary);
-      border: 1px solid var(--text-primary);
+      border: 1px solid var(--accent);
       padding: 8px 15px;
       border-radius: 20px;
       cursor: pointer;
@@ -153,10 +231,10 @@
       top: calc(100% + 10px);
       right: 0;
       background-color: var(--card-bg);
-      border: 1px solid var(--text-primary);
+      border: 1px solid var(--accent);
       border-radius: 8px;
       padding: 10px;
-      box-shadow: 0 0 15px var(--text-primary);
+      box-shadow: 0 0 15px var(--accent);
       min-width: 150px;
       z-index: 10;
     }
@@ -174,6 +252,7 @@
       width: 100%;
       font-size: 0.9rem;
       display: block;
+      transition: all 0.3s ease;
     }
     .theme-options button:hover {
       background: rgba(255, 255, 255, 0.1);
@@ -193,19 +272,12 @@
     .hero h1 {
       font-size: 3.2rem;
       color: var(--text-primary);
-      text-shadow: 
-        0 0 10px var(--accent), 
-        0 0 20px var(--accent), 
-        0 0 30px var(--accent), 
-        0 0 40px var(--accent),
-        0 0 50px var(--accent);
       margin-bottom: 30px;
       transition: all 0.6s ease;
     }
     .hero p {
       font-size: 1.2rem;
       margin-bottom: 50px;
-      text-shadow: 0 0 8px var(--accent);
       max-width: 600px;
       color: var(--text-primary);
       transition: all 0.6s ease;
