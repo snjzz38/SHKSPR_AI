@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "AI Humanizer/api/Humanizer_API.js": {
-      "runtime": "now-node@18.17.1"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/humanizer",
