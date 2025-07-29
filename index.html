@@ -1,374 +1,497 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Shkspr | AI Study Suite</title>
-  <style>
-    :root {
-      --bg-primary: #000;
-      --bg-secondary: #111;
-      --text-primary: #fff;
-      --accent: #fff;
-      --card-bg: #222;
-      --link-hover: #ffffff;
-    }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      overflow-x: hidden;
-      transition: background-color 0.6s, color 0.6s;
-      min-height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <title>Humanize Any Text: GPT-100</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
+        }
+        body.theme-cyan {
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #fff;
+            --accent: #00f6ff;
+            --card-bg: #141414;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+        }
+        body.theme-green {
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+        }
+        /* Black & White Theme: default variables */
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+        }
+        /* Glow intensity for Black & White theme - reduced intensity */
+        /* Adjust these text-shadow blur values to increase or decrease glow intensity */
+        body.theme-blackwhite .logo {
+            text-shadow:
+                0 0 2px #fff,
+                0 0 4px #fff,
+                0 0 6px #fff;
+        }
+        body.theme-blackwhite .hero h1 {
+            text-shadow:
+                0 0 1px #fff,
+                0 0 3px #fff,
+                0 0 5px #fff;
+        }
+        body.theme-blackwhite .hero p {
+            text-shadow: 0 0 2px #fff;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.6s, color 0.6s;
+            overflow-x: hidden;
+        }
+        .transition-all {
+            transition: all 0.6s ease;
+        }
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
+            /* Removed box-shadow from header to eliminate green glow */
+            box-shadow: none;
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none;
+            transition: all 0.6s ease;
+        }
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: relative;
+        }
+        /* Common styling for dropdown buttons */
+        .dropdown-button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .dropdown-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
 
-    /* === THEMES === */
+        /* Common styling for dropdown containers */
+        .dropdown-container {
+            position: relative;
+            /* No padding-bottom here, as the menu will be directly adjacent */
+        }
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
 
-    body.theme-cyan {
-      --bg-primary: #00131a; /* subtle cyan-blue tint for body bg */
-      --bg-secondary: #0b1820; /* header/footer bg */
-      --text-primary: #fff;
-      --accent: #00f6ff;
-      --card-bg: #142127; /* card bg */
-    }
-    body.theme-purple {
-      --bg-primary: #0d001a;
-      --bg-secondary: #14002b;
-      --text-primary: #ffe6ff;
-      --accent: #cc66ff;
-      --card-bg: #1d0036;
-    }
-    body.theme-green {
-      --bg-primary: #001a00;
-      --bg-secondary: #002b00;
-      --text-primary: #e6ffe6;
-      --accent: #66ff66;
-      --card-bg: #003600;
-    }
-    /* Black & White Theme: default variables */
-    body.theme-blackwhite {
-      --bg-primary: #000;
-      --bg-secondary: #111;
-      --text-primary: #fff;
-      --accent: #fff;
-      --card-bg: #222;
-    }
+        /* Common styling for dropdown options */
+        .dropdown-options {
+            display: none;
+            position: absolute;
+            top: 100%; /* Position directly below the button */
+            right: 0;
+            background-color: var(--card-bg);
+            border: none; /* Ensure no border */
+            border-radius: 8px;
+            padding: 10px; /* Keep internal padding for buttons */
+            min-width: 150px;
+            box-shadow: none !important; /* Force removal of any box-shadow */
+            z-index: 10;
+        }
+        .dropdown-container:hover .dropdown-options,
+        .dropdown-options:hover {
+            display: block;
+        }
+        .dropdown-options button,
+        .dropdown-options a { /* Apply to links as well */
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none; /* Remove underline for links */
+        }
+        .dropdown-options button:hover,
+        .dropdown-options a:hover { /* Apply to links as well */
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
 
-    /* === Glow for Black & White === */
-    body.theme-blackwhite .logo {
-      text-shadow: 
-        0 0 2px #fff, 
-        0 0 4px #fff, 
-        0 0 6px #fff;
-    }
-    
-    body.theme-blackwhite .hero h1 {
-      text-shadow: 
-        0 0 1px #fff, 
-        0 0 3px #fff, 
-        0 0 5px #fff;
-    }
-    
-    body.theme-blackwhite .hero p {
-      text-shadow: 0 0 2px #fff;
-    }
+        .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 50px 20px 30px 20px;
+            position: relative;
+            z-index: 5;
+        }
+        .hero h1 {
+            font-size: 3.2rem;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent);
+            margin-bottom: 20px;
+            transition: all 0.6s ease;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 8px var(--accent);
+            max-width: 600px;
+            color: var(--text-primary);
+            transition: all 0.6s ease;
+        }
 
-    /* === Glow for Cyan theme (similar to purple & green) === */
-    body.theme-cyan .logo {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent),
-        0 0 60px var(--accent);
-    }
-    body.theme-cyan .hero h1 {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent);
-    }
-    body.theme-cyan .hero p {
-      text-shadow: 0 0 8px var(--accent);
-    }
-    body.theme-cyan .theme-options button {
-      text-shadow:
-        0 0 3px var(--accent),
-        0 0 6px var(--accent);
-    }
-
-    /* === Glow for Purple theme === */
-    body.theme-purple .logo {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent),
-        0 0 60px var(--accent);
-    }
-    body.theme-purple .hero h1 {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent);
-    }
-    body.theme-purple .hero p {
-      text-shadow: 0 0 8px var(--accent);
-    }
-    body.theme-purple .theme-options button {
-      text-shadow:
-        0 0 3px var(--accent),
-        0 0 6px var(--accent);
-    }
-
-    /* === Glow for Green theme === */
-    body.theme-green .logo {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent),
-        0 0 60px var(--accent);
-    }
-    body.theme-green .hero h1 {
-      text-shadow:
-        0 0 10px var(--accent),
-        0 0 20px var(--accent),
-        0 0 30px var(--accent),
-        0 0 40px var(--accent),
-        0 0 50px var(--accent);
-    }
-    body.theme-green .hero p {
-      text-shadow: 0 0 8px var(--accent);
-    }
-    body.theme-green .theme-options button {
-      text-shadow:
-        0 0 3px var(--accent),
-        0 0 6px var(--accent);
-    }
-
-    /* === General styles === */
-    .transition-all {
-      transition: all 0.6s ease;
-    }
-    .particles-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-      overflow: hidden;
-    }
-    .particle {
-      position: absolute;
-      border-radius: 50%;
-      background: var(--accent);
-      opacity: 0.7;
-      pointer-events: none;
-      will-change: transform;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 10%;
-      background-color: var(--bg-secondary);
-      box-shadow: 0 0 15px var(--accent);
-      transition: background-color 0.6s, color 0.6s;
-      position: relative;
-      z-index: 10;
-    }
-    .logo {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: var(--text-primary);
-      /* Default glow for all themes except blackwhite handled above */
-      text-decoration: none;
-      transition: all 0.6s ease;
-    }
-    .theme-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      position: relative;
-    }
-    .theme-button {
-      background: var(--card-bg);
-      color: var(--text-primary);
-      border: 1px solid var(--accent);
-      padding: 8px 15px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.3s;
-    }
-    .theme-button:hover {
-      background: var(--text-primary);
-      color: var(--bg-primary);
-    }
-    .theme-dropdown {
-      position: relative;
-    }
-    .theme-dropdown:hover .theme-options {
-      display: block;
-    }
-    .theme-options {
-      display: none;
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      background-color: var(--card-bg);
-      border: 1px solid var(--accent);
-      border-radius: 8px;
-      padding: 10px;
-      box-shadow: 0 0 15px var(--accent);
-      min-width: 150px;
-      z-index: 10;
-    }
-    .theme-dropdown:hover .theme-options,
-    .theme-options:hover {
-      display: block;
-    }
-    .theme-options button {
-      background: none;
-      border: none;
-      color: var(--text-primary);
-      padding: 8px;
-      cursor: pointer;
-      text-align: left;
-      width: 100%;
-      font-size: 0.9rem;
-      display: block;
-      transition: all 0.3s ease;
-    }
-    .theme-options button:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-    }
-    .hero {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 100px 20px 60px 20px;
-      min-height: 80vh;
-      position: relative;
-      z-index: 5;
-    }
-    .hero h1 {
-      font-size: 3.2rem;
-      color: var(--text-primary);
-      margin-bottom: 30px;
-      transition: all 0.6s ease;
-    }
-    .hero p {
-      font-size: 1.2rem;
-      margin-bottom: 50px;
-      max-width: 600px;
-      color: var(--text-primary);
-      transition: all 0.6s ease;
-    }
-    .tools-container {
-      display: flex;
-      flex-direction: column;
-      gap: 40px;
-      align-items: center;
-      width: 100%;
-    }
-    @media (min-width: 768px) {
-      .tools-container {
-        flex-direction: row;
-        justify-content: center;
-      }
-    }
-    .tool-button {
-      padding: 20px 40px;
-      background-color: var(--card-bg);
-      color: var(--text-primary);
-      border: 2px solid var(--text-primary);
-      border-radius: 10px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      min-width: 200px;
-      box-shadow: 0 0 15px rgba(0, 246, 255, 0.3);
-    }
-    .tool-button:hover {
-      transform: scale(1.05);
-      background-color: var(--text-primary);
-      color: var(--bg-primary);
-      box-shadow: 0 0 25px var(--accent);
-    }
-    footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 0.9rem;
-      color: var(--text-primary);
-      text-shadow: 0 0 5px var(--accent);
-      background-color: var(--bg-secondary);
-      transition: background-color 0.6s, color 0.6s;
-      position: relative;
-      z-index: 10;
-    }
-  </style>
+        .container {
+            max-width: 1000px;
+            margin: 24px auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            position: relative;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+        }
+        .disclaimer {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        select, button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--text-primary);
+            font-size: 0.95rem;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+        button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.3s;
+            box-shadow: 0 0 8px rgba(0, 246, 255, 0.3);
+        }
+        button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px var(--accent);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toggle input {
+            width: 40px;
+            height: 20px;
+            appearance: none;
+            background: #666;
+            border: 1px solid #000;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .toggle input::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border: 1px solid #000;
+            border-radius: 50%;
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            transition: transform 0.3s;
+        }
+        .toggle input:checked {
+            background: var(--accent);
+        }
+        .toggle input:checked::before {
+            transform: translateX(20px);
+        }
+        .areas {
+            display: flex;
+            gap: 16px;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        @media (min-width: 768px) {
+            .areas { flex-direction: row; }
+        }
+        .area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .area-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .area-header label {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .area-header button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            box-shadow: none;
+        }
+        .area-header button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 8px var(--accent);
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 250px;
+            padding: 12px;
+            border: 1px solid var(--text-primary);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            font-family: 'Fira Mono', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            color: var(--text-primary);
+        }
+        textarea:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+        .word-count {
+            font-size: 0.85rem;
+            color: #aaa;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .progress {
+            width: 100%;
+            height: 4px;
+            background: #444;
+            border-radius: 4px;
+            margin: 16px 0;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 44px;
+            width: 0;
+            transition: width 0.4s ease-out;
+        }
+        .status {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 8px;
+            text-align: center;
+            height: 1em;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            text-shadow: 0 0 5px var(--accent);
+            background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+            margin-top: 40px;
+        }
+    </style>
 </head>
 <body class="theme-blackwhite transition-all">
   <div class="particles-container" id="particles"></div>
   <header class="transition-all">
-    <a href="#" class="logo">SHKSPR</a>
+    <a href="../index.html" class="logo">SHKSPR</a>
     <div class="theme-controls">
-      <div class="theme-dropdown">
-        <button class="theme-button">🎨 Themes</button>
-        <div class="theme-options">
-          <button onclick="setTheme('theme-blackwhite')">Black & White</button>
-          <button onclick="setTheme('theme-cyan')">Cyan</button>
-          <button onclick="setTheme('theme-purple')">Purple</button>
-          <button onclick="setTheme('theme-green')">Green</button>
+      <!-- Tools Dropdown Menu -->
+      <div class="dropdown-container">
+        <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+        <div class="dropdown-options">
+          <a href="./Humanizer.html">AI Humanizer</a>
+          <a href="../AI_Grader/Grader.html">AI Grader</a>
+        </div>
+      </div>
+      <!-- Themes Dropdown Menu -->
+      <div class="dropdown-container">
+        <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+        <div class="dropdown-options">
+          <button id="theme-blackwhite-btn">Black & White</button>
+          <button id="theme-cyan-btn">Cyan</button>
+          <button id="theme-purple-btn">Purple</button>
+          <button id="theme-green-btn">Green</button>
         </div>
       </div>
     </div>
   </header>
-  <section class="hero">
-    <h1>Shkspr AI Suite</h1>
-    <p>Powerful tools to enhance your AI-generated content. Built to work across all your devices.</p>
-    <div class="tools-container">
-      <button class="tool-button" onclick="window.location.href='AI_Humanizer/Humanizer.html'">AI Humanizer</button>
-      <button class="tool-button" onclick="window.location.href='AI_Grader/Grader.html'">AI Grader</button>
+    <section class="hero">
+        <h1>GPT-100</h1>
+        <p class="disclaimer"><b>Humanize any AI-generated text.</b> <br>
+             Still in beta development, expect lots of mistakes.
+             <br>May change/destroy facts, omit random information, make grammatical mistakes, etc. <br><br><b>ALWAYS CHECK!!!</b>
+        </p>
+    </section>
+    <div class="container">
+        <div class="controls">
+            <select id="tone">
+                <option value="professional">Professional</option>
+                <option value="academic">Academic</option>
+                <option value="casual">Casual</option>
+            </select>
+            <div class="toggle">
+                <span>General</span>
+                <input type="checkbox" id="perspective" checked>
+                <span>Personal</span>
+            </div>
+            <button id="process">Humanize Text</button>
+        </div>
+        <div class="areas">
+            <div class="area">
+                <div class="area-header">
+                    <label for="input">Input Text</label>
+                </div>
+                <textarea id="input" placeholder="Paste your AI-generated text here, with paragraphs separated by newlines..."></textarea>
+                <div class="word-count" id="input-count">0 words</div>
+            </div>
+            <div class="area">
+                <div class="area-header" id="area-header-output">
+                    <label for="output">Humanized Output</label>
+                    <button id="copy">Copy</button>
+                </div>
+                <textarea id="output" readonly></textarea>
+                <div class="word-count" id="output-count">0 words</div>
+                <pre id="jsonOutput" style="white-space: pre-wrap; word-wrap: break-word; font-size: 0.8em; background-color: var(--bg-secondary); padding: 10px; border-radius: 5px; margin-top: 10px; display: none;"></pre>
+            </div>
+        </div>
+        <div class="progress"><div class="progress-bar"></div></div>
+        <div class="status" id="status"></div>
     </div>
-  </section>
-  <footer class="transition-all">
-    <p>&copy; 2025 Shkspr. All rights reserved.</p>
-  </footer>
-  <script>
-    function setTheme(theme) {
+    <footer class="transition-all">
+        <p>&copy; 2025 Shkspr. All rights reserved.</p>
+    </footer>
+<script>
+    // --- Global functions for theming and particles (moved to global scope) ---
+    // These functions are attached to window to ensure global accessibility.
+    window.setTheme = function(theme) {
       document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
-      // Save theme preference
       localStorage.setItem('shkspr-theme', theme);
-      // Reinitialize particles with new theme colors
-      initParticles();
+      window.initParticles();
     }
-    class Particle {
+
+    window.Particle = class Particle {
       constructor(container, colors) {
         this.container = container;
         this.element = document.createElement('div');
         this.element.classList.add('particle');
         this.container.appendChild(this.element);
-        // Random properties
         this.size = Math.random() * 6 + 2;
         this.color = colors[Math.floor(Math.random() * colors.length)];
         this.x = Math.random() * window.innerWidth;
@@ -376,19 +499,15 @@
         this.vx = (Math.random() - 0.5) * 4;
         this.vy = (Math.random() - 0.5) * 4;
         this.opacity = Math.random() * 0.5 + 0.3;
-        // Apply styles
         this.element.style.width = `${this.size}px`;
         this.element.style.height = `${this.size}px`;
         this.element.style.backgroundColor = this.color;
         this.element.style.opacity = this.opacity;
-        // Update position
         this.update();
       }
       update() {
-        // Update position
         this.x += this.vx;
         this.y += this.vy;
-        // Boundary collision
         if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
           this.vx *= -1;
           this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
@@ -397,45 +516,23 @@
           this.vy *= -1;
           this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
         }
-        // Apply position
         this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
       }
-      checkCollision(other) {
-        const dx = this.x - other.x;
-        const dy = this.y - other.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < (this.size + other.size) / 2) {
-          // Simple elastic collision
-          const tempVx = this.vx;
-          const tempVy = this.vy;
-          this.vx = other.vx;
-          this.vy = other.vy;
-          other.vx = tempVx;
-          other.vy = tempVy;
-          // Separate particles to prevent sticking
-          const angle = Math.atan2(dy, dx);
-          const targetX = this.x + Math.cos(angle) * (this.size + other.size) / 2;
-          const targetY = this.y + Math.sin(angle) * (this.size + other.size) / 2;
-          other.x = targetX;
-          other.y = targetY;
-        }
-      }
+      // Removed checkCollision method entirely for particles to phase through each other
       remove() {
         this.container.removeChild(this.element);
       }
     }
     let particles = [];
     let animationId;
-    function initParticles() {
+    window.initParticles = function() {
       const container = document.getElementById('particles');
-      // Clear existing particles
+      if (!container) return; // Ensure container exists
       particles.forEach(p => p.remove());
       particles = [];
-      // Cancel existing animation
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
-      // Get theme colors
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
@@ -447,37 +544,547 @@
       } else if (document.body.classList.contains('theme-green')) {
         colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
       }
-      // Create particles
       const particleCount = 60;
       for (let i = 0; i < particleCount; i++) {
-        particles.push(new Particle(container, colors));
+        particles.push(new window.Particle(container, colors));
       }
-      // Start animation loop
-      animateParticles();
+      window.animateParticles();
     }
-    function animateParticles() {
-      // Update all particles
+    window.animateParticles = function() {
       particles.forEach(particle => particle.update());
-      // Check collisions (simplified for performance)
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          particles[i].checkCollision(particles[j]);
-        }
-      }
-      animationId = requestAnimationFrame(animateParticles);
+      // Removed collision check loop:
+      // for (let i = 0; i < particles.length; i++) {
+      //   for (let j = i + 1; j < particles.length; j++) {
+      //     particles[i].checkCollision(particles[j]);
+      //   }
+      // }
+      animationId = requestAnimationFrame(window.animateParticles);
     }
-    // Apply default theme and mode on load
-    document.addEventListener('DOMContentLoaded', () => {
-      // Check for saved theme preference
-      const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-      setTheme(savedTheme);
-      // Initialize particles
-      initParticles();
-      // Handle window resize
-      window.addEventListener('resize', () => {
-        initParticles();
-      });
+    // End of global functions for theming and particles
+
+    // --- Helper function to escape regex special characters ---
+    function escapeRegExp(string) {
+        return string.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+    }
+
+    // --- Helper function to escape HTML for prompt safety ---
+    function escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/`/g, "\\`");
+    }
+
+    // --- Main script content ---
+    const MODELS_TO_TRY = [
+        'llama-3.1-8b-instant',
+        'llama3-8b-8192',
+        'gemma2-9b-it',
+        'mistral-saba-24b',
+        'llama3-70b-8192',
+        'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'meta-llama/llama-4-scout-17b-16e-instruct',
+        'meta-llama/llama-guard-4-12b',
+        'llama-guard-3-8b',
+        'meta-llama/llama-prompt-guard-2-22m',
+        'meta-llama/llama-prompt-guard-2-86m'
+    ];
+    const FORBIDDEN_WORDS_COMPREHENSIVE = [
+        'exacerbating', 'unequivocal', 'mitigate', 'transcends', 'stark', 'dire', 'exert', 'fortress', 'induce',
+        'ameliorate', 'socioeconomic', 'culminate', 'imperative', 'formidable', 'subsequently', 'hitherto',
+        'notwithstanding', 'thereby', 'thus', 'hence', 'whereas', 'moreover', 'furthermore', 'nevertheless',
+        'notable', 'significant', 'prevalent', 'consequently', 'therefore', 'delineate', 'underscore', 'paramount',
+        'pivotal', 'crucial', 'comprehensive', 'profound', 'vividly', 'crippled', 'waver', 'confronted',
+        'debilitating', 'susceptible', 'fluctuations', 'escalates', 'compromising', 'indestructible', 'equitable',
+        'resilient', 'resolve', 'portrayed', 'vividly', 'curb', 'dictates', 'proactive', 'bleak', 'intergovernmental',
+        'amplifies', 'consequences', 'rooted', 'excessive', 'emission', 'intensive', 'deforestation', 'shifting',
+        'frequent', 'torrential', 'downpours', 'crippled', 'terrain', 'biodiversity', 'strive', 'waning',
+        'outbreaks', 'debilitating', 'respiratory', 'socioeconomic', 'pose', 'considerable', 'susceptible',
+        'livelihood', 'delicacy', 'vastly', 'climatic', 'fluctuations', 'scarcity', 'alongside', 'triggers',
+        'migration', 'conflict', 'stability', 'financial', 'burden', 'inaction', 'inevitably', 'incur', 'escalating',
+        'eclipsing', 'restraints', 'proactive', 'encompass', 'shift', 'optimizing', 're-establishing', 'promoting',
+        'responsible', 'occupancy', 'crucially', 'cooperation', 'necessary', 'curb', 'pre-industrial', 'strengthening',
+        'infrastructure', 'resist', 'disasters', 'effective', 'awareness', 'systems', 'agricultural', 'practices',
+        'conserve', 'resources', 'significantly', 'harmony', 'balanced', 'distribution', 'disadvantaged', 'collective',
+        'pressing', 'reality', 'combat', 'challenge', 'approached', 'unified', 'international', 'presence', 'rooted',
+        'solid', 'evidence', 'innovative', 'solutions', 'universal', 'responsibility', 'insurmountable', 'obstacles',
+        'vast', 'opportunity', 'establish', 'sustainable', 'resilient', 'just', 'current and future generations',
+        'proactive', 'stance', 'define', 'sustainable', 'return', 'long', 'fragile', 'well-being',
+        'necessitate', 'ecstatic', 'redeem', 'utilize', 'alterations'
+    ];
+    const FORBIDDEN_WORDS_FOR_AI_PROMPT = [
+        'unequivocal', 'mitigate', 'transcends', 'stark', 'dire', 'exert', 'fortress',
+        'induce', 'ameliorate', 'socioeconomic', 'culminate', 'imperative', 'formidable', 'subsequently',
+        'hitherto', 'notwithstanding', 'thereby', 'thus', 'hence', 'whereas', 'moreover', 'furthermore',
+        'nevertheless', 'consequently', 'therefore', 'delineate', 'underscore', 'paramount', 'pivotal',
+        'crucial', 'comprehensive', 'profound', 'vividly', 'crippled', 'waver', 'confronted', 'debilitating',
+        'susceptible', 'fluctuations', 'escalates', 'compromising', 'indestructible', 'equitable', 'resilient',
+        'resolve', 'portrayed', 'vividly', 'curb', 'dictates', 'proactive', 'bleak', 'intergovernmental',
+        'amplifies', 'consequences', 'rooted', 'excessive', 'emission', 'intensive', 'deforestation', 'shifting',
+        'frequent', 'torrential', 'downpours', 'crippled', 'terrain', 'biodiversity', 'strive', 'waning',
+        'outbreaks', 'debilitating', 'respiratory', 'socioeconomic', 'pose', 'considerable', 'susceptible',
+        'livelihood', 'delicacy', 'vastly', 'climatic', 'fluctuations', 'scarcity', 'alongside', 'triggers',
+        'migration', 'conflict', 'stability', 'financial', 'burden', 'inaction', 'inevitably', 'incur', 'escalating',
+        'eclipsing', 'restraints', 'proactive', 'encompass', 'shift', 'optimizing', 're-establishing', 'promoting',
+        'responsible', 'occupancy', 'crucially', 'cooperation', 'necessary', 'curb', 'pre-industrial', 'strengthening',
+        'infrastructure', 'resist', 'disasters', 'effective', 'awareness', 'systems', 'agricultural', 'practices',
+        'conserve', 'resources', 'significantly', 'harmony', 'balanced', 'distribution', 'disadvantaged', 'collective',
+        'pressing', 'reality', 'combat', 'challenge', 'approached', 'unified', 'international', 'presence', 'rooted',
+        'solid', 'evidence', 'innovative', 'solutions', 'universal', 'responsibility', 'insurmountable', 'obstacles',
+        'vast', 'opportunity', 'establish', 'sustainable', 'resilient', 'just', 'current and future generations',
+        'proactive', 'stance', 'define', 'sustainable', 'return', 'long', 'fragile', 'well-being',
+        'necessitate', 'ecstatic', 'redeem', 'utilize', 'alterations'
+    ];
+    const $ = id => document.getElementById(id);
+    const init = () => {
+        const processButton = $('process');
+        if (!processButton) {
+            console.error("Error: 'process' button not found in the DOM. Check its ID in HTML.");
+            return;
+        }
+        ['input', 'output'].forEach(id => {
+            const el = $(id);
+            const counter = $(`${id}-count`);
+            const updateCount = () => {
+                const words = el.value.trim().match(/\S+/g) || [];
+                counter.textContent = `${words.length} words`;
+            };
+            el.addEventListener('input', updateCount);
+            updateCount();
+        });
+        const outputHeaderEl = $('area-header-output');
+        if (outputHeaderEl) {
+            const copyJsonButton = document.createElement('button');
+            copyJsonButton.id = 'copyJson';
+            copyJsonButton.textContent = 'Copy JSON';
+            copyJsonButton.style.marginLeft = '10px';
+            copyJsonButton.style.display = 'none';
+            outputHeaderEl.appendChild(copyJsonButton);
+            copyJsonButton.addEventListener('click', async () => {
+                const jsonOutputEl = $('jsonOutput');
+                if (!jsonOutputEl.textContent) return;
+                try {
+                    await navigator.clipboard.writeText(jsonOutputEl.textContent);
+                    copyJsonButton.textContent = 'Copied!';
+                    setTimeout(() => copyJsonButton.textContent = 'Copy JSON', 1500);
+                } catch (err) {
+                    alert('Failed to copy JSON.');
+                }
+            });
+        }
+        const copyTextButton = $('copy');
+        if (copyTextButton) {
+            copyTextButton.addEventListener('click', async () => {
+                const output = $('output');
+                if (!output.value) return;
+                try {
+                    await navigator.clipboard.writeText(output.value);
+                    copyTextButton.textContent = 'Copied!';
+                    setTimeout(() => copyTextButton.textContent = 'Copy', 1500);
+                } catch (err) {
+                    alert('Failed to copy text.');
+                }
+            });
+        }
+        processButton.addEventListener('click', processText);
+
+        // Add event listeners for theme buttons
+        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+
+        // Initialize theme and particles on page load
+        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+        window.setTheme(savedTheme);
+    };
+
+    const isNonsense = (text) => {
+        if (!text || text.trim().length < 10) return true;
+        const words = text.trim().split(/\s+/);
+        const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+        if (words.length > 20 && uniqueWords.size / words.length < 0.3) return true;
+        if (/[^a-zA-Z0-9\s.,!?'-]/.test(text)) {
+            const unexpectedChars = text.match(/[^a-zA-Z0-9\s.,!?'-]/g);
+            if (unexpectedChars && unexpectedChars.length / text.length > 0.05) return true;
+        }
+        if (/(as an ai language model|i am an ai|i cannot|i can help with that|here is the text you requested|let me know if you need any other assistance|i hope this helps|i've done my best|it is important to note|in summary|in conclusion)/i.test(text)) return true;
+        if (words.length > 10 && !/[.!?]/.test(text)) return true;
+        return false;
+    };
+
+    const sanitizeAIOutput = (text) => {
+        if (!text) return '';
+        let cleanText = text;
+        const prefixes = [
+            "here's the rewritten text:", "here is the rewritten text:", "certainly, here's the revised paragraph:",
+            "of course, here is the updated version:", "here is your rewritten paragraph:", "rewritten text:",
+            "your rewritten text:", "here's the rewritten version:", "here's a rewritten version:",
+            "i have rewritten the text as follows:", "the rewritten text is:", "here you go:",
+            "here's the humanized version:", "here's the humanized text:", "rewritten as requested:",
+            "the text rewritten is:", "rewritten text:", "humanized output:", "output:", "here is the output:",
+            "here's the output:", "i've rewritten the paragraph:", "here is the rewritten output for the section:",
+            "here's the revised content:", "this is the humanized text:", "your humanized text:",
+            "below is the rewritten text:", "i have transformed the text:", "the transformed text is:",
+            "this is your updated section:", "here's your improved text:", "your text, humanized:",
+            "the rewritten text is as follows:", "here's your new text:", "rewriting the text now:",
+            "i think this is what the user wants:", "the humanized text is:", "here's the humanized output:",
+            "your requested output:", "here is the humanized version of the text:", "here is the updated text:",
+            "i've processed the text:", "this is the revised text:", "the revised text is:", "your text revised:",
+            "here's your text:", "here is your text:",
+            "the urgency of addressing climate change: a pressing human concern",
+            "the urgency of addressing climate change. a pressing human concern",
+            "the urgency of climate change is a worldwide concern.",
+            "here's the corrected text:", "here's your corrected text:",
+            "alright, here's the rewritten paragraph:", "let me know if you need any further adjustments.",
+            "please note this is only one possible way to rewrite it.", "this is a possible humanized version:",
+            "here's a humanized version of your text:",
+            "the humanized output is:", "here's the humanized output you requested:",
+            "this is the humanized text you asked for:", "i've rewritten the text for you:",
+            "here is the revised text you requested:", "this is the rewritten version of your text:",
+            "here is the humanized version of your provided text:",
+            "your text has been humanized:", "i have humanized the text as follows:",
+            "the humanized text you asked for:", "here is the humanized paragraph:"
+        ];
+        prefixes.sort((a, b) => b.length - a.length);
+        for (const prefix of prefixes) {
+            if (cleanText.toLowerCase().startsWith(prefix)) {
+                cleanText = cleanText.substring(prefix.length).trim();
+                break;
+            }
+        }
+        cleanText = cleanText.replace(/^(as requested|here is your text|i've rephrased this for you|this is the rewritten text|this is your rewritten text|here is the rewritten text for the section|here is (the|your) rewritten (text|output)( for the section)?|below is the (rewritten|humanized) text|this is your (updated|improved) text|the rewritten text is as follows|here's your new text|rewriting the text now|i think this is what the user wants|the humanized text is|here's the humanized output|your requested output|here is the humanized version of the text|here is the updated text|i've processed the text|this is the revised text|the revised text is|your text revised|here's your text|here is your text|alright, here's the rewritten paragraph|let me know if you need any further adjustments|please note this is only one possible way to rewrite it|this is a possible humanized version|here's a humanized version of your text|the humanized output is|here's the humanized output you requested|this is the humanized text you asked for|i've rewritten the text for you|here is the revised text you requested|this is the rewritten version of your text|here is the humanized version of your provided text|your text has been humanized|i have humanized the text as follows|the humanized text you asked for|here is the humanized paragraph)\W*/i, '').trim();
+        cleanText = cleanText.replace(/^["'`]+|["'`]+$/g, '').trim();
+        cleanText = cleanText.replace(/[\u2014\u2013]/g, ' ');
+        cleanText = cleanText.replace(/,(\s*[.!?])/g, '$1');
+        cleanText = cleanText.replace(/\s{2,}/g, ' ');
+        cleanText = cleanText.replace(/\s*([.!?])\s*/g, '$1 ').trim();
+        cleanText = cleanText.replace(/\s*,\s*/g, ', ');
+        return cleanText;
+    };
+
+    const enforceForbiddenWords = (text) => {
+        let cleanText = text;
+        FORBIDDEN_WORDS_COMPREHENSIVE.forEach(word => {
+            const escapedWord = escapeRegExp(word);
+            const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+            cleanText = cleanText.replace(regex, `[REPLACED WORD: ${word.toUpperCase()}]`);
+        });
+        return cleanText;
+    };
+
+   const apiCall = async (prompt, modelIndex = 0, customTemperature = 1.9, retryCount = 0) => {
+  if (modelIndex >= MODELS_TO_TRY.length) {
+    throw new Error('All available models failed to process the request.');
+  }
+  const currentModel = MODELS_TO_TRY[modelIndex];
+  try {
+    // Changed the fetch URL to point to the new, simpler API endpoint
+    const response = await fetch('/api/humanizer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: currentModel,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: customTemperature,
+        top_p: 0.98,
+        max_tokens: 2048,
+      }),
     });
-  </script>
+    const data = await response.json();
+    if (!response.ok) {
+      const errorMsg = data.error || 'Unknown error';
+      if (errorMsg.includes('maximum context length')) {
+        return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+      } else if (response.status === 429) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+      } else if (response.status >= 500 || response.status === 404 || response.status === 403) {
+        if (retryCount < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
+          return apiCall(prompt, modelIndex, customTemperature, retryCount + 1);
+        }
+        return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+      }
+      throw new Error(errorMsg);
+    }
+    return data.choices?.[0]?.message?.content.trim() || null;
+  } catch (error) {
+    if (retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
+      return apiCall(prompt, modelIndex, customTemperature, retryCount + 1);
+    }
+    return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+  }
+};
+
+    const analyzeSectionForPatterns = (section) => {
+        const issues = {
+            hasParticipialPhrase: false,
+            participialExamples: [],
+            hasPredictableStart: false,
+            predictableStartExamples: [],
+            hasColonsOrSemicolons: false
+        };
+        const participialRegex = /(\b\w+(?:ing|ed|en)\b(?:(?:\s\w+)*?\s\w+)?)(?=\s|,|\.|$)/gi;
+        let match;
+        const sentences = section.match(/[^.!?]+[.!?]*/g) || [section];
+        sentences.forEach(sentence => {
+            while ((match = participialRegex.exec(sentence)) !== null) {
+                const potentialPhrase = match[1].trim();
+                if (potentialPhrase.length > 3 &&
+                    !/^\b(?:is|are|was|were|has|have|had)\s/.test(sentence.substring(Math.max(0, match.index - 5), match.index)) &&
+                    !/^\b(?:the|a|an)\s\w+(?:ing|ed|en)\b/.test(potentialPhrase.toLowerCase()))
+                {
+                    issues.hasParticipialPhrase = true;
+                    if (potentialPhrase && !issues.participialExamples.includes(potentialPhrase)) {
+                        issues.participialExamples.push(`"${potentialPhrase.replace(/,$/, '')}"`);
+                    }
+                }
+            }
+        });
+        const predictableStarts = [
+            /^The world is/, /^Our planet/, /^Every year the earth/, /^Climate change is making things/, /^It is worth noting/, /^The key factor/, /^Rising global temperatures/, /^The dire economic effects/, /^Strategies for Mitigation and Adaptation/, /^Climate change is a harsh reality/,
+            /^It is important to note/, /^In conclusion/, /^Furthermore/, /^Moreover/, /^However/, /^Therefore/, /^Thus/, /^The fact that/, /^In order to/, /^Ultimately/, /^Despite the fact that/, /^With the rise of/, /^As a result of/, /^Given that/, /^This means/, /^It affects/, /^There are some people/, /^Individuals, governments, and international partnerships/, /^Climate change remains/, /^The causes of climate change are rooted in/, /^Effects of a Shifting Planet/, /^Socioeconomic impacts of climate change exert/, /^Combating climate change demands/, /^Immediate action is demanded to combat/,
+            /^In essence/, /^What's more/, /^On the other hand/, /^Concurrently/, /^Subsequently/, /^In particular/, /^It is essential/, /^It is crucial/, /^It is clear that/, /^To summarize/, /^In summary/, /^In a nutshell/, /^Basically/, /^The reason is/, /^The problem is/, /^It's important to understand/, /^It's crucial to acknowledge/, /^One of the main challenges/, /^This article discusses/, /^The primary objective/, /^The study found that/, /^Data suggests that/, /^In light of these findings/, /^The implications of this/, /^It is evident that/, /^Ultimately, the goal is/, /^Addressing these issues/, /^Looking ahead,/
+        ];
+        sentences.forEach(sentence => {
+            const trimmedSentence = sentence.trim();
+            for (const start of predictableStarts) {
+                if (start.test(trimmedSentence)) {
+                    issues.hasPredictableStart = true;
+                    const example = trimmedSentence.split(' ').slice(0, 5).join(' ') + '...';
+                    if (!issues.predictableStartExamples.includes(example)) {
+                        issues.predictableStartExamples.push(`"${example}"`);
+                    }
+                    break;
+                }
+            }
+            }
+        });
+        if (/[;:]/.test(section)) {
+            issues.hasColonsOrSemicolons = true;
+        }
+        return issues;
+    };
+
+    const buildComprehensivePrompt = (section, tone, isPersonal, pastParaphrases, sectionAnalysis) => {
+        const escapedSection = escapeHtml(section);
+
+        let prompt = `**GOLDEN RULE: DO NOT, under ANY circumstances, introduce ANY information, facts, or concepts not EXPLICITLY present in the "TEXT TO REWRITE" section below. Your output must be a pure rephrasing of the provided text, and nothing more. This is a STRICT information-preservation task, not an information-generation task. Do not make up any new details or draw on any outside knowledge.**\n`;
+        prompt += `Your sole response MUST be the rewritten text for the provided section. NO commentary, NO intros, NO filler, NO questions, NO conversational phrases like "here's the rewritten text".\n`;
+        prompt += `**TEXT TO REWRITE (ONE SINGLE SECTION/PARAGRAPH):**\n`;
+        prompt += `"${escapedSection}"\n`;
+        prompt += `**MANDATORY RULES (STRICTLY ADHERE TO THESE):**\n`;
+        prompt += `1.  **SIMPLIFY WORDS AND COMPLETELY RESTRUCTURE SENTENCES.** Use plain, everyday language. Avoid unnecessary complex vocabulary or jargon.\n`;
+        prompt += `    **ABSOLUTELY DO NOT USE ANY OF THESE WORDS (find direct, simpler synonyms, or restructure the sentence completely):** ${FORBIDDEN_WORDS_FOR_AI_PROMPT.map(w => `'${w}'`).join(', ')}.\n`;
+        prompt += `    **Example for forbidden word "transcends":** Instead of "This issue transcends boundaries," write "This issue goes beyond borders," or "This issue affects areas outside of typical limits."\n`;
+        prompt += `    **CRITICAL:** If a simpler, clear synonym cannot be found for a word on the forbidden list, or if replacing it makes the sentence unclear or nonsensical, or if it leads to gibberish, **RETAIN THE ORIGINAL WORD and try to restructure the sentence differently.** Prioritize clarity and meaning above all else. **DO NOT generate random or nonsensical text. The output must be coherent and grammatically sound.**\n`;
+
+        const originalWordCount = section.trim().split(/\s+/).length;
+        const targetMinWords = Math.round(originalWordCount * 0.90);
+        const targetMaxWords = Math.round(originalWordCount * 1.10);
+
+        prompt += `2.  **STRICT WORD COUNT & CONTENT INTEGRITY.** Output for this section MUST be between **${targetMinWords} and ${targetMaxWords} words** (within +/- 10% of original ${originalWordCount} words). **DO NOT add new sentences, remove original sentences, or introduce any new information.** The rewritten text **MUST** contain the exact same number of core facts, ideas, and pieces of information as the original. Focus purely on rephrasing the existing content.\n`;
+        prompt += `3.  **PUNCTUATION AND TRANSITIONS.** **USE ONLY CONVENTIONAL PUNCTUATION: PERIODS (.), COMMAS (,), EXCLAMATION MARKS (!), AND QUESTION MARKS (?). ABSOLUTELY NO COLONS (:) OR SEMICOLONS (;).** **Use transition words and phrases SPARINGLY and NATURALLY, only when necessary for coherence. AVOID excessive use of commas to link unrelated clauses or ideas that should be separate sentences. Focus on clear, concise sentence structures.**\n`;
+
+        if (sectionAnalysis.hasParticipialPhrase && sectionAnalysis.participialExamples.length > 0) {
+            prompt += `    * **ABSOLUTELY RESTRUCTURE AND ELIMINATE ALL PARTICIPIAL PHRASES.** This is a critical requirement. Rewrite phrases like ${sectionAnalysis.participialExamples.map(e => escapeHtml(e)).join(', ')} as full, independent clauses or by splitting the original sentence into two or more clearer sentences. For example, instead of "The man, *walking quickly*, tripped," write "The man walked quickly and then he tripped," or "The man was walking quickly. He tripped."\n`;
+        }
+        if (sectionAnalysis.hasPredictableStart && sectionAnalysis.predictableStartExamples.length > 0) {
+            prompt += `    * **VARY SENTENCE BEGINNINGS.** Avoid predictable starts like ${sectionAnalysis.predictableStartExamples.map(e => escapeHtml(e)).join(', ')}. Make every sentence start differently.\n`;
+        }
+
+        const keywordsAndProperNounsToRetain = [
+            'climate change', 'humanity', '21st century', 'temperature', 'precipitation',
+            'wind patterns', 'Earth\'s climate system', 'anthropogenic activities', 'greenhouse gases',
+            'industrial processes', 'transportation', 'deforestation', 'scientific consensus',
+            'human influence', 'global climate', 'catastrophic consequences', 'ecosystems', 'economies',
+            'societies', 'global warming', 'sea levels', 'extreme weather events', 'carbon dioxide (CO₂)',
+            'methane (CH₄)', 'nitrous oxide (N₂O)', 'fossil fuels', 'renewable energy', 'biodiversity', 'natural resources', 'public health',
+            'policy frameworks', 'international cooperation', 'sustainable development', 'mitigation',
+            'adaptation', 'economic impacts', 'social equity', 'IPCC', 'Paris Agreement',
+            'heatwaves', 'droughts', 'hurricanes', 'floods', 'polar ice caps', 'glaciers', 'coastal communities',
+            'small island nations', 'vector-borne diseases', 'respiratory issues', 'food insecurity',
+            'vulnerable populations', 'developing countries', 'agricultural practices', 'land-use changes',
+            'global stability', 'security', 'economic cost of inaction', 'preventive measures',
+            'energy efficiency', 'reforestation', 'sustainable land use', 'resilient infrastructure',
+            'early warning systems', 'climate-smart agriculture', 'political will', 'public engagement',
+            'equitable resource distribution', 'present reality', 'unified global response', 'science', 'innovation',
+            'moral responsibility', 'sustainable', 'resilient', 'just', 'current and future generations',
+            'combustion', 'United Nations Intergovernmental Panel'
+        ];
+        prompt += `4.  **CRITICAL: PRESERVE ALL ORIGINAL MEANING AND FACTS EXACTLY.** The humanized text MUST convey the IDENTICAL message as the original, rephrased. Keep all core details, proper nouns (e.g., "IPCC," "Paris Agreement," specific gas names like "CO₂"), and key concepts. **DO NOT simplify or alter specific technical terms or proper nouns unless explicitly instructed by the forbidden words list, or if the original is grammatically incorrect.**\n`;
+        prompt += `5.  **SINGLE PARAGRAPH OUTPUT.** The output for THIS specific section MUST be a single, continuous paragraph with NO newlines or extra spaces that create new paragraphs within it. **DO NOT introduce new information or random text.** Prioritize clear, coherent meaning.\n`;
+
+        const toneInstruction = `Maintain a ${tone} tone${isPersonal ? ' using a first-person perspective (e.g., "I believe," "we must," "our responsibility").' : ' using a general, objective, and neutral perspective.'}`;
+        prompt += `6.  **TONE.** ${toneInstruction}\n`;
+
+        if (pastParaphrases && pastParaphrases.length > 0) {
+            const recentParaphrases = pastParaphrases.slice(-3).map(p => escapeHtml(p));
+            prompt += `7.  **PREVIOUS CONTEXT AND STYLE (for flow only):**\n`;
+            prompt += `    Previous humanized text sections: "${recentParaphrases.join('\n')}"\n`;
+            prompt += `    Ensure the new section flows naturally from these. **DO NOT** reuse specific phrasing or sentence structures. Use *fresh synonyms* and *novel sentence constructions*.\n`;
+        }
+        prompt += `**Your response MUST be ONLY the rewritten text for this single section, nothing else.**`;
+        return prompt;
+    };
+
+    const buildIndividualSectionReviewPrompt = (sectionText) => {
+        const escapedSectionText = escapeHtml(sectionText);
+
+        let prompt = `**GOLDEN RULE: DO NOT, under ANY circumstances, introduce ANY information, facts, or concepts not EXPLICITLY present in the "TEXT TO REVIEW" section below. Your output must be a pure rephrasing of the provided text, and nothing more. This is a STRICT information-preservation task, not an information-generation task. Do not make up any new details or draw on any outside knowledge.**\n`;
+        prompt += `You are an expert copy editor. Review the provided single paragraph ONLY for the following issues. **Your only output must be the corrected text, with no additional commentary or explanation.**\n`;
+        prompt += `**STRICT CORRECTIONS ONLY for this single paragraph:**\n`;
+        prompt += `* **COHERENCE AND GRAMMAR:** Ensure the text is perfectly coherent, grammatically correct, and makes complete sense. **DO NOT generate random or nonsensical text.** If the text is fundamentally incoherent, try to make it coherent while retaining its original meaning and *only* the information originally present.\n`;
+        prompt += `* **CONVENTIONAL PUNCTUATION ONLY:** Replace **ALL colons (:) and semicolons (;)** with appropriate conventional punctuation (periods, commas, question marks, exclamation marks). Ensure all other punctuation is standard and correctly used.\n`;
+        prompt += `* **ELIMINATE ALL PARTICIPIAL PHRASES:** Identify and rewrite *every single participial phrase* (e.g., "walking quickly," "being seen," "having done") into clear, full clauses or by splitting sentences. This is a top priority.\n`;
+        prompt += `* **REMOVE ALL AI COMMENTS/CONVERSATIONAL FILLER:** Ensure there are absolutely no introductory phrases, conversational remarks, questions to the user, or anything that resembles AI interaction (e.g., "Here is the text," "I can help with that," "Let me know"). The output must be the pure, clean text.\n`;
+        prompt += `* **NO MEANING CHANGE:** Do not change the original meaning, facts, or core information.\n`;
+        prompt += `* **NO WORD CHOICE CHANGE (unless directly related to punctuation/grammar fix or specifically from the forbidden list if it slipped through):** Do not re-humanize or rephrase sentences beyond fixing the punctuation/participial issues. Only change words if it's a direct grammatical correction, spelling error, or if a forbidden word (from the \`FORBIDDEN_WORDS_COMPREHENSIVE\` list) somehow slipped into the output.\n`;
+        prompt += `* **NO LENGTH CHANGE:** Do not significantly change the length of the text.\n`;
+        prompt += `* **SINGLE PARAGRAPH OUTPUT:** The output MUST remain a single paragraph. DO NOT introduce newlines or merge with other (non-existent) paragraphs.\n`;
+        prompt += `**TEXT TO REVIEW (SINGLE PARAGRAPH):**\n`;
+        prompt += `"${escapedSectionText}"\n`;
+        prompt += `**FINAL OUTPUT (SINGLE PARAGRAPH):** ONLY the corrected text, with no preamble or commentary.`;
+        return prompt;
+    };
+
+    const processText = async () => {
+        const text = $('input').value.trim();
+        if (!text) {
+            alert('Please enter text to humanize.');
+            return;
+        }
+        const processBtn = $('process');
+        const progressContainer = document.querySelector('.progress');
+        const progressBar = document.querySelector('.progress-bar');
+        const statusEl = $('status');
+        const outputEl = $('output');
+        const jsonOutputEl = $('jsonOutput');
+        const copyJsonButton = $('copyJson');
+
+        processBtn.disabled = true;
+        processBtn.textContent = 'Processing...';
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        statusEl.textContent = 'Initializing...';
+        outputEl.value = '';
+        jsonOutputEl.textContent = '';
+        jsonOutputEl.style.display = 'none';
+        if (copyJsonButton) {
+            copyJsonButton.style.display = 'inline-block';
+        }
+
+        try {
+            const tone = $('tone').value;
+            const isPersonal = $('perspective').checked;
+            console.log("Is Personal Mode:", isPersonal);
+
+            const rawSectionsArray = text.split(/\n\s*\n/).filter(s => s.trim());
+            if (rawSectionsArray.length === 0) {
+                statusEl.textContent = 'No valid text sections found.';
+                throw new Error('No valid text sections found.');
+            }
+
+            const originalInputDict = {};
+            rawSectionsArray.forEach((content, index) => {
+                originalInputDict[`section_${index + 1}`] = content;
+            });
+
+            const humanizedOutputDict = {};
+            const finalHumanizedSections = [];
+
+            for (let i = 0; i < rawSectionsArray.length; i++) {
+                const sectionKey = `section_${i + 1}`;
+                const originalSectionContent = rawSectionsArray[i];
+                statusEl.textContent = `Humanizing section ${i + 1} of ${rawSectionsArray.length}...`;
+
+                const pastParaphrases = finalHumanizedSections;
+                const sectionAnalysis = analyzeSectionForPatterns(originalSectionContent);
+                const humanizePrompt = buildComprehensivePrompt(originalSectionContent, tone, isPersonal, pastParaphrases, sectionAnalysis);
+
+                let humanizedContent = null;
+                try {
+                    humanizedContent = await apiCall(humanizePrompt, 0, 1.9);
+                } catch (apiError) {
+                    console.error(`Initial humanization API call failed for section ${i + 1}:`, apiError);
+                }
+
+                if (!humanizedContent || isNonsense(humanizedContent)) {
+                    console.warn(`Initial humanization for section ${i + 1} failed/nonsense. Retrying...`);
+                    statusEl.textContent = `Retrying humanization for section ${i + 1}...`;
+                    try {
+                        humanizedContent = await apiCall(humanizePrompt, 0, 1.0);
+                        if (isNonsense(humanizedContent)) {
+                            console.warn(`Second humanization attempt for section ${i + 1} also failed/nonsense. Using original content.`);
+                            humanizedContent = originalSectionContent;
+                        }
+                    } catch (retryError) {
+                        console.error(`Retry humanization API call failed for section ${i + 1}:`, retryError);
+                        humanizedContent = originalSectionContent;
+                    }
+                }
+
+                humanizedContent = sanitizeAIOutput(humanizedContent);
+                humanizedContent = enforceForbiddenWords(humanizedContent);
+
+                statusEl.textContent = `Reviewing section ${i + 1} for punctuation and style...`;
+                const reviewPrompt = buildIndividualSectionReviewPrompt(humanizedContent);
+                let reviewedContent = null;
+                try {
+                    reviewedContent = await apiCall(reviewPrompt, 0, 0.1);
+                } catch (reviewApiError) {
+                    console.error(`Individual review API call failed for section ${i + 1}:`, reviewApiError);
+                }
+
+                if (!reviewedContent || isNonsense(reviewedContent)) {
+                    console.warn(`Individual review for section ${i + 1} failed/nonsense. Using prior humanized content.`);
+                    reviewedContent = humanizedContent;
+                } else {
+                    reviewedContent = sanitizeAIOutput(reviewedContent);
+                }
+
+                humanizedOutputDict[sectionKey] = reviewedContent;
+                finalHumanizedSections.push(reviewedContent);
+                outputEl.value = finalHumanizedSections.join('\n\n');
+                const words = outputEl.value.trim().match(/\S+/g) || [];
+                $('output-count').textContent = `${words.length} words`;
+                progressBar.style.width = `${Math.round(((i + 1) / rawSectionsArray.length) * 100)}%`;
+            }
+
+            statusEl.textContent = 'All sections processed and reviewed. Assembling final output.';
+            progressBar.style.width = '100%';
+            outputEl.value = finalHumanizedSections.join('\n\n');
+            const finalWords = outputEl.value.trim().match(/\S+/g) || [];
+            $('output-count').textContent = `${finalWords.length} words`;
+            jsonOutputEl.textContent = JSON.stringify(humanizedOutputDict, null, 2);
+            jsonOutputEl.style.display = 'block';
+            if (copyJsonButton) {
+                copyJsonButton.style.display = 'inline-block';
+            }
+            statusEl.textContent = 'Humanization complete!';
+
+        } catch (error) {
+            outputEl.value = `Error: ${error.message}`;
+            statusEl.textContent = `Failed: ${error.message.substring(0, 100)}...`;
+            console.error('Processing error details:', error);
+        } finally {
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                processBtn.disabled = false;
+                processBtn.textContent = 'Humanize Text';
+                if (!statusEl.textContent.startsWith('Failed:')) {
+                    statusEl.textContent = '';
+                }
+            }, 2000);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
