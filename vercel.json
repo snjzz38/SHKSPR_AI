@@ -5,7 +5,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "/api/humanizer.js",
+      "src": "/api/Humanizer_API.js",
       "use": "@vercel/node"
     },
     {
@@ -15,8 +15,12 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/humanizer",
+      "destination": "/api/Humanizer_API.js"
+    },
+    {
+      "source": "/api/Grader_API",
+      "destination": "/api/Grader_API.js"
     },
     {
       "source": "/",
