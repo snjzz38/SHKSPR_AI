@@ -4,8 +4,7 @@
 // const fetch = require('node-fetch');
 
 // The Gemini model to use for grading.
-// Consider using a stable model like gemini-1.5-flash or gemini-2.0-flash-lite
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-1.5-flash"; // Using a stable model
 
 export default async function handler(request, response) {
     // Ensure the request is a POST request.
@@ -64,7 +63,7 @@ Output your response in structured Markdown with these exact headings and ample 
         // Prepare the final payload for the Gemini API.
         const payload = { contents: [{ role: "user", parts }] };
 
-        // --- FIX 1: Corrected URL construction by removing extra spaces ---
+        // --- FIX: Corrected URL construction by removing potential formatting issues ---
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${googleApiKey}`;
 
         // --- Make the call to the Google Gemini API ---
@@ -85,7 +84,7 @@ Output your response in structured Markdown with these exact headings and ample 
         const result = await apiResponse.json();
         const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (text === undefined || text === null) { // Check for null/undefined explicitly
+        if (text === undefined || text === null) {
              console.error("Gemini API returned unexpected structure:", JSON.stringify(result, null, 2));
              throw new Error("Received an invalid or empty response structure from the Gemini API.");
         }
@@ -96,8 +95,7 @@ Output your response in structured Markdown with these exact headings and ample 
     } catch (error) {
         // Log the full error on the server for debugging.
         console.error("Backend Error in Grader_API.js:", error);
-        // Send a generic error message to the client to avoid exposing internal details.
-        // Include error.message if it's informative, otherwise a default message.
+        // Send a generic error message to the client.
         const clientErrorMessage = error.message || 'An internal server error occurred during grading.';
         response.status(500).json({ error: clientErrorMessage });
     }
