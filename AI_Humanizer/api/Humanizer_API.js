@@ -1,9 +1,10 @@
 // This is your serverless function for humanizing text.
 // It handles POST requests to interact with the Groq API.
 
-// Import node-fetch for consistent fetch API behavior across environments.
-// This is crucial for Vercel serverless functions.
-const fetch = require('node-fetch');
+// Import node-fetch using dynamic import for ESM compatibility.
+// This is crucial for Vercel serverless functions with node-fetch v3+.
+// const fetch = require('node-fetch'); // <-- OLD CommonJS way (causes ERR_REQUIRE_ESM)
+let fetch; // Declare fetch variable
 
 // Ensure you have your Groq API key set as an environment variable on Vercel
 // named `GROQ_API_KEY` or `Humanizer_1` as per previous discussions.
@@ -12,7 +13,19 @@ const GROQ_API_KEY = process.env.Humanizer_1; // Using Humanizer_1 as per your c
 
 // This is the main handler function for the serverless endpoint.
 // Using module.exports for broader compatibility with Vercel's Node.js runtime.
+// NOTE: The function is now 'async' to accommodate the 'await import()'
 module.exports = async function handler(req, res) {
+    // Dynamically import node-fetch inside an async function
+    if (!fetch) {
+        try {
+            const nodeFetch = await import('node-fetch');
+            fetch = nodeFetch.default; // Get the default export
+        } catch (importError) {
+            console.error('Failed to dynamically import node-fetch:', importError);
+            return res.status(500).json({ error: 'Server configuration error: Failed to load fetch library.' });
+        }
+    }
+
     console.log('API function invoked. Request method:', req.method);
 
     // Only allow POST requests to this endpoint.
@@ -45,7 +58,7 @@ module.exports = async function handler(req, res) {
         console.log('Making Groq API call with model:', model);
 
         // Make the API call to Groq.
-        // --- CORRECTED LINE BELOW ---
+        // --- CORRECTED LINE BELOW (URL) ---
         const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
