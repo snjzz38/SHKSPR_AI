@@ -1,4 +1,5 @@
-// File: AI_Humanizer/api/Humanizer_API.js
+// File: api/Humanizer_API.js
+// Uses built-in 'https' module for compatibility and to avoid external dependencies.
 
 const https = require('https');
 
@@ -7,7 +8,7 @@ const GROQ_API_KEY = process.env.HUMANIZER_1;
 const GROQ_API_HOST = 'api.groq.com';
 const GROQ_API_PATH = '/openai/v1/chat/completions';
 
-// Helper function to make HTTPS POST requests and return a Promise
+// --- Helper function to make HTTPS POST requests and return a Promise ---
 function httpsPostRequest(options, postData) {
     return new Promise((resolve, reject) => {
         const req = https.request(options, (res) => {
@@ -20,10 +21,10 @@ function httpsPostRequest(options, postData) {
             res.on('end', () => {
                 try {
                     const jsonData = JSON.parse(data);
-                    // Resolve with an object containing status, headers, and parsed body
+                    // Resolve with status, headers, and parsed body
                     resolve({ statusCode: res.statusCode, headers: res.headers, body: jsonData });
                 } catch (parseError) {
-                    console.warn('Response body was not valid JSON:', data.substring(0, 200)); // Log snippet
+                    console.warn('Groq response body was not valid JSON:', data.substring(0, 200)); // Log snippet
                     // Resolve with status, headers, and raw body string if JSON parse fails
                     resolve({ statusCode: res.statusCode, headers: res.headers, body: data });
                 }
@@ -43,73 +44,68 @@ function httpsPostRequest(options, postData) {
     });
 }
 
-// Main handler function
+// --- Main handler function ---
+// Using module.exports for compatibility with Vercel's Node.js functions when not using ESM export default
 module.exports = async function handler(req, res) {
-    console.log('API function invoked. Request method:', req.method);
+    console.log('Humanizer_API.js invoked. Method:', req.method);
 
-    // Only allow POST requests
+    // --- 1. Allow only POST requests ---
     if (req.method !== 'POST') {
         console.warn('Method Not Allowed:', req.method);
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // Ensure the API key is available
+    // --- 2. Check for API Key EARLY ---
     if (!GROQ_API_KEY) {
-        console.error('Groq API key is not configured. Check Vercel Environment Variables (HUMANIZER_1).');
-        return res.status(500).json({ error: 'Server configuration error: API key missing.' });
+        const errorMsg = 'Groq API key (HUMANIZER_1) is missing or empty in Vercel Environment Variables.';
+        console.error('CONFIGURATION ERROR:', errorMsg);
+        return res.status(500).json({ error: 'Server configuration error: API key missing or empty.' });
     }
+    console.log('Groq API Key found.');
+
+    // --- 3. Validate Request Body (Simplified check) ---
+    // Check if body exists, is an object, and has required properties.
+    if (!req.body || typeof req.body !== 'object' || !req.body.model || !req.body.messages) {
+        const errorMsg = 'Invalid request body. Must be a JSON object with `model` and `messages` properties.';
+        console.error('BODY VALIDATION ERROR:', errorMsg, 'Received body type:', typeof req.body);
+        return res.status(400).json({ error: errorMsg });
+    }
+    console.log('Request body validated. Model:', req.body.model);
 
     try {
-        // Log the raw request body for debugging if parsing issues occur
-        console.log('Raw request body:', req.body);
+        // --- 4. Prepare data for Groq API (Forward req.body directly) ---
+        const postData = JSON.stringify(req.body);
+        console.log('Prepared request body for Groq API.');
 
-        // Parse the request body to get the model, messages, and other parameters
-        const { model, messages, temperature, top_p, max_tokens } = req.body || {};
-
-        // Validate essential request body parameters
-        if (!model || !messages) {
-            console.error('Validation Error: Missing required parameters in request body. Model:', model, 'Messages:', messages);
-            return res.status(400).json({ error: 'Missing required parameters: model or messages. Check request body format.' });
-        }
-
-        console.log('Making Groq API call with model:', model);
-
-        // --- PREPARE DATA FOR GROQ ---
-        const postData = JSON.stringify({
-            model: model,
-            messages: messages,
-            temperature: temperature,
-            top_p: top_p,
-            max_tokens: max_tokens,
-            stream: false
-        });
-
-        // --- MAKE THE API CALL TO GROQ ---
-        const groqResponse = await httpsPostRequest({
+        // --- 5. Configure HTTPS request options ---
+        const options = {
             hostname: GROQ_API_HOST,
             port: 443,
             path: GROQ_API_PATH,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                // Use the Bearer token format as expected by Groq
                 'Authorization': `Bearer ${GROQ_API_KEY}`,
+                // Set Content-Length header
                 'Content-Length': Buffer.byteLength(postData),
+                // Adding a User-Agent is good practice
                 'User-Agent': 'SHKSPR-Humanizer-App/1.0'
             }
-        }, postData);
+        };
+        console.log('Configured HTTPS request options.');
 
-        // --- HANDLE GROQ API RESPONSE CORRECTLY ---
-        // groqResponse is the object returned by our httpsPostRequest helper:
-        // { statusCode: number, headers: object, body: object|string }
+        // --- 6. Make the API call to Groq (using our helper) ---
+        console.log('Making HTTPS request to Groq API...');
+        const groqResponse = await httpsPostRequest(options, postData);
+        console.log('Received response from Groq API. Status:', groqResponse.statusCode);
 
-        console.log('Groq API response status:', groqResponse.statusCode);
-        // console.log('Groq API response headers:', groqResponse.headers); // Uncomment for debugging
-        // console.log('Groq API response body (type):', typeof groqResponse.body); // Uncomment for debugging
-        // console.log('Groq API response body (content):', JSON.stringify(groqResponse.body).substring(0, 500)); // Uncomment for debugging
-
+        // --- 7. Handle Groq API response ---
         // Check if the Groq API call was successful (status code 2xx).
-        // Use groqResponse.statusCode, NOT groqResponse.ok
         if (groqResponse.statusCode < 200 || groqResponse.statusCode >= 300) {
+            // Log the error details for debugging
+            console.error(`Groq API Error (${groqResponse.statusCode}):`, groqResponse.body);
+
             // Prepare error message to send back to client
             let errorMessage = 'Error from Groq API';
             // If the body is an object (parsed JSON error), try to get a specific message
@@ -120,7 +116,6 @@ module.exports = async function handler(req, res) {
                 errorMessage = groqResponse.body || errorMessage;
             }
 
-            console.error(`Groq API Error (${groqResponse.statusCode}):`, errorMessage);
             // Return the error status and message from Groq
             return res.status(groqResponse.statusCode).json({
                 error: errorMessage,
@@ -129,19 +124,23 @@ module.exports = async function handler(req, res) {
             });
         }
 
+        // --- 8. Success: Send Groq's successful JSON response back to the client ---
         // If status is 2xx, groqResponse.body should be the successful JSON data.
-        // Use groqResponse.body directly, NOT groqResponse.json()
         const data = groqResponse.body;
         console.log('Groq API call successful.');
-        // Send the Groq response back to the client
-        return res.status(200).json(data);
+        return res.status(200).json(data); // Send data exactly as received from Groq
 
     } catch (error) {
-        // Catch any unexpected errors during the process
-        console.error('Internal Server Error during API processing:', error.message);
+        // --- 9. Catch any unexpected errors during processing ---
+        console.error('!!! UNCAUGHT INTERNAL SERVER ERROR in Humanizer_API.js !!!');
+        console.error('Error Details:', error.message);
         if (error.stack) {
             console.error('Error Stack:', error.stack);
         }
-        return res.status(500).json({ error: 'Internal Server Error during API processing.', details: error.message });
+        // Return 500 Internal Server Error
+        return res.status(500).json({
+            error: 'Internal Server Error during API processing.',
+            internal_error: error.message // Optional detail for debugging (be cautious in production)
+        });
     }
 };
