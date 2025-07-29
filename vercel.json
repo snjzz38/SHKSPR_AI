@@ -1,9 +1,10 @@
 {
-  "functions": {
-    "AI_Humanizer/api/Humanizer_API.js": {
-      "runtime": "now-node@18.20.0"
+  "builds": [
+    {
+      "src": "AI_Humanizer/api/Humanizer_API.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "rewrites": [
     {
       "source": "/api/humanizer",
