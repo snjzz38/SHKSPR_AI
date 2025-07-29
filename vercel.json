@@ -1,11 +1,11 @@
 {
   "builds": [
     {
-      "src": "/api/Grader_API.js",
+      "src": "/AI_Humanizer/api/Humanizer_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Humanizer_API.js",
+      "src": "/AI_Grader/api/Grader_API.js",
       "use": "@vercel/node"
     },
     {
@@ -15,12 +15,21 @@
   ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/humanizer",
+      "destination": "/AI_Humanizer/api/Humanizer_API.js"
+    },
+    {
+      "source": "/api/Grader_API",
+      "destination": "/AI_Grader/api/Grader_API.js"
     },
     {
       "source": "/",
       "destination": "/index.html"
     }
+    // Optional: Keep this if you plan to add standard api routes later
+    // {
+    //   "source": "/api/:path*",
+    //   "destination": "/api/:path*"
+    // }
   ]
 }
