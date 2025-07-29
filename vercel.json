@@ -7,8 +7,7 @@
   "rewrites": [
     {
       "source": "/api/humanizer",
-      "destination": "/AI Humanizer/api/Humanizer_API.js",
-      "method": "POST"
+      "destination": "/AI Humanizer/api/Humanizer_API.js"
     }
   ]
 }
