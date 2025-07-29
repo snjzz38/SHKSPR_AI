@@ -5,7 +5,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Humanizer_API.js",
+      "src": "/api/humanizer.js",
       "use": "@vercel/node"
     },
     {
