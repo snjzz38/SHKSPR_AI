@@ -1,19 +1,15 @@
-            {
-              "builds": [
-                {
-                  "src": "AI_Humanizer/api/Humanizer_API.js",
-                  "use": "@vercel/node"
-                }
-              ],
-              "rewrites": [
-                {
-                  "source": "/api/humanizer",
-                  "destination": "/AI_Humanizer/api/Humanizer_API.js"
-                },
-                {
-                  "source": "/",
-                  "destination": "/index.html"
-                }
-              ]
-            }
-            
+{
+  // Remove the builds section for now if it's causing confusion
+  // Keep only the rewrite for the index.html
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+    // Comment out the API rewrite temporarily
+    // {
+    //   "source": "/api/humanizer",
+    //   "destination": "/AL_Humanizer/api/Humanizer_API.js"
+    // }
+  ]
+}
