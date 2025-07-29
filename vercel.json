@@ -1,12 +1,12 @@
 {
   "builds": [
     {
-      "src": "/AI_Humanizer/api/Humanizer_API.js",
+      "src": "/api/Grader_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Grader_API.js", 
-      "use": "@vercel/node" 
+      "src": "/api/Humanizer_API.js",
+      "use": "@vercel/node"
     },
     {
       "src": "/**",
@@ -15,16 +15,12 @@
   ],
   "rewrites": [
     {
-      "source": "/api/humanizer",
-      "destination": "/AI_Humanizer/api/Humanizer_API.js"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
       "source": "/",
       "destination": "/index.html"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
     }
   ]
 }
