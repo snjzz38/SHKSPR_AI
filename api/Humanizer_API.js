@@ -45,7 +45,7 @@ function httpsPostRequest(options, postData) {
 }
 
 // --- Main handler function ---
-// Using module.exports for compatibility with Vercel's Node.js functions when not using ESM export default
+// Using module.exports for compatibility with Vercel's Node.js functions
 module.exports = async function handler(req, res) {
     console.log('Humanizer_API.js invoked. Method:', req.method);
 
@@ -140,7 +140,7 @@ module.exports = async function handler(req, res) {
         // Return 500 Internal Server Error
         return res.status(500).json({
             error: 'Internal Server Error during API processing.',
-            internal_error: error.message // Optional detail for debugging (be cautious in production)
+            internal_error: error.message // Optional detail for debugging
         });
     }
 };
