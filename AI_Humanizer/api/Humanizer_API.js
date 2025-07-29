@@ -7,8 +7,8 @@ const fetch = require('node-fetch');
 
 // Ensure you have your Groq API key set as an environment variable on Vercel
 // named `GROQ_API_KEY` or `Humanizer_1` as per previous discussions.
-// For this example, we'll assume it's `GROQ_API_KEY`.
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.Humanizer_1;
+// For this example, we'll assume it's `Humanizer_1`.
+const GROQ_API_KEY = process.env.Humanizer_1; // Using Humanizer_1 as per your current setup
 
 // This is the main handler function for the serverless endpoint.
 // Using module.exports for broader compatibility with Vercel's Node.js runtime.
@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
 
     // Ensure the API key is available.
     if (!GROQ_API_KEY) {
-        console.error('Groq API key is not configured. Check Vercel Environment Variables.');
+        console.error('Groq API key is not configured. Check Vercel Environment Variables (Humanizer_1).');
         return res.status(500).json({ error: 'Server configuration error: API key missing.' });
     }
 
