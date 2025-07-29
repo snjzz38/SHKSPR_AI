@@ -1,7 +1,7 @@
 {
   "functions": {
     "AI Humanizer/api/Humanizer_API.js": {
-      "runtime": "nodejs18.x" // You can also use "nodejs20.x" if preferred.
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
