@@ -1,18 +1,19 @@
-{
-  "builds": [
-    {
-      "src": "AI_Humanizer/api/Humanizer_API.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/humanizer",
-      "destination": "/AI_Humanizer/api/Humanizer_API.js"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
-    }
-  ]
-}
+            {
+              "builds": [
+                {
+                  "src": "AI_Humanizer/api/Humanizer_API.js",
+                  "use": "@vercel/node"
+                }
+              ],
+              "rewrites": [
+                {
+                  "source": "/api/humanizer",
+                  "destination": "/AI_Humanizer/api/Humanizer_API.js"
+                },
+                {
+                  "source": "/",
+                  "destination": "/index.html"
+                }
+              ]
+            }
+            
