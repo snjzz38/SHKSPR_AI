@@ -45,6 +45,7 @@ module.exports = async function handler(req, res) {
         console.log('Making Groq API call with model:', model);
 
         // Make the API call to Groq.
+        // --- CORRECTED LINE BELOW ---
         const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
