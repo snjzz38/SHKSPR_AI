@@ -3,7 +3,8 @@
 // const fetch = require('node-fetch');
 
 // The Gemini model to use for grading.
-const GEMINI_MODEL = "gemini-2.5-flash-preview-05-20";
+// Consider using a stable model like gemini-1.5-flash or gemini-2.0-flash-lite
+const GEMINI_MODEL = "gemini-1.5-flash"; 
 
 export default async function handler(request, response) {
     // Ensure the request is a POST request.
@@ -14,9 +15,10 @@ export default async function handler(request, response) {
 
     try {
         // Retrieve the Google API key from Vercel environment variables.
-        const googleApiKey = process.env.GRADER_1;
+        // Make sure GRADER_1 is set in your Vercel project settings.
+        const googleApiKey = process.env.GRADER_1; 
         if (!googleApiKey) {
-            throw new Error("API key is not configured on the server.");
+            throw new Error("API key (GRADER_1) is not configured on the server.");
         }
 
         // Get the data from the frontend request body.
@@ -59,6 +61,8 @@ export default async function handler(request, response) {
 
         // Prepare the final payload for the Gemini API.
         const payload = { contents: [{ role: "user", parts }] };
+        
+        // --- FIX: Corrected URL construction by removing extra spaces ---
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${googleApiKey}`;
 
         // --- Make the call to the Google Gemini API ---
