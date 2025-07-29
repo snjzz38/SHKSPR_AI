@@ -1,14 +1,14 @@
 {
   "builds": [
     {
-      "src": "AIHumanizer/api/Humanizer_API.js",
+      "src": "AI_Humanizer/api/Humanizer_API.js",
       "use": "@vercel/node"
     }
   ],
   "rewrites": [
     {
       "source": "/api/humanizer",
-      "destination": "/AIHumanizer/api/Humanizer_API.js"
+      "destination": "/AI_Humanizer/api/Humanizer_API.js"
     }
   ]
 }
