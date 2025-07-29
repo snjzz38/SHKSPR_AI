@@ -1,14 +1,13 @@
-    {
-      "functions": {
-        "AI_Humanizer/api/Humanizer_API.js": {
-          "runtime": "nodejs22.x"
-        }
-      },
-      "rewrites": [
-        {
-          "source": "/api/humanizer",
-          "destination": "/AI_Humanizer/api/Humanizer_API.js"
-        }
-      ]
+{
+  "functions": {
+    "AI_Humanizer/api/Humanizer_API.js": {
+      "runtime": "now-node@18.20.0"
     }
-    
+  },
+  "rewrites": [
+    {
+      "source": "/api/humanizer",
+      "destination": "/AI_Humanizer/api/Humanizer_API.js"
+    }
+  ]
+}
