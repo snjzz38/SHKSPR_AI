@@ -863,13 +863,13 @@
                     break;
                 }
             }
-            }
-        });
+        }); // Corrected: The extra '}' has been removed from here
         if (/[;:]/.test(section)) {
             issues.hasColonsOrSemicolons = true;
         }
         return issues;
     };
+
 
     const buildComprehensivePrompt = (section, tone, isPersonal, pastParaphrases, sectionAnalysis) => {
         const escapedSection = escapeHtml(section);
