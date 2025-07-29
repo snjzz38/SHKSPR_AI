@@ -7,8 +7,8 @@
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.Humanizer_1;
 
 // This is the main handler function for the serverless endpoint.
-// Vercel expects this to be the default export for Node.js serverless functions.
-export default async function handler(req, res) {
+// Using module.exports for broader compatibility with Vercel's Node.js runtime.
+module.exports = async function handler(req, res) {
     // Only allow POST requests to this endpoint.
     if (req.method !== 'POST') {
         // If any other method is used, return a 405 Method Not Allowed error.
@@ -65,4 +65,4 @@ export default async function handler(req, res) {
         console.error('Server error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
-}
+};
