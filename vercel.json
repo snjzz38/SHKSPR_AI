@@ -5,6 +5,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "/api/Grader_API.js", 
+      "use": "@vercel/node" 
+    },
+    {
       "src": "/**",
       "use": "@vercel/static"
     }
