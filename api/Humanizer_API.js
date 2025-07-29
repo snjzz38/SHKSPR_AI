@@ -1,4 +1,4 @@
-// File: api/Humanizer_API.js
+// File: api/humanizer.js
 // Uses built-in 'https' module for compatibility and to avoid external dependencies.
 
 const https = require('https');
@@ -47,7 +47,7 @@ function httpsPostRequest(options, postData) {
 // --- Main handler function ---
 // Using module.exports for compatibility with Vercel's Node.js functions
 module.exports = async function handler(req, res) {
-    console.log('Humanizer_API.js invoked. Method:', req.method);
+    console.log('Humanizer_API.js (now humanizer.js) invoked. Method:', req.method);
 
     // --- 1. Allow only POST requests ---
     if (req.method !== 'POST') {
@@ -132,7 +132,7 @@ module.exports = async function handler(req, res) {
 
     } catch (error) {
         // --- 9. Catch any unexpected errors during processing ---
-        console.error('!!! UNCAUGHT INTERNAL SERVER ERROR in Humanizer_API.js !!!');
+        console.error('!!! UNCAUGHT INTERNAL SERVER ERROR in humanizer.js !!!');
         console.error('Error Details:', error.message);
         if (error.stack) {
             console.error('Error Stack:', error.stack);
