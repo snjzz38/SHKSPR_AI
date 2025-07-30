@@ -89,7 +89,7 @@
             will-change: transform;
         }
 
-        header {
+        header.main-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -239,7 +239,7 @@
             transform: translateY(-3px);
         }
 
-        footer {
+        footer.main-footer {
             text-align: center;
             padding: 20px;
             font-size: 0.9rem;
@@ -255,7 +255,7 @@
 </head>
 <body class="theme-blackwhite transition-all">
   <div class="particles-container" id="particles"></div>
-  <header class="transition-all">
+  <header class="main-header transition-all">
     <a href="./index.html" class="logo">SHKSPR</a>
     <div class="theme-controls">
       <div class="dropdown-container">
@@ -284,12 +284,12 @@
       <a href="./AI_Grader/Grader.html" class="cta-button">Grade Essay</a>
     </div>
   </section>
-  <footer class="transition-all">
-    <p>&copy; 2025 Shkspr. All rights reserved.</p>
+  <footer class="main-footer transition-all">
+    <p>© 2025 Shkspr. All rights reserved.</p>
   </footer>
 <script>
     window.setTheme = function(theme) {
-      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + 'theme-' + theme + ' transition-all';
       localStorage.setItem('shkspr-theme', theme);
       window.initParticles();
     }
@@ -365,12 +365,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('blackwhite'));
+        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('cyan'));
+        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('purple'));
+        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('green'));
 
-        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+        const savedTheme = localStorage.getItem('shkspr-theme') || 'blackwhite';
         window.setTheme(savedTheme);
     });
 </script>
