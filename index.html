@@ -5,6 +5,7 @@
     <title>SHKSPR - AI Study Suite</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        /* --- Theme Variables --- */
         :root {
             --bg-primary: #000;
             --bg-secondary: #111;
@@ -19,6 +20,7 @@
             --text-primary: #e0ffff;
             --accent: #00f6ff;
             --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255; /* Added for consistency */
         }
         body.theme-purple {
             --bg-primary: #0d001a;
@@ -26,6 +28,7 @@
             --text-primary: #ffe6ff;
             --accent: #cc66ff;
             --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255; /* Added for consistency */
         }
         body.theme-green {
             --bg-primary: #001a00;
@@ -33,22 +36,43 @@
             --text-primary: #e6ffe6;
             --accent: #66ff66;
             --card-bg: #003600;
+            --accent-rgb: 102, 255, 102; /* Added for consistency */
         }
+        /* Updated Black & White Theme with silvery glow */
         body.theme-blackwhite {
             --bg-primary: #000;
             --bg-secondary: #111;
             --text-primary: #fff;
-            --accent: #fff;
+            --accent: #e0e0e0; /* Silvery white accent */
             --card-bg: #222;
+            --accent-rgb: 224, 224, 224; /* RGB for silvery white */
         }
+        /* Glow intensity for Black & White theme - adjusted for silvery glow */
         body.theme-blackwhite .logo,
         body.theme-blackwhite .hero h1 {
-            text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 6px #fff;
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
         }
         body.theme-blackwhite .hero p {
-            text-shadow: 0 0 2px #fff;
+            text-shadow: 0 0 8px var(--accent);
         }
 
+        /* New Red Theme */
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles --- */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -89,7 +113,7 @@
             will-change: transform;
         }
 
-        header.main-header {
+        header.main-header { /* Added main-header class for consistency */
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -227,7 +251,7 @@
             font-weight: bold;
             font-size: 1.1rem;
             transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(0, 246, 255, 0.5);
+            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5); /* Use accent-rgb for dynamic shadow */
             border: none;
             cursor: pointer;
         }
@@ -239,7 +263,7 @@
             transform: translateY(-3px);
         }
 
-        footer.main-footer {
+        footer.main-footer { /* Added main-footer class for consistency */
             text-align: center;
             padding: 20px;
             font-size: 0.9rem;
@@ -272,6 +296,7 @@
           <button id="theme-cyan-btn">Cyan</button>
           <button id="theme-purple-btn">Purple</button>
           <button id="theme-green-btn">Green</button>
+          <button id="theme-red-btn">Red</button> <!-- New Red Theme Button -->
         </div>
       </div>
     </div>
@@ -285,11 +310,11 @@
     </div>
   </section>
   <footer class="main-footer transition-all">
-    <p>© 2025 Shkspr. All rights reserved.</p>
+    <p>&copy; 2025 Shkspr. All rights reserved.</p>
   </footer>
 <script>
     window.setTheme = function(theme) {
-      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + 'theme-' + theme + ' transition-all';
+      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
       localStorage.setItem('shkspr-theme', theme);
       window.initParticles();
     }
@@ -345,13 +370,15 @@
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
-        colors = ['#ffffff', '#cccccc', '#999999'];
+        colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; /* Silvery shades for particles */
       } else if (document.body.classList.contains('theme-cyan')) {
         colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
       } else if (document.body.classList.contains('theme-purple')) {
         colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
       } else if (document.body.classList.contains('theme-green')) {
         colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+      } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
+        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
       }
       for (let i = 0; i < 60; i++) {
         particles.push(new window.Particle(container, colors));
@@ -365,12 +392,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('blackwhite'));
-        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('cyan'));
-        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('purple'));
-        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('green'));
+        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red')); /* New Red Theme Event Listener */
 
-        const savedTheme = localStorage.getItem('shkspr-theme') || 'blackwhite';
+        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
         window.setTheme(savedTheme);
     });
 </script>
