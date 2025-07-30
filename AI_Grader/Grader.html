@@ -10,8 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <!-- Marked.js CDN for Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         /* --- Theme Variables --- */
         :root {
@@ -46,18 +44,48 @@
             --card-bg: #003600;
             --accent-rgb: 102, 255, 102;
         }
+        /* Updated Black & White Theme with silvery glow */
         body.theme-blackwhite {
             --bg-primary: #000;
             --bg-secondary: #111;
             --text-primary: #fff;
-            --accent: #fff;
+            --accent: #e0e0e0; /* Silvery white accent */
             --card-bg: #222;
-            --accent-rgb: 255, 255, 255;
+            --accent-rgb: 224, 224, 224; /* RGB for silvery white */
+        }
+        /* Glow intensity for Black & White theme - adjusted for silvery glow */
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 {
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+        }
+        body.theme-blackwhite .hero p {
+            text-shadow: 0 0 8px var(--accent);
+        }
+
+        /* New Red Theme */
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
         }
 
         /* --- Global Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif; /* Changed font to Segoe UI */
             background-color: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -77,31 +105,42 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 5%;
-            background-color: var(--bg-primary);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            padding: 20px 10%; /* Matched index.html padding */
+            background-color: var(--bg-secondary); /* Matched index.html background */
+            box-shadow: none; /* Removed box-shadow for consistency with index.html */
+            transition: background-color 0.6s, color 0.6s;
             position: relative;
             z-index: 10;
         }
         .logo {
-            font-size: 2rem;
+            font-size: 2.5rem; /* Matched index.html font size */
             font-weight: bold;
             color: var(--text-primary);
-            text-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent); /* Matched index.html text-shadow */
             text-decoration: none;
+            transition: all 0.6s ease;
         }
         .theme-controls { display: flex; gap: 10px; align-items: center; }
         .dropdown-button {
             background: var(--card-bg);
             color: var(--text-primary);
-            border: 1px solid var(--accent);
+            border: 1px solid var(--text-primary); /* Matched index.html border */
             padding: 8px 15px;
             border-radius: 20px;
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
         }
-        .dropdown-button:hover { background: var(--accent); color: var(--bg-primary); }
+        .dropdown-button:hover {
+            background: var(--text-primary); /* Matched index.html hover background */
+            color: var(--bg-primary); /* Matched index.html hover color */
+        }
         .dropdown-container { position: relative; }
         .dropdown-container:hover .dropdown-options { display: block; }
         .dropdown-options {
@@ -113,31 +152,47 @@
             border-radius: 8px;
             padding: 10px;
             min-width: 150px;
-            z-index: 20;
+            z-index: 10; /* Matched index.html z-index */
         }
         .dropdown-options button, .dropdown-options a {
             background: none; border: none; color: var(--text-primary);
             padding: 8px; cursor: pointer; text-align: left; width: 100%;
             font-size: 0.9rem; display: block; text-decoration: none;
+            border-radius: 0; /* Ensure no rounded corners from previous styles */
         }
-        .dropdown-options button:hover, .dropdown-options a:hover { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        .dropdown-options button:hover, .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
 
         /* --- Hero Section --- */
-        .hero { text-align: center; padding: 2rem 1rem; position: relative; z-index: 5; }
+        .hero {
+            text-align: center;
+            padding: 50px 20px 30px 20px; /* Matched index.html padding */
+            position: relative;
+            z-index: 5;
+        }
         .hero h1 {
-            font-size: clamp(2.5rem, 5vw, 3.2rem);
+            font-size: 3.2rem; /* Matched index.html font size */
             color: var(--text-primary);
-            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-            margin-bottom: 0.5rem;
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent); /* Matched index.html text-shadow */
+            margin-bottom: 20px; /* Matched index.html margin */
+            transition: all 0.6s ease;
         }
         .hero p {
-            font-size: clamp(1rem, 2.5vw, 1.2rem);
-            margin-bottom: 1.5rem;
+            font-size: 1.2rem; /* Matched index.html font size */
+            margin-bottom: 30px; /* Matched index.html margin */
             text-shadow: 0 0 8px var(--accent);
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
             color: var(--text-primary);
+            transition: all 0.6s ease;
         }
 
         /* --- Grader Container Styles --- */
@@ -161,7 +216,7 @@
         textarea, input[type="text"], input[type="file"] {
             background: var(--bg-secondary);
             color: var(--text-primary);
-            border: 1px solid var(--accent);
+            border: 1px solid var(--accent); /* Retained accent border for form inputs */
             border-radius: 8px;
             padding: 12px;
             width: 100%;
@@ -216,7 +271,7 @@
             font-weight: bold;
             font-size: 1rem;
             transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); /* Use accent-rgb for dynamic shadow */
             border: none;
             cursor: pointer;
         }
@@ -297,11 +352,11 @@
         }
         footer.main-footer {
             text-align: center;
-            padding: 1rem;
+            padding: 20px; /* Matched index.html padding */
             font-size: 0.9rem;
             color: var(--text-primary);
             text-shadow: 0 0 5px var(--accent);
-            background-color: var(--bg-secondary);
+            background-color: var(--bg-secondary); /* Matched index.html background */
             position: relative;
             z-index: 10;
             margin-top: auto;
@@ -328,6 +383,7 @@
                     <button id="theme-cyan-btn">Cyan</button>
                     <button id="theme-purple-btn">Purple</button>
                     <button id="theme-green-btn">Green</button>
+                    <button id="theme-red-btn">Red</button> <!-- New Red Theme Button -->
                 </div>
             </div>
         </div>
@@ -442,7 +498,7 @@
         </main>
     </div>
 
-    <footer class="main-footer">
+    <footer class="main-footer transition-all">
         &copy; 2025 Shkspr. All rights reserved.
     </footer>
 
@@ -452,33 +508,41 @@
 
         // --- Theming and Particle System ---
         window.setTheme = function(theme) {
-            document.body.className = `theme-${theme} transition-all`;
+            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
             localStorage.setItem('shkspr-theme', theme);
             window.initParticles();
         }
 
         class Particle {
-            constructor(container) {
+            constructor(container, colors) { /* Added colors parameter */
                 this.container = container;
                 this.element = document.createElement('div');
                 this.element.className = 'particle';
                 this.container.appendChild(this.element);
-                const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-                this.element.style.background = accentColor;
-                this.size = Math.random() * 4 + 1;
+                this.size = Math.random() * 6 + 2; /* Matched index.html particle size */
+                this.color = colors[Math.floor(Math.random() * colors.length)]; /* Use colors array */
                 this.x = Math.random() * window.innerWidth;
                 this.y = Math.random() * window.innerHeight;
-                this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = (Math.random() - 0.5) * 1.5;
+                this.vx = (Math.random() - 0.5) * 4; /* Matched index.html particle speed */
+                this.vy = (Math.random() - 0.5) * 4; /* Matched index.html particle speed */
+                this.opacity = Math.random() * 0.5 + 0.3; /* Matched index.html opacity */
                 this.element.style.width = `${this.size}px`;
                 this.element.style.height = `${this.size}px`;
+                this.element.style.backgroundColor = this.color; /* Set background color from chosen color */
+                this.element.style.opacity = this.opacity;
                 this.update();
             }
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                if (this.x <= 0 || this.x >= window.innerWidth - this.size) this.vx *= -1;
-                if (this.y <= 0 || this.y >= window.innerHeight - this.size) this.vy *= -1;
+                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                    this.vx *= -1;
+                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                }
+                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                    this.vy *= -1;
+                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                }
                 this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
             }
             remove() { this.container.removeChild(this.element); }
@@ -492,7 +556,21 @@
             particles.forEach(p => p.remove());
             particles = [];
             if (animationId) cancelAnimationFrame(animationId);
-            for (let i = 0; i < 50; i++) particles.push(new Particle(container));
+
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            let colors = [accentColor];
+            if (document.body.classList.contains('theme-blackwhite')) {
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; /* Silvery shades for particles */
+            } else if (document.body.classList.contains('theme-cyan')) {
+                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+            } else if (document.body.classList.contains('theme-purple')) {
+                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+            } else if (document.body.classList.contains('theme-green')) {
+                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+            } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
+                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+            }
+            for (let i = 0; i < 60; i++) particles.push(new Particle(container, colors)); /* Matched index.html particle count */
             animateParticles();
         }
         function animateParticles() {
@@ -715,13 +793,14 @@
             });
 
             // --- Init ---
-            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => setTheme('blackwhite'));
-            document.getElementById('theme-cyan-btn').addEventListener('click', () => setTheme('cyan'));
-            document.getElementById('theme-purple-btn').addEventListener('click', () => setTheme('purple'));
-            document.getElementById('theme-green-btn').addEventListener('click', () => setTheme('green'));
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red')); /* New Red Theme Event Listener */
             
-            const savedTheme = localStorage.getItem('shkspr-theme') || 'cyan';
-            setTheme(savedTheme);
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite'; /* Changed default theme to blackwhite */
+            window.setTheme(savedTheme);
             showStep(0);
         });
     </script>
