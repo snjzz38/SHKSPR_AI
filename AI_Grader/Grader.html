@@ -1,324 +1,320 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Assignment Grader</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-    <!-- Marked.js CDN for Markdown rendering -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* --- Theme Variables --- */
-        :root {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #fff;
-            --card-bg: #222;
-            --accent-rgb: 255, 255, 255;
-        }
-        body.theme-cyan {
-            --bg-primary: #000c0c;
-            --bg-secondary: #072a2c;
-            --text-primary: #e0ffff;
-            --accent: #00f6ff;
-            --card-bg: #041f21;
-            --accent-rgb: 0, 246, 255;
-        }
-        body.theme-purple {
-            --bg-primary: #0d001a;
-            --bg-secondary: #14002b;
-            --text-primary: #f3e8ff;
-            --accent: #cc66ff;
-            --card-bg: #1d0036;
-            --accent-rgb: 204, 102, 255;
-        }
-        body.theme-green {
-            --bg-primary: #001a00;
-            --bg-secondary: #002b00;
-            --text-primary: #e6ffe6;
-            --accent: #66ff66;
-            --card-bg: #003600;
-            --accent-rgb: 102, 255, 102;
-        }
-        body.theme-blackwhite {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #fff;
-            --card-bg: #222;
-            --accent-rgb: 255, 255, 255;
-        }
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>AI Assignment Grader</title>
+   <!-- Tailwind CSS CDN -->
+   <script src="https://cdn.tailwindcss.com"></script>
+   <!-- Inter Font -->
+   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+   <style>
+       /* --- Theme Variables --- */
+       :root {
+           --bg-primary: #000;
+           --bg-secondary: #111;
+           --text-primary: #fff;
+           --accent: #fff;
+           --card-bg: #222;
+           --accent-rgb: 255, 255, 255;
+       }
+       body.theme-cyan {
+           --bg-primary: #000c0c;
+           --bg-secondary: #072a2c;
+           --text-primary: #e0ffff;
+           --accent: #00f6ff;
+           --card-bg: #041f21;
+           --accent-rgb: 0, 246, 255;
+       }
+       body.theme-purple {
+           --bg-primary: #0d001a;
+           --bg-secondary: #14002b;
+           --text-primary: #f3e8ff;
+           --accent: #cc66ff;
+           --card-bg: #1d0036;
+           --accent-rgb: 204, 102, 255;
+       }
+       body.theme-green {
+           --bg-primary: #001a00;
+           --bg-secondary: #002b00;
+           --text-primary: #e6ffe6;
+           --accent: #66ff66;
+           --card-bg: #003600;
+           --accent-rgb: 102, 255, 102;
+       }
+       body.theme-blackwhite {
+           --bg-primary: #000;
+           --bg-secondary: #111;
+           --text-primary: #fff;
+           --accent: #fff;
+           --card-bg: #222;
+           --accent-rgb: 255, 255, 255;
+       }
 
-        /* --- Global Styles --- */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            transition: background-color 0.6s, color 0.6s;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-        .transition-all { transition: all 0.6s ease; }
+       /* --- Global Styles --- */
+       body {
+           font-family: 'Inter', sans-serif;
+           background-color: var(--bg-primary);
+           color: var(--text-primary);
+           min-height: 100vh;
+           transition: background-color 0.6s, color 0.6s;
+           display: flex;
+           flex-direction: column;
+           overflow-x: hidden;
+       }
+       .transition-all { transition: all 0.6s ease; }
 
-        /* --- Particle System Styles --- */
-        .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
-        .particle { position: absolute; border-radius: 50%; background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform; }
+       /* --- Particle System Styles --- */
+       .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+       .particle { position: absolute; border-radius: 50%; background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform; }
 
-        /* --- Header Styles --- */
-        header.main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 5%;
-            background-color: var(--bg-primary);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            position: relative;
-            z-index: 10;
-        }
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            text-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
-            text-decoration: none;
-        }
-        .theme-controls { display: flex; gap: 10px; align-items: center; }
-        .dropdown-button {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--accent);
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-        }
-        .dropdown-button:hover { background: var(--accent); color: var(--bg-primary); }
-        .dropdown-container { position: relative; }
-        .dropdown-container:hover .dropdown-options { display: block; }
-        .dropdown-options {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 10px;
-            min-width: 150px;
-            z-index: 20;
-        }
-        .dropdown-options button, .dropdown-options a {
-            background: none; border: none; color: var(--text-primary);
-            padding: 8px; cursor: pointer; text-align: left; width: 100%;
-            font-size: 0.9rem; display: block; text-decoration: none;
-        }
-        .dropdown-options button:hover, .dropdown-options a:hover { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+       /* --- Header Styles --- */
+       header.main-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           padding: 1rem 5%;
+           background-color: var(--bg-primary);
+           box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+           position: relative;
+           z-index: 10;
+       }
+       .logo {
+           font-size: 2rem;
+           font-weight: bold;
+           color: var(--text-primary);
+           text-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
+           text-decoration: none;
+       }
+       .theme-controls { display: flex; gap: 10px; align-items: center; }
+       .dropdown-button {
+           background: var(--card-bg);
+           color: var(--text-primary);
+           border: 1px solid var(--accent);
+           padding: 8px 15px;
+           border-radius: 20px;
+           cursor: pointer;
+           font-size: 0.9rem;
+           transition: all 0.3s;
+       }
+       .dropdown-button:hover { background: var(--accent); color: var(--bg-primary); }
+       .dropdown-container { position: relative; }
+       .dropdown-container:hover .dropdown-options { display: block; }
+       .dropdown-options {
+           display: none;
+           position: absolute;
+           top: 100%;
+           right: 0;
+           background-color: var(--card-bg);
+           border-radius: 8px;
+           padding: 10px;
+           min-width: 150px;
+           z-index: 20;
+       }
+       .dropdown-options button, .dropdown-options a {
+           background: none; border: none; color: var(--text-primary);
+           padding: 8px; cursor: pointer; text-align: left; width: 100%;
+           font-size: 0.9rem; display: block; text-decoration: none;
+       }
+       .dropdown-options button:hover, .dropdown-options a:hover { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 
-        /* --- Hero Section --- */
-        .hero { text-align: center; padding: 2rem 1rem; position: relative; z-index: 5; }
-        .hero h1 {
-            font-size: clamp(2.5rem, 5vw, 3.2rem);
-            color: var(--text-primary);
-            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-            margin-bottom: 0.5rem;
-        }
-        .hero p {
-            font-size: clamp(1rem, 2.5vw, 1.2rem);
-            margin-bottom: 1.5rem;
-            text-shadow: 0 0 8px var(--accent);
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            color: var(--text-primary);
-        }
+       /* --- Hero Section --- */
+       .hero { text-align: center; padding: 2rem 1rem; position: relative; z-index: 5; }
+       .hero h1 {
+           font-size: clamp(2.5rem, 5vw, 3.2rem);
+           color: var(--text-primary);
+           text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+           margin-bottom: 0.5rem;
+       }
+       .hero p {
+           font-size: clamp(1rem, 2.5vw, 1.2rem);
+           margin-bottom: 1.5rem;
+           text-shadow: 0 0 8px var(--accent);
+           max-width: 600px;
+           margin-left: auto;
+           margin-right: auto;
+           color: var(--text-primary);
+       }
 
-        /* --- Grader Container Styles --- */
-        .grader-container {
-            max-width: 1000px;
-            width: 95%;
-            margin: 0 auto 2rem auto;
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0, 0.5);
-            padding: 1.5rem;
-            position: relative;
-            z-index: 5;
-            color: var(--text-primary);
-        }
+       /* --- Grader Container Styles --- */
+       .grader-container {
+           max-width: 1000px;
+           width: 95%;
+           margin: 0 auto 2rem auto;
+           background: var(--card-bg);
+           border-radius: 12px;
+           box-shadow: 0 4px 12px rgba(0,0,0, 0.5);
+           padding: 1.5rem;
+           position: relative;
+           z-index: 5;
+           color: var(--text-primary);
+       }
 
-        /* --- Form & Input Styles --- */
-        .step-content { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+       /* --- Form & Input Styles --- */
+       .step-content { animation: fadeIn 0.5s ease-in-out; }
+       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        textarea, input[type="text"], input[type="file"] {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            padding: 12px;
-            width: 100%;
-        }
-        textarea:focus, input[type="text"]:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
-        }
-        textarea { min-height: 120px; resize: vertical; }
+       textarea, input[type="text"], input[type="file"] {
+           background: var(--bg-secondary);
+           color: var(--text-primary);
+           border: 1px solid var(--accent);
+           border-radius: 8px;
+           padding: 12px;
+           width: 100%;
+       }
+       textarea:focus, input[type="text"]:focus {
+           outline: none;
+           box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
+       }
+       textarea { min-height: 120px; resize: vertical; }
 
-        /* File input custom button */
-        input[type="file"] { display: none; }
-        .file-input-label {
-            display: inline-block;
-            background: var(--bg-secondary);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-        }
-        .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
+       /* File input custom button */
+       input[type="file"] { display: none; }
+       .file-input-label {
+           display: inline-block;
+           background: var(--bg-secondary);
+           color: var(--accent);
+           border: 1px solid var(--accent);
+           padding: 8px 16px;
+           border-radius: 20px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.3s;
+           text-align: center;
+       }
+       .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
 
-        /* Strictness slider */
-        input[type="range"] {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; height: 10px; background: var(--bg-secondary);
-            border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s;
-        }
-        input[type="range"]:hover { opacity: 1; }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 25px; height: 25px; border-radius: 50%;
-            background: var(--accent); cursor: pointer;
-            box-shadow: 0 0 5px var(--accent);
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 25px; height: 25px; border-radius: 50%;
-            background: var(--accent); cursor: pointer;
-            box-shadow: 0 0 5px var(--accent);
-        }
+       /* Strictness slider */
+       input[type="range"] {
+           -webkit-appearance: none; appearance: none;
+           width: 100%; height: 10px; background: var(--bg-secondary);
+           border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s;
+       }
+       input[type="range"]:hover { opacity: 1; }
+       input[type="range"]::-webkit-slider-thumb {
+           -webkit-appearance: none; appearance: none;
+           width: 25px; height: 25px; border-radius: 50%;
+           background: var(--accent); cursor: pointer;
+           box-shadow: 0 0 5px var(--accent);
+       }
+       input[type="range"]::-moz-range-thumb {
+           width: 25px; height: 25px; border-radius: 50%;
+           background: var(--accent); cursor: pointer;
+           box-shadow: 0 0 5px var(--accent);
+       }
 
-        /* --- Buttons --- */
-        .nav-button, button#grade-button, .clear-button {
-            background: var(--accent);
-            color: var(--bg-primary);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
-            border: none;
-            cursor: pointer;
-        }
-        .nav-button:hover, button#grade-button:hover, .clear-button:hover {
-            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8);
-            transform: translateY(-2px);
-        }
-        .nav-button:disabled, button#grade-button:disabled {
-            background: #555 !important;
-            color: #999 !important;
-            cursor: not-allowed !important;
-            box-shadow: none !important;
-            transform: none !important;
-        }
-        .clear-button { background: #4a5568; color: #fff; }
-        .clear-button:hover { background: #2d3748; }
+       /* --- Buttons --- */
+       .nav-button, button#grade-button, .clear-button {
+           background: var(--accent);
+           color: var(--bg-primary);
+           padding: 10px 20px;
+           border-radius: 30px;
+           font-weight: bold;
+           font-size: 1rem;
+           transition: all 0.3s ease;
+           box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+           border: none;
+           cursor: pointer;
+       }
+       .nav-button:hover, button#grade-button:hover, .clear-button:hover {
+           box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8);
+           transform: translateY(-2px);
+       }
+       .nav-button:disabled, button#grade-button:disabled {
+           background: #555 !important;
+           color: #999 !important;
+           cursor: not-allowed !important;
+           box-shadow: none !important;
+           transform: none !important;
+       }
+       .clear-button { background: #4a5568; color: #fff; }
+       .clear-button:hover { background: #2d3748; }
 
 
-        /* --- Messages & Indicators --- */
-        #loading-indicator svg, #loading-indicator span { color: var(--accent); }
-        #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
-        #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
+       /* --- Messages & Indicators --- */
+       #loading-indicator svg, #loading-indicator span { color: var(--accent); }
+       #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
+       #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
 
-        /* --- Results & File List --- */
-        #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
-        #grade-result h2 { color: var(--accent); }
-        .prose { color: var(--text-primary); word-break: break-word; }
-        .prose h1, .prose h2, .prose h3 { color: var(--accent); }
-        .prose a { color: var(--accent); text-decoration: underline; }
-        .prose strong { color: var(--text-primary); }
-        .prose ul > li::before { background-color: var(--accent); }
+       /* --- Results & File List --- */
+       #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+       #grade-result h2 { color: var(--accent); }
+       .prose { color: var(--text-primary); word-break: break-word; }
+       .prose h1, .prose h2, .prose h3 { color: var(--accent); }
+       .prose a { color: var(--accent); text-decoration: underline; }
+       .prose strong { color: var(--text-primary); }
+       .prose ul > li::before { background-color: var(--accent); }
 
-        .file-list { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
-        .file-list.expanded { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
-        .file-list-item {
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--accent);
-            padding: 0.5rem;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-        .file-list-item button {
-            background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer;
-            line-height: 1; padding: 0.2rem;
-        }
-        .file-list-item button:hover { color: #ff4d4d; }
+       .file-list { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+       .file-list.expanded { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
+       .file-list-item {
+           background-color: var(--bg-secondary);
+           color: var(--text-primary);
+           border: 1px solid var(--accent);
+           padding: 0.5rem;
+           border-radius: 6px;
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 0.5rem;
+           font-size: 0.9rem;
+       }
+       .file-list-item button {
+           background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer;
+           line-height: 1; padding: 0.2rem;
+       }
+       .file-list-item button:hover { color: #ff4d4d; }
 
-        /* --- Layout & Spacing Adjustments --- */
-        .step-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .step-header .btn-container {
-            flex: 1 0 0;
-        }
-        .step-header .title {
-            flex: 2 1 auto;
-            text-align: center;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0 1rem;
-        }
-        .description-text {
-            min-height: 80px;
-            line-height: 1.5;
-            font-size: 0.875rem;
-            color: #ccc;
-        }
-        .action-area {
-            display: none; /* Hidden by default, shown on last step */
-        }
-        footer.main-footer {
-            text-align: center;
-            padding: 1rem;
-            font-size: 0.9rem;
-            color: var(--text-primary);
-            text-shadow: 0 0 5px var(--accent);
-            background-color: var(--bg-secondary);
-            position: relative;
-            z-index: 10;
-            margin-top: auto;
-        }
-    </style>
+       /* --- Layout & Spacing Adjustments --- */
+       .step-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: 1rem;
+       }
+       .step-header .btn-container {
+           flex: 1 0 0;
+       }
+       .step-header .title {
+           flex: 2 1 auto;
+           text-align: center;
+           font-size: 1.25rem;
+           font-weight: 600;
+           margin: 0 1rem;
+       }
+       .description-text {
+           min-height: 80px;
+           line-height: 1.5;
+           font-size: 0.875rem;
+           color: #ccc;
+       }
+       .action-area {
+           display: none; /* Hidden by default, shown on last step */
+       }
+       footer.main-footer {
+           text-align: center;
+           padding: 1rem;
+           font-size: 0.9rem;
+           color: var(--text-primary);
+           text-shadow: 0 0 5px var(--accent);
+           background-color: var(--bg-secondary);
+           position: relative;
+           z-index: 10;
+           margin-top: auto;
+       }
+   </style>
 </head>
 <body class="theme-blackwhite transition-all">
     <div class="particles-container" id="particles"></div>
 
     <header class="main-header transition-all">
-        <a href="#" class="logo">SHKSPR</a>
+        <a href="../index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
             <div class="dropdown-container">
                 <button class="dropdown-button">🛠️ Tools</button>
                 <div class="dropdown-options">
-                    <a href="#">AI Humanizer</a>
-                    <a href="#">AI Grader</a>
+                    <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="./Grader.html">AI Grader</a>
                 </div>
             </div>
             <div class="dropdown-container">
@@ -470,6 +466,7 @@
                 this.y = Math.random() * window.innerHeight;
                 this.vx = (Math.random() - 0.5) * 1.5;
                 this.vy = (Math.random() - 0.5) * 1.5;
+                this.opacity = Math.random() * 0.5 + 0.3;
                 this.element.style.width = `${this.size}px`;
                 this.element.style.height = `${this.size}px`;
                 this.update();
@@ -502,6 +499,8 @@
 
         // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
+            let googleApiKey = null; // Will store the fetched Google API key
+
             const dom = {
                 steps: Array.from(document.querySelectorAll('.step-content')),
                 actionArea: document.getElementById('action-area'),
@@ -613,6 +612,13 @@
                 toggleLoading(true);
 
                 try {
+                    // Ensure googleApiKey is fetched before proceeding
+                    if (!googleApiKey) {
+                        displayMessage(dom.errorMessageDiv, "API key not loaded. Please wait or refresh the page.", true);
+                        toggleLoading(false);
+                        return;
+                    }
+
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
                     const essayData = await getProcessedSectionContent('essay', fileInputs[2].data);
@@ -624,29 +630,111 @@
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
                     
-                    const payload = {
-                        instructionsData,
-                        rubricData,
-                        essayData,
-                        extraInstructions,
-                        strictness
+                    const contents = [];
+
+                    // System-like prompt incorporated into the first user part
+                    contents.push({
+                        role: "user",
+                        parts: [{ text: `
+                        You are an AI assignment grader. Your task is to evaluate an assignment based on provided instructions and a specific rubric.
+
+                        ---
+                        Grading Strictness Level: ${strictness} (1 = Very Lenient, 5 = Very Strict).
+                        - When strictness is **4 or 5 (Strict/Very Strict)**: Identify *all* errors, even minor ones. Be highly critical and apply **significant point deductions** for deviations from instructions, rubric, or quality standards. Focus on precision and flawlessness.
+                        - When strictness is **2 or 3 (Lenient/Normal)**: Be more forgiving of minor errors. Focus on overall understanding, effort, and major concepts. Apply **fewer point deductions** for small imperfections, emphasizing growth and broader achievement.
+                        - Tailor your feedback and numerical grade (if applicable) to reflect this chosen strictness, ensuring consistency in your scoring.
+                        ---
+
+                        ${extraInstructions ? `
+                        ---
+                        ***URGENT: CRITICAL ADDITIONAL INSTRUCTIONS FOR GRADING THIS ASSIGNMENT!***
+                        ***Please pay extremely close attention to the following and prioritize them above all other general grading guidelines:***
+                        ${extraInstructions}
+                        ***END OF CRITICAL INSTRUCTIONS.***
+                        ---
+                        ` : ''}
+
+                        Provide a detailed grade and feedback, addressing each point of the rubric.
+                        `}]
+                    });
+
+                    // Helper to add combined text and image parts to Gemini's 'contents' array
+                    const addSectionToGeminiContents = (data, label) => {
+                        if (data.combinedText || data.imageParts.length > 0) {
+                            const sectionParts = [];
+                            sectionParts.push({ text: `\n--- ${label} ---\n` }); // Section header for AI clarity
+
+                            if (data.combinedText) {
+                                sectionParts.push({ text: data.combinedText + '\n' });
+                            }
+
+                            data.imageParts.forEach(imgPart => {
+                                sectionParts.push({ text: `\n(Image: ${imgPart.filename}) Please refer to the content in this image:` });
+                                sectionParts.push({
+                                    inlineData: {
+                                        mimeType: imgPart.mimeType,
+                                        data: imgPart.data
+                                    }
+                                });
+                            });
+                            contents.push({ role: 'user', parts: sectionParts });
+                        }
                     };
 
-                    // Fetch from the backend API
-                    const response = await fetch('/api/Grader_API', {
+                    addSectionToGeminiContents(instructionsData, "ASSIGNMENT INSTRUCTIONS");
+                    addSectionToGeminiContents(rubricData, "GRADING RUBRIC");
+                    addSectionToGeminiContents(essayData, "ASSIGNMENT TO BE GRADED"); // Label changed to Assignment
+
+                    // Add the final formatting instruction
+                    contents.push({
+                        role: "user",
+                        parts: [{ text: `
+                        ---
+                        Please provide your feedback and grade in the following structured Markdown format. Use extra line breaks where appropriate to improve readability between sections and paragraphs.
+
+                        # Overall Grade: [Your calculated grade based on the rubric, e.g., A, B+, 85/100, etc.]
+
+                        ---
+
+                        ## Detailed Feedback:
+
+                        * **Criterion 1 (from Rubric):**
+                          [Evaluation for this criterion, strengths, weaknesses, and suggestions for improvement. Use bullet points for strengths, weaknesses, and suggestions if applicable. Ensure there is vertical spacing between points.]
+
+                        * **Criterion 2 (from Rubric):**
+                          [Evaluation for this criterion, strengths, weaknesses, and suggestions for improvement. Ensure there is vertical spacing between points.]
+
+                        * ... (Continue for all relevant rubric criteria, ensuring clear headings, ample vertical spacing, and bullet points for each criterion's evaluation, strengths, weaknesses, and suggestions.)
+
+                        ---
+
+                        ## General Comments:
+                        [Any additional overall feedback, summary of major strengths, or overarching areas for growth. Ensure good paragraph spacing.]
+
+                        ---
+
+                        ## What to Work On to Improve:
+                        [Provide clear, actionable steps for improvement. Use numbered lists or bulleted lists for clarity. Each point should be a specific suggestion based on the weaknesses identified in the detailed feedback. Ensure good vertical spacing between points.]
+                    `}]
+                    });
+
+                    const PRIMARY_GEMINI_MODEL = "gemini-2.0-flash-lite"; // Most cost-efficient and generally available
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${PRIMARY_GEMINI_MODEL}:generateContent?key=${googleApiKey}`;
+
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ contents: contents })
                     });
 
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(`Server Error: ${errorData.error || response.statusText}`);
+                        throw new Error(`Google Gemini API error: ${errorData.error?.message || response.statusText}`);
                     }
 
                     const result = await response.json();
-                    const text = result.text;
-                    if (!text) throw new Error("Received an empty response from the server.");
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) throw new Error("Received an empty or malformed response from the AI.");
 
                     dom.resultContentDiv.innerHTML = marked.parse(text);
                     dom.gradeResultDiv.classList.remove('hidden');
@@ -715,14 +803,17 @@
             });
 
             // --- Init ---
-            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => setTheme('blackwhite'));
-            document.getElementById('theme-cyan-btn').addEventListener('click', () => setTheme('cyan'));
-            document.getElementById('theme-purple-btn').addEventListener('click', () => setTheme('purple'));
-            document.getElementById('theme-green-btn').addEventListener('click', () => setTheme('green'));
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
             
             const savedTheme = localStorage.getItem('shkspr-theme') || 'cyan';
-            setTheme(savedTheme);
-            showStep(0);
+            window.setTheme(savedTheme);
+            showStep(0); // Ensure the initial step is shown
+
+            // Fetch API key on app initialization
+            fetchAppConfigs();
         });
     </script>
 </body>
