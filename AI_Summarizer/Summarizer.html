@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Audio & YouTube Summarization</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Inter font and general layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align items to the start to prevent vertical centering issues with long content */
+            min-height: 100vh;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 90%; /* Responsive width */
+            width: 800px; /* Max width for larger screens */
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            padding: 2rem;
+            text-align: center;
+        }
+        .button {
+            background-color: #4f46e5; /* Indigo 600 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* Slightly rounded buttons */
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        .button:hover {
+            background-color: #4338ca; /* Indigo 700 on hover */
+        }
+        .button:disabled {
+            background-color: #9ca3af; /* Gray 400 */
+            cursor: not-allowed;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #ef4444; /* Red 500 */
+            background-color: #fee2e2; /* Red 100 */
+            border: 1px solid #ef4444;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            text-align: left;
+        }
+        .data-display {
+            margin-top: 1.5rem;
+            text-align: left;
+            background-color: #f9fafb; /* Lightest gray */
+            padding: 1rem;
+            border-radius: 0.75rem;
+            max-height: 400px; /* Limit height for scrollability */
+            overflow-y: auto; /* Enable vertical scrolling */
+            word-wrap: break-word; /* Ensure long words wrap */
+        }
+        .data-display pre {
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+            word-wrap: break-word; /* Break long words */
+        }
+        .file-input-wrapper {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .file-input-wrapper input[type="file"] {
+            display: none; /* Hide the default file input */
+        }
+        .custom-file-upload {
+            border: 2px dashed #cbd5e1; /* Slate 300 */
+            background-color: #f8fafc; /* Blue Gray 50 */
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            color: #475569; /* Slate 600 */
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .custom-file-upload:hover {
+            background-color: #e2e8f0; /* Slate 200 */
+            border-color: #94a3b8; /* Slate 400 */
+        }
+        .file-name-display {
+            font-size: 0.875rem; /* text-sm */
+            color: #64748b; /* Slate 500 */
+            margin-top: 0.5rem;
+        }
+        .prompt-input-group {
+            margin-top: 1rem;
+            text-align: left;
+            width: 100%;
+        }
+        .prompt-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151; /* Gray 700 */
+        }
+        .prompt-input-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db; /* Gray 300 */
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            min-height: 80px;
+            resize: vertical;
+        }
+        .slider-group {
+            margin-top: 1rem;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .slider-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            width: 100%;
+            text-align: center;
+        }
+        .slider-group input[type="range"] {
+            width: 80%;
+            -webkit-appearance: none;
+            height: 8px;
+            background: #d1d5db;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        .slider-group input[type="range"]:hover {
+            opacity: 1;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .slider-value {
+            margin-top: 0.5rem;
+            font-weight: 500;
+            color: #475569;
+        }
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .mode-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid #e5e7eb;
+            background-color: #f9fafb;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+        }
+        .mode-button:hover {
+            background-color: #f3f4f5;
+        }
+        .mode-button.active {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+            color: #4f46e5;
+        }
+        .input-section {
+            margin-bottom: 1.5rem;
+        }
+        .youtube-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            box-sizing: border-box;
+        }
+        .note {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+            text-align: left;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Gemini Audio & YouTube Summarization</h1>
+        <p class="text-gray-600 mb-6">
+            Upload an audio file (MP3, M4A) or provide a YouTube link to transcribe and summarize it using the Gemini AI model.
+        </p>
+        
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <div class="mode-button active" data-mode="file">Upload Audio File</div>
+            <div class="mode-button" data-mode="youtube">YouTube Link</div>
+        </div>
+
+        <!-- Section for audio summarization -->
+        <div class="p-4 border border-gray-200 rounded-lg">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Summarize Content</h2>
+            
+            <!-- File Input Section -->
+            <div class="input-section" id="fileInputSection">
+                <div class="file-input-wrapper">
+                    <label for="audioFileInput" class="custom-file-upload">
+                        Choose Audio File (MP3, M4A)
+                    </label>
+                    <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
+                    <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+                </div>
+            </div>
+            
+            <!-- YouTube Input Section (Hidden by default) -->
+            <div class="input-section hidden" id="youtubeInputSection">
+                <label for="youtubeLinkInput" class="block text-left font-medium text-gray-700 mb-2">YouTube Video Link:</label>
+                <input type="text" id="youtubeLinkInput" class="youtube-input" placeholder="https://www.youtube.com/watch?v=...">
+                <p class="note">Note: This extracts the auto-generated transcript. The video must have captions enabled.</p>
+            </div>
+            
+            <div class="slider-group">
+                <label for="concisenessSlider">Conciseness (1-10):</label>
+                <input type="range" id="concisenessSlider" min="1" max="10" value="5">
+                <span id="concisenessValue" class="slider-value">5</span>
+            </div>
+            <div class="prompt-input-group">
+                <label for="summarizationPrompt">Summarization Prompt:</label>
+                <textarea id="summarizationPrompt" rows="4"></textarea>
+            </div>
+            <button id="processBtn" class="button flex items-center justify-center mx-auto mt-4" disabled>
+                Process Content
+                <span id="processLoadingIndicator" class="loading-spinner hidden"></span>
+            </button>
+            <!-- Error message display for processing -->
+            <div id="processErrorMessage" class="error-message hidden"></div>
+            <!-- Transcribed Text display area -->
+            <div id="transcribedTextDisplay" class="data-display hidden">
+                <h2 class="text-xl font-semibold text-gray-700 mb-2">Transcribed Text:</h2>
+                <pre id="transcribedTextContent" class="text-sm text-gray-800"></pre>
+            </div>
+            <!-- Summary display area -->
+            <div id="summaryDisplay" class="data-display hidden">
+                <h2 class="text-xl font-semibold text-gray-700 mb-2">Summary:</h2>
+                <pre id="summaryContent" class="text-sm text-gray-800"></pre>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Gemini API Configuration
+        // IMPORTANT: For production applications, store your API key securely on a backend server
+        // and proxy requests to the Gemini API. Do NOT expose your API key directly in client-side code.
+        const GEMINI_API_KEY = 'AIzaSyAatoDhPEli6dZRMpk9Ab1fC4Kn8kN4tC0'; // Your Gemini API Key
+        // Free multimodal models from ai.google.dev/gemini-api/docs/models that support text output
+        const ALL_GEMINI_MODELS = [
+            'gemini-2.5-flash',
+            'gemini-2.5-flash-lite-preview-06-17',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-8b'
+            // Excluded: TTS models, Image/Video generation models, Embedding models, 1.5-pro (more expensive)
+        ];
+        const MAX_RETRIES = ALL_GEMINI_MODELS.length; // Max retries equals the number of available models
+        
+        // DOM Elements
+        const audioFileInput = document.getElementById('audioFileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const youtubeLinkInput = document.getElementById('youtubeLinkInput');
+        const processBtn = document.getElementById('processBtn');
+        const processLoadingIndicator = document.getElementById('processLoadingIndicator');
+        const processErrorMessageDiv = document.getElementById('processErrorMessage');
+        const transcribedTextDisplay = document.getElementById('transcribedTextDisplay');
+        const transcribedTextContent = document.getElementById('transcribedTextContent');
+        const summaryDisplay = document.getElementById('summaryDisplay');
+        const summaryContent = document.getElementById('summaryContent');
+        const summarizationPromptInput = document.getElementById('summarizationPrompt');
+        const concisenessSlider = document.getElementById('concisenessSlider');
+        const concisenessValueSpan = document.getElementById('concisenessValue');
+        const fileInputSection = document.getElementById('fileInputSection');
+        const youtubeInputSection = document.getElementById('youtubeInputSection');
+        const modeButtons = document.querySelectorAll('.mode-button');
+        
+        // State
+        let currentMode = 'file'; // 'file' or 'youtube'
+        
+        // Utility Functions
+        function hideElement(element) {
+            element.classList.add('hidden');
+        }
+        function showElement(element) {
+            element.classList.remove('hidden');
+        }
+        function displayError(errorDiv, message) {
+            errorDiv.textContent = `Error: ${message}`;
+            showElement(errorDiv);
+        }
+        function clearError(errorDiv) {
+            hideElement(errorDiv);
+            errorDiv.textContent = '';
+        }
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+        function generateSummarizationPrompt(concisenessLevel) {
+            if (concisenessLevel >= 1 && concisenessLevel <= 2) {
+                return "Provide a very brief, one-sentence summary of the main idea:";
+            } else if (concisenessLevel >= 3 && concisenessLevel <= 4) {
+                return "Summarize in 2-3 key bullet points, focusing on main topics:";
+            } else if (concisenessLevel >= 5 && concisenessLevel <= 6) {
+                return "Summarize concisely in 3-5 key bullet points, highlighting main topics and conclusions:";
+            } else if (concisenessLevel >= 7 && concisenessLevel <= 8) {
+                return "Provide a detailed summary including all major points and supporting details:";
+            } else if (concisenessLevel >= 9 && concisenessLevel <= 10) {
+                return "Generate a comprehensive summary including all significant information and arguments:";
+            }
+            return "Summarize the following text:";
+        }
+        function updateSummarizationPrompt() {
+            const level = parseInt(concisenessSlider.value, 10);
+            concisenessValueSpan.textContent = level;
+            summarizationPromptInput.value = generateSummarizationPrompt(level);
+        }
+        
+        // Mode Switching
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update UI
+            modeButtons.forEach(button => {
+                if (button.dataset.mode === mode) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+            
+            // Show/hide appropriate sections
+            if (mode === 'file') {
+                fileInputSection.classList.remove('hidden');
+                youtubeInputSection.classList.add('hidden');
+                processBtn.disabled = !audioFileInput.files.length;
+            } else {
+                fileInputSection.classList.add('hidden');
+                youtubeInputSection.classList.remove('hidden');
+                processBtn.disabled = youtubeLinkInput.value.trim() !== '';
+            }
+            
+            // Clear previous results
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+        }
+        
+        // Validation Functions
+        function isValidYouTubeUrl(url) {
+            const regExp = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
+            return regExp.test(url);
+        }
+        function getYouTubeVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+        
+        // YouTube Transcript Extraction (Simulated)
+        // In a real implementation, this would call a backend service
+        async function fetchYouTubeTranscript(videoId) {
+            // Simulate API call delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // This is a placeholder - in reality, you'd call your backend
+            // which uses youtube-transcript-api or similar to get the real transcript
+            return `Simulated transcript for YouTube video ID: ${videoId}
+
+This is a demonstration of how YouTube transcript summarization would work.
+In a production environment, this text would be the actual transcript extracted
+from the YouTube video using a backend service that utilizes libraries like
+youtube-transcript-api (Python) or equivalent.
+
+The transcript would contain the spoken content of the video, which can then
+be sent to the Gemini API for summarization just like any other text.`;
+        }
+        
+        // Gemini API Interaction
+        async function summarizeTextWithGemini(text, prompt, retriesLeft = MAX_RETRIES, triedModels = new Set()) {
+            // Filter out models that have already been tried
+            const availableModels = ALL_GEMINI_MODELS.filter(model => !triedModels.has(model));
+            if (availableModels.length === 0) {
+                throw new Error('All available models have been tried and failed for summarization.');
+            }
+
+            // Randomly select a model
+            const currentModel = availableModels[Math.floor(Math.random() * availableModels.length)];
+            triedModels.add(currentModel);
+            const currentGeminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({
+                    role: "user",
+                    parts: [{ text: `${prompt}\n${text}` }]
+                });
+
+                const summarizationPayload = { contents: chatHistory };
+                const summarizationResponse = await fetch(currentGeminiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(summarizationPayload)
+                });
+
+                if (!summarizationResponse.ok) {
+                    const errorData = await summarizationResponse.json().catch(() => ({ message: summarizationResponse.statusText }));
+                    const errorMessage = `Summarization failed with status ${summarizationResponse.status}: ${errorData.message || JSON.stringify(errorData)}`;
+                    throw new Error(errorMessage);
+                }
+
+                const summarizationResult = await summarizationResponse.json();
+                let summary = "Could not generate summary.";
+
+                if (summarizationResult.candidates && summarizationResult.candidates.length > 0 &&
+                    summarizationResult.candidates[0].content && summarizationResult.candidates[0].content.parts &&
+                    summarizationResult.candidates[0].content.parts.length > 0) {
+                    summary = summarizationResult.candidates[0].content.parts[0].text;
+                }
+
+                return summary;
+            } catch (error) {
+                console.error(`Summarization error with model ${currentModel}:`, error);
+                const isRetryableError = (error.message.includes('status 400') && 
+                    (error.message.includes('context window') || error.message.includes('too large') || error.message.includes('input_text_too_long'))) ||
+                    (error.message.includes('status 503') && error.message.includes('overloaded'));
+                
+                if (isRetryableError && retriesLeft > 1) {
+                    console.warn(`Retrying summarization with another model... Retries left: ${retriesLeft - 1}`);
+                    return summarizeTextWithGemini(text, prompt, retriesLeft - 1, triedModels);
+                } else {
+                    throw error;
+                }
+            }
+        }
+        
+        // Main Processing Functions
+        async function processAudioFile() {
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+            showElement(processLoadingIndicator);
+            processBtn.disabled = true;
+            
+            const file = audioFileInput.files[0];
+            if (!file) {
+                displayError(processErrorMessageDiv, 'Please select an audio file first.');
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            // Check file size (practical limit for inline upload)
+            const MAX_INLINE_FILE_SIZE_MB = 100000;
+            const fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > MAX_INLINE_FILE_SIZE_MB) {
+                displayError(processErrorMessageDiv,
+                    `File size (${fileSizeMB.toFixed(2)} MB) exceeds the limit for direct upload (${MAX_INLINE_FILE_SIZE_MB} MB). ` +
+                    `For larger files, consider using the Gemini Files API.`);
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            try {
+                // 1. Convert audio file to Base64
+                const base64Audio = await fileToBase64(file);
+                
+                // 2. Send audio for transcription to Gemini
+                const transcriptionModels = ALL_GEMINI_MODELS.filter(m => 
+                    m.includes('flash') && !m.includes('lite') && !m.includes('8b')
+                );
+                const transcriptionModel = transcriptionModels[Math.floor(Math.random() * transcriptionModels.length)];
+                const transcriptionApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${transcriptionModel}:generateContent?key=${GEMINI_API_KEY}`;
+                
+                const transcriptionPayload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: "Transcribe the following audio exactly as spoken:" },
+                            {
+                                inlineData: {
+                                    mimeType: file.type,
+                                     base64Audio
+                                }
+                            }
+                        ]
+                    }]
+                };
+                
+                const transcriptionResponse = await fetch(transcriptionApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transcriptionPayload)
+                });
+                
+                if (!transcriptionResponse.ok) {
+                    const errorData = await transcriptionResponse.json().catch(() => ({ message: transcriptionResponse.statusText }));
+                    throw new Error(`Transcription failed: ${errorData.message || transcriptionResponse.statusText}`);
+                }
+                
+                const transcriptionResult = await transcriptionResponse.json();
+                let transcribedText = "Could not transcribe audio.";
+                if (transcriptionResult.candidates && transcriptionResult.candidates.length > 0 &&
+                    transcriptionResult.candidates[0].content && transcriptionResult.candidates[0].content.parts &&
+                    transcriptionResult.candidates[0].content.parts.length > 0) {
+                    transcribedText = transcriptionResult.candidates[0].content.parts[0].text;
+                }
+                
+                transcribedTextContent.textContent = transcribedText;
+                showElement(transcribedTextDisplay);
+                
+                // 3. Summarize the transcribed text
+                const summarizationPrompt = summarizationPromptInput.value;
+                const summary = await summarizeTextWithGemini(transcribedText, summarizationPrompt);
+                
+                summaryContent.textContent = summary;
+                showElement(summaryDisplay);
+                
+            } catch (error) {
+                console.error('Failed to process audio:', error);
+                displayError(processErrorMessageDiv, error.message);
+            } finally {
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+            }
+        }
+        
+        async function processYouTubeLink() {
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+            showElement(processLoadingIndicator);
+            processBtn.disabled = true;
+            
+            const youtubeUrl = youtubeLinkInput.value.trim();
+            if (!youtubeUrl) {
+                displayError(processErrorMessageDiv, 'Please enter a YouTube video link.');
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            if (!isValidYouTubeUrl(youtubeUrl)) {
+                displayError(processErrorMessageDiv, 'Please enter a valid YouTube video link.');
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            const videoId = getYouTubeVideoId(youtubeUrl);
+            if (!videoId) {
+                displayError(processErrorMessageDiv, 'Could not extract video ID from the YouTube link.');
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            try {
+                // 1. Extract transcript from YouTube video
+                // Note: This is a simulated implementation
+                // In a real app, this would call your backend service
+                const transcribedText = await fetchYouTubeTranscript(videoId);
+                
+                if (!transcribedText || transcribedText.trim() === '') {
+                    throw new Error('Could not retrieve transcript for this video. It might not have captions enabled.');
+                }
+                
+                transcribedTextContent.textContent = transcribedText;
+                showElement(transcribedTextDisplay);
+                
+                // 2. Summarize the transcribed text
+                const summarizationPrompt = summarizationPromptInput.value;
+                const summary = await summarizeTextWithGemini(transcribedText, summarizationPrompt);
+                
+                summaryContent.textContent = summary;
+                showElement(summaryDisplay);
+                
+            } catch (error) {
+                console.error('Failed to process YouTube video:', error);
+                displayError(processErrorMessageDiv, error.message);
+            } finally {
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+            }
+        }
+        
+        // Event Listeners
+        audioFileInput.addEventListener('change', () => {
+            if (audioFileInput.files.length > 0) {
+                fileNameDisplay.textContent = audioFileInput.files[0].name;
+                if (currentMode === 'file') {
+                    processBtn.disabled = false;
+                }
+            } else {
+                fileNameDisplay.textContent = 'No file chosen';
+                if (currentMode === 'file') {
+                    processBtn.disabled = true;
+                }
+            }
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+        });
+        
+        youtubeLinkInput.addEventListener('input', () => {
+            if (youtubeLinkInput.value.trim()) {
+                if (currentMode === 'youtube') {
+                    processBtn.disabled = false;
+                }
+            } else {
+                if (currentMode === 'youtube') {
+                    processBtn.disabled = true;
+                }
+            }
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+        });
+        
+        modeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                switchMode(button.dataset.mode);
+            });
+        });
+        
+        concisenessSlider.addEventListener('input', updateSummarizationPrompt);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSummarizationPrompt();
+        });
+        
+        processBtn.addEventListener('click', () => {
+            if (currentMode === 'file') {
+                processAudioFile();
+            } else {
+                processYouTubeLink();
+            }
+        });
+    </script>
+</body>
+</html>
