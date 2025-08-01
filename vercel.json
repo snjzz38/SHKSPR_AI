@@ -28,12 +28,6 @@
       "src": "AI_Summarizer/Summarizer.html",
       "use": "@vercel/static"
     }
-    // You can add a catch-all static build if you have other static assets
-    // that are not explicitly listed, but the above covers your HTML files.
-    // {
-    //   "src": "/**",
-    //   "use": "@vercel/static"
-    // }
   ],
   "rewrites": [
     {
