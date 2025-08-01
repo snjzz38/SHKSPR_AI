@@ -29,6 +29,12 @@
       "use": "@vercel/static"
     }
   ],
+  "functions": {
+    "api/Summarizer_API.js": {
+      "memory": 2048,   
+      "maxDuration": 300 
+    }
+  },
   "rewrites": [
     {
       "source": "/api/humanizer",
