@@ -7,47 +7,249 @@
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for Inter font and general layout */
+        /* --- Theme Variables (from Humanizer.html) --- */
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
+            --accent-rgb: 255, 255, 255; /* Default for black & white */
+        }
+        body.theme-cyan {
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #e0ffff;
+            --accent: #00f6ff;
+            --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255;
+        }
+        body.theme-green {
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+            --accent-rgb: 102, 255, 102;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #e0e0e0;
+            --card-bg: #222;
+            --accent-rgb: 224, 224, 224;
+        }
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Align items to the start to prevent vertical centering issues with long content */
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 2rem;
+            display: flex;
+            flex-direction: column; /* Changed to column for header/hero/content flow */
+            justify-content: flex-start; /* Align items to the start */
+            align-items: center; /* Center horizontally */
+            padding: 0; /* Remove body padding, use padding in sections/container */
             box-sizing: border-box;
+            transition: background-color 0.6s, color 0.6s;
+            overflow-x: hidden;
         }
+        .transition-all {
+            transition: all 0.6s ease;
+        }
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+        header.main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+            width: 100%; /* Ensure header spans full width */
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none;
+            transition: all 0.6s ease;
+        }
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: relative;
+        }
+        .dropdown-button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .dropdown-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        .dropdown-container {
+            position: relative;
+        }
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
+        .dropdown-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 150px;
+            box-shadow: none !important;
+            z-index: 10;
+        }
+        .dropdown-options button,
+        .dropdown-options a {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none;
+        }
+        .dropdown-options button:hover,
+        .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 50px 20px 30px 20px;
+            position: relative;
+            z-index: 5;
+            width: 100%; /* Ensure hero spans full width */
+        }
+        .hero h1 {
+            font-size: 3.2rem;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent);
+            margin-bottom: 20px;
+            transition: all 0.6s ease;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 8px var(--accent);
+            max-width: 600px;
+            color: var(--text-primary);
+            transition: all 0.6s ease;
+        }
+
         .container {
-            max-width: 90%; /* Responsive width */
-            width: 800px; /* Max width for larger screens */
-            background-color: #ffffff;
-            border-radius: 1rem; /* Rounded corners */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            max-width: 90%;
+            width: 800px;
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             padding: 2rem;
             text-align: center;
+            transition: background-color 0.6s;
+            margin-top: 2rem; /* Add some space below the hero section */
+            margin-bottom: 2rem;
         }
         .button {
-            background-color: #4f46e5; /* Indigo 600 */
-            color: white;
+            background-color: var(--accent);
+            color: var(--bg-primary);
             padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem; /* Slightly rounded buttons */
+            border-radius: 0.5rem;
             font-weight: 600;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;
             border: none;
             outline: none;
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
         }
         .button:hover {
-            background-color: #4338ca; /* Indigo 700 on hover */
+            background-color: var(--text-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.7);
         }
         .button:disabled {
-            background-color: #9ca3af; /* Gray 400 */
+            background-color: #666;
             cursor: not-allowed;
+            box-shadow: none;
         }
         .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #4f46e5;
+            border: 4px solid rgba(var(--accent-rgb), 0.3);
+            border-left-color: var(--accent);
             border-radius: 50%;
             width: 24px;
             height: 24px;
@@ -61,8 +263,8 @@
             100% { transform: rotate(360deg); }
         }
         .error-message {
-            color: #ef4444; /* Red 500 */
-            background-color: #fee2e2; /* Red 100 */
+            color: #ef4444;
+            background-color: #fee2e2;
             border: 1px solid #ef4444;
             padding: 0.75rem;
             border-radius: 0.5rem;
@@ -72,16 +274,18 @@
         .data-display {
             margin-top: 1.5rem;
             text-align: left;
-            background-color: #f9fafb; /* Lightest gray */
+            background-color: var(--bg-secondary);
             padding: 1rem;
             border-radius: 0.75rem;
-            max-height: 400px; /* Limit height for scrollability */
-            overflow-y: auto; /* Enable vertical scrolling */
-            word-wrap: break-word; /* Ensure long words wrap */
+            max-height: 400px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            color: var(--text-primary);
+            transition: background-color 0.6s;
         }
         .data-display pre {
-            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
-            word-wrap: break-word; /* Break long words */
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         .file-input-wrapper {
             margin-bottom: 1rem;
@@ -90,26 +294,26 @@
             align-items: center;
         }
         .file-input-wrapper input[type="file"] {
-            display: none; /* Hide the default file input */
+            display: none;
         }
         .custom-file-upload {
-            border: 2px dashed #cbd5e1; /* Slate 300 */
-            background-color: #f8fafc; /* Blue Gray 50 */
+            border: 2px dashed var(--accent);
+            background-color: var(--bg-secondary);
             padding: 1rem 1.5rem;
             border-radius: 0.5rem;
             cursor: pointer;
             transition: background-color 0.3s ease, border-color 0.3s ease;
-            color: #475569; /* Slate 600 */
+            color: var(--text-primary);
             font-weight: 500;
             margin-bottom: 0.5rem;
         }
         .custom-file-upload:hover {
-            background-color: #e2e8f0; /* Slate 200 */
-            border-color: #94a3b8; /* Slate 400 */
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--text-primary);
         }
         .file-name-display {
-            font-size: 0.875rem; /* text-sm */
-            color: #64748b; /* Slate 500 */
+            font-size: 0.875rem;
+            color: var(--text-primary);
             margin-top: 0.5rem;
         }
         .prompt-input-group {
@@ -121,16 +325,24 @@
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #374151; /* Gray 700 */
+            color: var(--text-primary);
         }
         .prompt-input-group textarea {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #d1d5db; /* Gray 300 */
+            border: 1px solid var(--accent);
             border-radius: 0.5rem;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
             font-size: 0.875rem;
             min-height: 80px;
             resize: vertical;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .prompt-input-group textarea:focus {
+            outline: none;
+            border-color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
         }
         .slider-group {
             margin-top: 1rem;
@@ -143,7 +355,7 @@
         .slider-group label {
             font-weight: 600;
             margin-bottom: 0.5rem;
-            color: #374151;
+            color: var(--text-primary);
             width: 100%;
             text-align: center;
         }
@@ -151,7 +363,7 @@
             width: 80%;
             -webkit-appearance: none;
             height: 8px;
-            background: #d1d5db;
+            background: var(--bg-secondary);
             border-radius: 5px;
             outline: none;
             opacity: 0.7;
@@ -166,22 +378,22 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: var(--accent);
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
         }
         .slider-group input[type="range"]::-moz-range-thumb {
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #4f46e5;
+            background: var(--accent);
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
         }
         .slider-value {
             margin-top: 0.5rem;
             font-weight: 500;
-            color: #475569;
+            color: var(--text-primary);
         }
         .mode-selector {
             display: flex;
@@ -194,19 +406,21 @@
             border-radius: 0.5rem;
             font-weight: 600;
             cursor: pointer;
-            border: 2px solid #e5e7eb;
-            background-color: #f9fafb;
+            border: 2px solid var(--accent);
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
             transition: all 0.2s ease;
             flex: 1;
             text-align: center;
         }
         .mode-button:hover {
-            background-color: #f3f4f5;
+            background-color: rgba(var(--accent-rgb), 0.1);
         }
         .mode-button.active {
-            border-color: #4f46e5;
-            background-color: #eef2ff;
-            color: #4f46e5;
+            border-color: var(--text-primary);
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
         }
         .input-section {
             margin-bottom: 1.5rem;
@@ -214,40 +428,83 @@
         .youtube-input {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--accent);
             border-radius: 0.5rem;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
             font-size: 0.875rem;
             margin-top: 0.5rem;
             box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .youtube-input:focus {
+            outline: none;
+            border-color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
         }
         .note {
             font-size: 0.75rem;
-            color: #6b7280;
+            color: var(--text-primary);
             margin-top: 0.25rem;
             text-align: left;
         }
         .hidden {
             display: none;
         }
+        h1, h2 {
+            color: var(--text-primary);
+            text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+            transition: color 0.6s, text-shadow 0.6s;
+        }
+        p {
+            color: var(--text-primary);
+            transition: color 0.6s;
+        }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Gemini Audio & YouTube Summarization</h1>
-        <p class="text-gray-600 mb-6">
+<body class="theme-blackwhite transition-all">
+    <div class="particles-container" id="particles"></div>
+    <header class="main-header transition-all">
+        <a href="./index.html" class="logo">SHKSPR</a>
+        <div class="theme-controls">
+            <!-- Tools Dropdown Menu -->
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+                <div class="dropdown-options">
+                    <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="./AI_Grader/Grader.html">AI Grader</a>
+                </div>
+            </div>
+            <!-- Themes Dropdown Menu -->
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+                <div class="dropdown-options">
+                    <button id="theme-blackwhite-btn">Black & White</button>
+                    <button id="theme-cyan-btn">Cyan</button>
+                    <button id="theme-purple-btn">Purple</button>
+                    <button id="theme-green-btn">Green</button>
+                    <button id="theme-red-btn">Red</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <section class="hero">
+        <h1>Gemini Audio & YouTube Summarization</h1>
+        <p>
             Upload an audio file (MP3, M4A) or provide a YouTube link to transcribe and summarize it using the Gemini AI model.
         </p>
-        
-        <!-- Mode Selector -->
-        <div class="mode-selector">
-            <div class="mode-button active" data-mode="file">Upload Audio File</div>
-            <div class="mode-button" data-mode="youtube">YouTube Link</div>
-        </div>
+    </section>
 
-        <!-- Section for audio summarization -->
-        <div class="p-4 border border-gray-200 rounded-lg">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Summarize Content</h2>
+    <div class="container">
+        <div class="p-4 rounded-lg" style="border-color: var(--bg-secondary);">
+            <h2 class="text-2xl font-semibold mb-4">Summarize Content</h2>
             
+            <!-- Mode Selector -->
+            <div class="mode-selector">
+                <div class="mode-button active" data-mode="file">Upload Audio File</div>
+                <div class="mode-button" data-mode="youtube">YouTube Link</div>
+            </div>
+
             <!-- File Input Section -->
             <div class="input-section" id="fileInputSection">
                 <div class="file-input-wrapper">
@@ -261,7 +518,7 @@
             
             <!-- YouTube Input Section (Hidden by default) -->
             <div class="input-section hidden" id="youtubeInputSection">
-                <label for="youtubeLinkInput" class="block text-left font-medium text-gray-700 mb-2">YouTube Video Link:</label>
+                <label for="youtubeLinkInput" class="block text-left font-medium mb-2">YouTube Video Link:</label>
                 <input type="text" id="youtubeLinkInput" class="youtube-input" placeholder="https://www.youtube.com/watch?v=...">
                 <p class="note">Note: This extracts the auto-generated transcript. The video must have captions enabled.</p>
             </div>
@@ -283,33 +540,17 @@
             <div id="processErrorMessage" class="error-message hidden"></div>
             <!-- Transcribed Text display area -->
             <div id="transcribedTextDisplay" class="data-display hidden">
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Transcribed Text:</h2>
-                <pre id="transcribedTextContent" class="text-sm text-gray-800"></pre>
+                <h2 class="text-xl font-semibold mb-2">Transcribed Text:</h2>
+                <pre id="transcribedTextContent" class="text-sm"></pre>
             </div>
             <!-- Summary display area -->
             <div id="summaryDisplay" class="data-display hidden">
-                <h2 class="text-xl font-semibold text-gray-700 mb-2">Summary:</h2>
-                <pre id="summaryContent" class="text-sm text-gray-800"></pre>
+                <h2 class="text-xl font-semibold mb-2">Summary:</h2>
+                <pre id="summaryContent" class="text-sm"></pre>
             </div>
         </div>
     </div>
     <script>
-        // Gemini API Configuration
-        // IMPORTANT: For production applications, store your API key securely on a backend server
-        // and proxy requests to the Gemini API. Do NOT expose your API key directly in client-side code.
-        const GEMINI_API_KEY = 'AIzaSyAatoDhPEli6dZRMpk9Ab1fC4Kn8kN4tC0'; // Your Gemini API Key
-        // Free multimodal models from ai.google.dev/gemini-api/docs/models that support text output
-        const ALL_GEMINI_MODELS = [
-            'gemini-2.5-flash',
-            'gemini-2.5-flash-lite-preview-06-17',
-            'gemini-2.0-flash',
-            'gemini-2.0-flash-lite',
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-8b'
-            // Excluded: TTS models, Image/Video generation models, Embedding models, 1.5-pro (more expensive)
-        ];
-        const MAX_RETRIES = ALL_GEMINI_MODELS.length; // Max retries equals the number of available models
-        
         // DOM Elements
         const audioFileInput = document.getElementById('audioFileInput');
         const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -329,8 +570,86 @@
         const modeButtons = document.querySelectorAll('.mode-button');
         
         // State
-        let currentMode = 'file'; // 'file' or 'youtube'
+        let currentMode = 'file';
         
+        // --- Global functions for theming and particles (copied from Humanizer.html) ---
+        window.setTheme = function(theme) {
+            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+            localStorage.setItem('shkspr-theme', theme);
+            window.initParticles();
+        }
+
+        window.Particle = class Particle {
+            constructor(container, colors) {
+                this.container = container;
+                this.element = document.createElement('div');
+                this.element.classList.add('particle');
+                this.container.appendChild(this.element);
+                this.size = Math.random() * 6 + 2;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.opacity = Math.random() * 0.5 + 0.3;
+                this.element.style.width = `${this.size}px`;
+                this.element.style.height = `${this.size}px`;
+                this.element.style.backgroundColor = this.color;
+                this.element.style.opacity = this.opacity;
+                this.update();
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                    this.vx *= -1;
+                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                }
+                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                    this.vy *= -1;
+                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                }
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+            }
+            remove() {
+                this.container.removeChild(this.element);
+            }
+        }
+        let particles = [];
+        let animationId;
+        window.initParticles = function() {
+            const container = document.getElementById('particles');
+            if (!container) return;
+            particles.forEach(p => p.remove());
+            particles = [];
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            let colors = [accentColor];
+            if (document.body.classList.contains('theme-blackwhite')) {
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+            } else if (document.body.classList.contains('theme-cyan')) {
+                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+            } else if (document.body.classList.contains('theme-purple')) {
+                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+            } else if (document.body.classList.contains('theme-green')) {
+                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+            } else if (document.body.classList.contains('theme-red')) {
+                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+            }
+            const particleCount = 60;
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new window.Particle(container, colors));
+            }
+            window.animateParticles();
+        }
+        window.animateParticles = function() {
+            particles.forEach(particle => particle.update());
+            animationId = requestAnimationFrame(window.animateParticles);
+        }
+        // End of global functions for theming and particles
+
         // Utility Functions
         function hideElement(element) {
             element.classList.add('hidden');
@@ -398,7 +717,7 @@
             } else {
                 fileInputSection.classList.add('hidden');
                 youtubeInputSection.classList.remove('hidden');
-                processBtn.disabled = youtubeLinkInput.value.trim() !== '';
+                processBtn.disabled = youtubeLinkInput.value.trim() === '';
             }
             
             // Clear previous results
@@ -418,83 +737,6 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
         
-        // YouTube Transcript Extraction (Simulated)
-        // In a real implementation, this would call a backend service
-        async function fetchYouTubeTranscript(videoId) {
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // This is a placeholder - in reality, you'd call your backend
-            // which uses youtube-transcript-api or similar to get the real transcript
-            return `Simulated transcript for YouTube video ID: ${videoId}
-
-This is a demonstration of how YouTube transcript summarization would work.
-In a production environment, this text would be the actual transcript extracted
-from the YouTube video using a backend service that utilizes libraries like
-youtube-transcript-api (Python) or equivalent.
-
-The transcript would contain the spoken content of the video, which can then
-be sent to the Gemini API for summarization just like any other text.`;
-        }
-        
-        // Gemini API Interaction
-        async function summarizeTextWithGemini(text, prompt, retriesLeft = MAX_RETRIES, triedModels = new Set()) {
-            // Filter out models that have already been tried
-            const availableModels = ALL_GEMINI_MODELS.filter(model => !triedModels.has(model));
-            if (availableModels.length === 0) {
-                throw new Error('All available models have been tried and failed for summarization.');
-            }
-
-            // Randomly select a model
-            const currentModel = availableModels[Math.floor(Math.random() * availableModels.length)];
-            triedModels.add(currentModel);
-            const currentGeminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
-
-            try {
-                let chatHistory = [];
-                chatHistory.push({
-                    role: "user",
-                    parts: [{ text: `${prompt}\n${text}` }]
-                });
-
-                const summarizationPayload = { contents: chatHistory };
-                const summarizationResponse = await fetch(currentGeminiApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(summarizationPayload)
-                });
-
-                if (!summarizationResponse.ok) {
-                    const errorData = await summarizationResponse.json().catch(() => ({ message: summarizationResponse.statusText }));
-                    const errorMessage = `Summarization failed with status ${summarizationResponse.status}: ${errorData.message || JSON.stringify(errorData)}`;
-                    throw new Error(errorMessage);
-                }
-
-                const summarizationResult = await summarizationResponse.json();
-                let summary = "Could not generate summary.";
-
-                if (summarizationResult.candidates && summarizationResult.candidates.length > 0 &&
-                    summarizationResult.candidates[0].content && summarizationResult.candidates[0].content.parts &&
-                    summarizationResult.candidates[0].content.parts.length > 0) {
-                    summary = summarizationResult.candidates[0].content.parts[0].text;
-                }
-
-                return summary;
-            } catch (error) {
-                console.error(`Summarization error with model ${currentModel}:`, error);
-                const isRetryableError = (error.message.includes('status 400') && 
-                    (error.message.includes('context window') || error.message.includes('too large') || error.message.includes('input_text_too_long'))) ||
-                    (error.message.includes('status 503') && error.message.includes('overloaded'));
-                
-                if (isRetryableError && retriesLeft > 1) {
-                    console.warn(`Retrying summarization with another model... Retries left: ${retriesLeft - 1}`);
-                    return summarizeTextWithGemini(text, prompt, retriesLeft - 1, triedModels);
-                } else {
-                    throw error;
-                }
-            }
-        }
-        
         // Main Processing Functions
         async function processAudioFile() {
             clearError(processErrorMessageDiv);
@@ -511,71 +753,32 @@ be sent to the Gemini API for summarization just like any other text.`;
                 return;
             }
             
-            // Check file size (practical limit for inline upload)
-            const MAX_INLINE_FILE_SIZE_MB = 100000;
-            const fileSizeMB = file.size / (1024 * 1024);
-            if (fileSizeMB > MAX_INLINE_FILE_SIZE_MB) {
-                displayError(processErrorMessageDiv,
-                    `File size (${fileSizeMB.toFixed(2)} MB) exceeds the limit for direct upload (${MAX_INLINE_FILE_SIZE_MB} MB). ` +
-                    `For larger files, consider using the Gemini Files API.`);
-                hideElement(processLoadingIndicator);
-                processBtn.disabled = false;
-                return;
-            }
-            
             try {
                 // 1. Convert audio file to Base64
                 const base64Audio = await fileToBase64(file);
                 
-                // 2. Send audio for transcription to Gemini
-                const transcriptionModels = ALL_GEMINI_MODELS.filter(m => 
-                    m.includes('flash') && !m.includes('lite') && !m.includes('8b')
-                );
-                const transcriptionModel = transcriptionModels[Math.floor(Math.random() * transcriptionModels.length)];
-                const transcriptionApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${transcriptionModel}:generateContent?key=${GEMINI_API_KEY}`;
-                
-                const transcriptionPayload = {
-                    contents: [{
-                        role: "user",
-                        parts: [
-                            { text: "Transcribe the following audio exactly as spoken:" },
-                            {
-                                inlineData: {
-                                    mimeType: file.type,
-                                     base64Audio
-                                }
-                            }
-                        ]
-                    }]
-                };
-                
-                const transcriptionResponse = await fetch(transcriptionApiUrl, {
+                // 2. Send data to the Vercel serverless function for transcription and summarization
+                const response = await fetch('/api/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(transcriptionPayload)
+                    body: JSON.stringify({
+                        fileType: file.type,
+                        base64Audio: base64Audio,
+                        summarizationPrompt: summarizationPromptInput.value
+                    })
                 });
-                
-                if (!transcriptionResponse.ok) {
-                    const errorData = await transcriptionResponse.json().catch(() => ({ message: transcriptionResponse.statusText }));
-                    throw new Error(`Transcription failed: ${errorData.message || transcriptionResponse.statusText}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                    throw new Error(`Processing failed: ${errorData.error || errorData.message || response.statusText}`);
                 }
+
+                const result = await response.json();
                 
-                const transcriptionResult = await transcriptionResponse.json();
-                let transcribedText = "Could not transcribe audio.";
-                if (transcriptionResult.candidates && transcriptionResult.candidates.length > 0 &&
-                    transcriptionResult.candidates[0].content && transcriptionResult.candidates[0].content.parts &&
-                    transcriptionResult.candidates[0].content.parts.length > 0) {
-                    transcribedText = transcriptionResult.candidates[0].content.parts[0].text;
-                }
-                
-                transcribedTextContent.textContent = transcribedText;
+                transcribedTextContent.textContent = result.transcribedText;
                 showElement(transcribedTextDisplay);
                 
-                // 3. Summarize the transcribed text
-                const summarizationPrompt = summarizationPromptInput.value;
-                const summary = await summarizeTextWithGemini(transcribedText, summarizationPrompt);
-                
-                summaryContent.textContent = summary;
+                summaryContent.textContent = result.summary;
                 showElement(summaryDisplay);
                 
             } catch (error) {
@@ -618,23 +821,27 @@ be sent to the Gemini API for summarization just like any other text.`;
             }
             
             try {
-                // 1. Extract transcript from YouTube video
-                // Note: This is a simulated implementation
-                // In a real app, this would call your backend service
-                const transcribedText = await fetchYouTubeTranscript(videoId);
-                
-                if (!transcribedText || transcribedText.trim() === '') {
-                    throw new Error('Could not retrieve transcript for this video. It might not have captions enabled.');
+                // Send YouTube link to the Vercel serverless function
+                const response = await fetch('/api/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        youtubeLink: youtubeUrl,
+                        summarizationPrompt: summarizationPromptInput.value
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                    throw new Error(`Processing failed: ${errorData.error || errorData.message || response.statusText}`);
                 }
+
+                const result = await response.json();
                 
-                transcribedTextContent.textContent = transcribedText;
+                transcribedTextContent.textContent = result.transcribedText;
                 showElement(transcribedTextDisplay);
                 
-                // 2. Summarize the transcribed text
-                const summarizationPrompt = summarizationPromptInput.value;
-                const summary = await summarizeTextWithGemini(transcribedText, summarizationPrompt);
-                
-                summaryContent.textContent = summary;
+                summaryContent.textContent = result.summary;
                 showElement(summaryDisplay);
                 
             } catch (error) {
@@ -679,6 +886,15 @@ be sent to the Gemini API for summarization just like any other text.`;
             hideElement(summaryDisplay);
         });
         
+        // Theme button event listeners (copied from Humanizer.html)
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+        });
+
         modeButtons.forEach(button => {
             button.addEventListener('click', () => {
                 switchMode(button.dataset.mode);
@@ -689,6 +905,9 @@ be sent to the Gemini API for summarization just like any other text.`;
         
         document.addEventListener('DOMContentLoaded', () => {
             updateSummarizationPrompt();
+            // Initialize theme and particles on page load
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme); // Use window.setTheme to also initialize particles
         });
         
         processBtn.addEventListener('click', () => {
