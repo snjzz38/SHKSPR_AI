@@ -1,26 +1,6 @@
 {
   "builds": [
     {
-      "src": "api/Grader_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Humanizer_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Summarizer_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Summarize_Upload_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/GenerateSignedUrl_API.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "index.html",
       "use": "@vercel/static"
     },
@@ -38,6 +18,14 @@
     }
   ],
   "functions": {
+    "api/Grader_API.js": {
+      "memory": 2048,   
+      "maxDuration": 300 
+    },
+    "api/Humanizer_API.js": {
+      "memory": 2048,   
+      "maxDuration": 300 
+    },
     "api/Summarizer_API.js": {
       "memory": 2048,   
       "maxDuration": 300 
