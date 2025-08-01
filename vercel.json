@@ -13,6 +13,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/Summarize_Upload_API.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "index.html",
       "use": "@vercel/static"
     },
@@ -33,6 +37,10 @@
     "api/Summarizer_API.js": {
       "memory": 2048,   
       "maxDuration": 300 
+    },
+    "api/Summarize_Upload_API.js": {
+      "memory": 2048,   
+      "maxDuration": 300 
     }
   },
   "rewrites": [
@@ -47,6 +55,10 @@
     {
       "source": "/api/summarize",
       "destination": "/api/Summarizer_API.js"
+    },
+    {
+      "source": "/api/upload",
+      "destination": "/api/Summarize_Upload_API.js"
     },
     {
       "source": "/",
