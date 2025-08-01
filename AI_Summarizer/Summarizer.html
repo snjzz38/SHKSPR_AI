@@ -665,6 +665,10 @@
             hideElement(errorDiv);
             errorDiv.textContent = '';
         }
+        // fileToBase64 is NO LONGER needed for the initial upload to our Vercel /api/upload endpoint
+        // as we will now send raw binary data.
+        // However, it might still be useful for other parts of the app or if you revert.
+        /*
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -676,6 +680,7 @@
                 reader.readAsDataURL(file);
             });
         }
+        */
         function generateSummarizationPrompt(concisenessLevel) {
             if (concisenessLevel >= 1 && concisenessLevel <= 2) {
                 return "Provide a very brief, one-sentence summary of the main idea:";
@@ -754,31 +759,50 @@
             }
             
             try {
-                // 1. Convert audio file to Base64
-                const base64Audio = await fileToBase64(file);
+                // STEP 1: Upload the audio file as raw binary data to your Vercel /api/upload endpoint
+                // This is the crucial change to avoid the 413 Content Too Large error.
+                const uploadResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': file.type // Send the actual MIME type of the file
+                    },
+                    body: file // Send the File object directly as the body
+                });
+
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json().catch(() => ({ message: uploadResponse.statusText }));
+                    throw new Error(`File upload failed: ${errorData.error || errorData.message || uploadResponse.statusText}`);
+                }
+
+                const uploadResult = await uploadResponse.json();
+                const fileId = uploadResult.fileId; // Get the file ID from the upload API
+
+                if (!fileId) {
+                    throw new Error("No file ID received from upload API.");
+                }
                 
-                // 2. Send data to the Vercel serverless function for transcription and summarization
-                const response = await fetch('/api/summarize', {
+                // STEP 2: Send the fileId and other details to your Vercel /api/summarize endpoint
+                const summarizeResponse = await fetch('/api/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        fileType: file.type,
-                        base64Audio: base64Audio,
+                        fileId: fileId, // Send the file ID instead of base64Audio
+                        fileType: file.type, // Also send the file type for the summarizer API to use
                         summarizationPrompt: summarizationPromptInput.value
                     })
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                    throw new Error(`Processing failed: ${errorData.error || errorData.message || response.statusText}`);
+                if (!summarizeResponse.ok) {
+                    const errorData = await summarizeResponse.json().catch(() => ({ message: summarizeResponse.statusText }));
+                    throw new Error(`Summarization failed: ${errorData.error || errorData.message || summarizeResponse.statusText}`);
                 }
 
-                const result = await response.json();
+                const summarizeResult = await summarizeResponse.json();
                 
-                transcribedTextContent.textContent = result.transcribedText;
+                transcribedTextContent.textContent = summarizeResult.transcribedText;
                 showElement(transcribedTextDisplay);
                 
-                summaryContent.textContent = result.summary;
+                summaryContent.textContent = summarizeResult.summary;
                 showElement(summaryDisplay);
                 
             } catch (error) {
@@ -822,6 +846,7 @@
             
             try {
                 // Send YouTube link to the Vercel serverless function
+                // This path remains largely the same as it doesn't involve direct file uploads.
                 const response = await fetch('/api/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
