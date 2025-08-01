@@ -17,6 +17,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/GenerateSignedUrl_API.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "index.html",
       "use": "@vercel/static"
     },
@@ -41,6 +45,10 @@
     "api/Summarize_Upload_API.js": {
       "memory": 2048,   
       "maxDuration": 300 
+    },
+    "api/GenerateSignedUrl_API.js": {
+      "memory": 128,    
+      "maxDuration": 10 
     }
   },
   "rewrites": [
@@ -59,6 +67,10 @@
     {
       "source": "/api/upload",
       "destination": "/api/Summarize_Upload_API.js"
+    },
+    {
+      "source": "/api/generate-signed-url",
+      "destination": "/api/GenerateSignedUrl_API.js"
     },
     {
       "source": "/",
