@@ -1,80 +1,81 @@
-{
-  "builds": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Grader/Grader.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Humanizer/Humanizer.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Summarizer/Summarizer.html",
-      "use": "@vercel/static"
+      "builds": [
+        {
+          "src": "index.html",
+          "use": "@vercel/static"
+        },
+        {
+          "src": "AI_Grader/Grader.html",
+          "use": "@vercel/static"
+        },
+        {
+          "src": "AI_Humanizer/Humanizer.html",
+          "use": "@vercel/static"
+        },
+        {
+          "src": "AI_Summarizer/Summarizer.html",
+          "use": "@vercel/static"
+        }
+      ],
+      "functions": {
+        "api/Grader_API.js": {
+          "memory": 1024,   
+          "maxDuration": 300 
+        },
+        "api/Humanizer_API.js": {
+          "memory": 2048,   
+          "maxDuration": 60 
+        },
+        "api/Summarizer_API.js": {
+          "memory": 2048,   
+          "maxDuration": 300 
+        },
+        "api/Summarize_Upload_API.js": {
+          "memory": 2048,   
+          "maxDuration": 300 
+        },
+        "api/GenerateSignedUrl_API.js": {
+          "memory": 128,    
+          "maxDuration": 10 
+        }
+      },
+      "rewrites": [
+        {
+          "source": "/api/humanizer",
+          "destination": "/api/Humanizer_API.js"
+        },
+        {
+          "source": "/api/grader",
+          "destination": "/api/Grader_API.js"
+        },
+        {
+          "source": "/api/summarize",
+          "destination": "/api/Summarizer_API.js"
+        },
+        {
+          "source": "/api/upload",
+          "destination": "/api/Summarize_Upload_API.js"
+        },
+        {
+          "source": "/api/generate-signed-url",
+          "destination": "/api/GenerateSignedUrl_API.js"
+        },
+        {
+          "source": "/",
+          "destination": "/index.html"
+        },
+        {
+          "source": "/AI_Grader/:path*",
+          "destination": "/AI_Grader/:path*"
+        },
+        {
+          "source": "/AI_Humanizer/:path*",
+          "destination": "/AI_Humanizer/:path*"
+        },
+        {
+          "source": "/AI_Summarizer/:path*",
+          "destination": "/AI_Summarizer/:path*"
+        }
+      ]
     }
-  ],
-  "functions": {
-    "api/Grader_API.js": {
-      "memory": 1024,   
-      "maxDuration": 300 
-    },
-    "api/Humanizer_API.js": {
-      "memory": 2048,   
-      "maxDuration": 60 
-    },
-    "api/Summarizer_API.js": {
-      "memory": 2048,   
-      "maxDuration": 300 
-    },
-    "api/Summarize_Upload_API.js": {
-      "memory": 2048,   
-      "maxDuration": 300 
-    },
-    "api/GenerateSignedUrl_API.js": {
-      "memory": 128,    
-      "maxDuration": 10 
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/humanizer",
-      "destination": "/api/Humanizer_API.js"
-    },
-    {
-      "source": "/api/grader",
-      "destination": "/api/Grader_API.js"
-    },
-    {
-      "source": "/api/summarize",
-      "destination": "/api/Summarizer_API.js"
-    },
-    {
-      "source": "/api/upload",
-      "destination": "/api/Summarize_Upload_API.js"
-    },
-    {
-      "source": "/api/generate-signed-url",
-      "destination": "/api/GenerateSignedUrl_API.js"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/AI_Grader/:path*",
-      "destination": "/AI_Grader/:path*"
-    },
-    {
-      "source": "/AI_Humanizer/:path*",
-      "destination": "/AI_Humanizer/:path*"
-    },
-    {
-      "source": "/AI_Summarizer/:path*",
-      "destination": "/AI_Summarizer/:path*"
-    }
-  ]
-}
+    
