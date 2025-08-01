@@ -19,12 +19,12 @@
   ],
   "functions": {
     "api/Grader_API.js": {
-      "memory": 2048,   
+      "memory": 1024,   
       "maxDuration": 300 
     },
     "api/Humanizer_API.js": {
       "memory": 2048,   
-      "maxDuration": 300 
+      "maxDuration": 60 
     },
     "api/Summarizer_API.js": {
       "memory": 2048,   
