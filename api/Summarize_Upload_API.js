@@ -1,13 +1,19 @@
 // api/Summarize_Upload_API.js
 
 import fetch from 'node-fetch';
+// No longer need Busboy as we're not parsing multipart/form-data here anymore
+// import Busboy from 'busboy'; 
 
 // IMPORTANT: Your Gemini API Key should be set as an environment variable in Vercel.
-// Based on your input, your environment variable is named SUMMARIZER_1.
-// Go to your Vercel project settings -> Environment Variables.
-// Name: SUMMARIZER_1
-// Value: YOUR_ACTUAL_GEMINI_API_KEY (e.g., AIzaSy... )
 const GEMINI_API_KEY = process.env.SUMMARIZER_1;
+
+// We no longer need to disable bodyParser here, as this API will receive JSON
+// with the GCS URI, not raw file data.
+export const config = {
+    api: {
+        bodyParser: true, // Re-enable bodyParser or let Vercel default handle it
+    },
+};
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -19,39 +25,44 @@ export default async function handler(req, res) {
     }
 
     try {
-        // When the frontend sends `body: file` and `Content-Type: file.type`,
-        // Vercel's serverless function receives the raw binary data in `req.body` as a Buffer.
-        const audioBuffer = req.body; // req.body is already a Buffer for raw binary uploads
-        const fileType = req.headers['content-type']; // Get the MIME type from the request headers
+        // This API now receives the GCS URI and original fileType from the frontend
+        const { gcsUri, fileType } = req.body;
 
-        if (!audioBuffer || !fileType) {
-            return res.status(400).json({ error: 'Missing audio data or content-type in request.' });
+        if (!gcsUri || !fileType) {
+            return res.status(400).json({ error: 'Missing gcsUri or fileType in request body.' });
         }
 
-        const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`;
+        // Register the GCS file with the Gemini Files API
+        // The Gemini Files API will then internally access the GCS file.
+        const registerFilePayload = {
+            file: {
+                displayName: `uploaded_audio_${Date.now()}`, // A display name for the file
+                uri: gcsUri // The Google Cloud Storage URI
+            }
+        };
 
-        const uploadResponse = await fetch(uploadUrl, {
+        const uploadUrl = `https://generativelanguage.googleapis.com/v1beta/files?key=${GEMINI_API_KEY}`;
+
+        const registerResponse = await fetch(uploadUrl, {
             method: 'POST',
             headers: {
-                'X-Goog-Upload-Protocol': 'raw', // Indicates raw upload
-                'X-Goog-Upload-Content-Type': fileType, // Original MIME type of the audio
-                'Content-Type': fileType // Also set Content-Type for the request body
+                'Content-Type': 'application/json'
             },
-            body: audioBuffer // Send the raw audio buffer as the body
+            body: JSON.stringify(registerFilePayload)
         });
 
-        if (!uploadResponse.ok) {
-            const errorData = await uploadResponse.json().catch(() => ({ message: uploadResponse.statusText }));
-            throw new Error(`Gemini Files API upload failed with status ${uploadResponse.status}: ${errorData.message || JSON.stringify(errorData)}`);
+        if (!registerResponse.ok) {
+            const errorData = await registerResponse.json().catch(() => ({ message: registerResponse.statusText }));
+            throw new Error(`Gemini Files API registration failed with status ${registerResponse.status}: ${errorData.message || JSON.stringify(errorData)}`);
         }
 
-        const uploadResult = await uploadResponse.json();
-        const fileId = uploadResult.file.name; // This is the 'files/XXXXXX' ID
+        const registerResult = await registerResponse.json();
+        const fileId = registerResult.name; // This is the 'files/XXXXXX' ID from Gemini Files API
 
         res.status(200).json({ fileId });
 
     } catch (error) {
-        console.error('Serverless Upload API error:', error);
-        res.status(500).json({ error: error.message || 'An unexpected error occurred during file upload.' });
+        console.error('Serverless Summarize_Upload_API error:', error);
+        res.status(500).json({ error: error.message || 'An unexpected error occurred during file registration.' });
     }
 }
