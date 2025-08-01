@@ -759,14 +759,14 @@
             }
             
             try {
-                // STEP 1: Upload the audio file as raw binary data to your Vercel /api/upload endpoint
-                // This is the crucial change to avoid the 413 Content Too Large error.
+                // STEP 1: Upload the audio file as multipart/form-data to your Vercel /api/upload endpoint
+                // This is the most robust way to handle large file uploads in web applications.
+                const formData = new FormData();
+                formData.append('audioFile', file); // 'audioFile' will be the field name on the serverless function
+
                 const uploadResponse = await fetch('/api/upload', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': file.type // Send the actual MIME type of the file
-                    },
-                    body: file // Send the File object directly as the body
+                    body: formData // No need to set Content-Type header; FormData does it automatically
                 });
 
                 if (!uploadResponse.ok) {
