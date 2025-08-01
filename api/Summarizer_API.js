@@ -1,206 +1,123 @@
-// api/Summarizer_API.js
+// api/Upload_API.js
 
-// Import node-fetch for making HTTP requests in the Node.js environment
-// Vercel's Node.js runtime supports fetch natively, but explicit import is good practice.
 import fetch from 'node-fetch';
+import { Readable } from 'stream'; // For converting buffer to stream
 
 // IMPORTANT: Your Gemini API Key should be set as an environment variable in Vercel.
 // Based on your input, your environment variable is named SUMMARIZER_1.
 // Go to your Vercel project settings -> Environment Variables.
-// Add a new variable with:
 // Name: SUMMARIZER_1
 // Value: YOUR_ACTUAL_GEMINI_API_KEY (e.g., AIzaSy... )
-// This variable will be automatically available in the Vercel serverless function's environment.
-const GEMINI_API_KEY = process.env.SUMMARIZER_1; // Updated to use SUMMARIZER_1
+const GEMINI_API_KEY = process.env.SUMMARIZER_1;
 
-// List of Gemini models to use for text processing (transcription and summarization)
-// These models are capable of handling multimodal input (like audio for transcription)
-// and generating text output.
-const ALL_GEMINI_MODELS = [
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-flash-live',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash-live',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-pro'
-];
-// Maximum number of retries for API calls, using different models if a call fails.
-const MAX_RETRIES = ALL_GEMINI_MODELS.length;
-
-/**
- * Helper function to call the Gemini API with exponential backoff and model fallback.
- * @param {object} payload - The request payload for the Gemini API.
- * @param {string} modelType - 'text' or 'audio' (for logging purposes, not functional).
- * @param {number} retriesLeft - Number of retries remaining.
- * @param {Set<string>} triedModels - Set of models already attempted.
- * @returns {Promise<object>} The JSON response from the Gemini API.
- * @throws {Error} If API key is missing or all models fail.
- */
-async function callGeminiApi(payload, modelType = 'text', retriesLeft = MAX_RETRIES, triedModels = new Set()) {
-    // Ensure the API key is available in the serverless environment.
-    if (!GEMINI_API_KEY) {
-        throw new Error("Server-side Gemini API Key (SUMMARIZER_1) is not configured. Please set it as a Vercel environment variable.");
-    }
-
-    // Filter out models that have already been tried to avoid infinite loops on failures.
-    let modelsToTry = ALL_GEMINI_MODELS.filter(model => !triedModels.has(model));
-
-    // If no models are left to try, throw an error.
-    if (modelsToTry.length === 0) {
-        throw new Error('All available models have been tried and failed.');
-    }
-
-    // Select the first available model for the current attempt.
-    const currentModel = modelsToTry[0];
-    // Add the current model to the set of tried models.
-    triedModels.add(currentModel);
-
-    // Construct the API URL with the selected model and API key.
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
-
-    try {
-        // Make the POST request to the Gemini API.
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        // Check if the response was successful (status 2xx).
-        if (!response.ok) {
-            // If not successful, parse the error data and throw an error.
-            const errorData = await response.json().catch(() => ({ message: response.statusText }));
-            const errorMessage = `API call failed with status ${response.status}: ${errorData.message || JSON.stringify(errorData)}`;
-            throw new Error(errorMessage);
-        }
-
-        // Parse and return the successful JSON response.
-        const result = await response.json();
-        return result;
-
-    } catch (error) {
-        // Log the error for debugging.
-        console.error(`Server-side API call error with model ${currentModel}:`, error);
-
-        // Determine if the error is retryable (e.g., context window exceeded, server overloaded, rate limit).
-        const isRetryableError = (error.message.includes('status 400') && 
-                                    (error.message.includes('context window') || error.message.includes('too large') || error.message.includes('input_text_too_long'))) ||
-                                 (error.message.includes('status 503') && error.message.includes('overloaded')) ||
-                                 (error.message.includes('status 429')); // 429 is for Too Many Requests (rate limiting)
-
-        // If retryable and retries are left, attempt to retry with a delay.
-        if (isRetryableError && retriesLeft > 1) {
-            const delay = 1500 * (MAX_RETRIES - retriesLeft + 1); // Exponential backoff
-            console.warn(`Server-side retrying with another model in ${delay}ms... Retries left: ${retriesLeft - 1}`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return callGeminiApi(payload, modelType, retriesLeft - 1, triedModels);
-        } else {
-            // If not retryable or no retries left, re-throw the error.
-            throw error;
-        }
-    }
-}
-
-/**
- * Vercel Serverless Function handler.
- * This function processes POST requests for audio transcription and summarization.
- * @param {object} req - The incoming request object.
- * @param {object} res - The outgoing response object.
- */
 export default async function handler(req, res) {
-    // Only allow POST requests.
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
+    if (!GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Server-side Gemini API Key (SUMMARIZER_1) is not configured." });
+    }
+
     try {
-        // Destructure necessary data from the request body.
-        const { fileType, base64Audio, summarizationPrompt, youtubeLink } = req.body;
+        // Vercel's req.body for multipart/form-data is usually parsed automatically
+        // if using a framework like Next.js. For raw Node.js serverless functions,
+        // you might need to parse it manually or rely on Vercel's default parsing
+        // for simple JSON/text bodies. For file uploads, it's often best to
+        // send as 'application/octet-stream' or 'multipart/form-data' and
+        // handle the buffer.
+        // Assuming the frontend sends the file as a raw binary body (application/octet-stream)
+        // or as multipart/form-data with a 'file' field.
+        
+        // For simplicity and common Vercel setup, we'll assume the frontend sends
+        // the file as a raw binary body (application/octet-stream) or a Base64 string.
+        // If it's multipart/form-data, you'd need a library like 'busboy' or 'formidable'.
 
-        let transcribedText;
+        // Let's assume for now the frontend sends a JSON body with base64Audio and fileType
+        // as it was doing before, but this endpoint is specifically for uploading.
+        // For true large file uploads, a direct binary stream is better.
+        // However, if the frontend is already converting to Base64, this will work for now,
+        // but the 413 error might still occur if the Base64 string itself is too large for req.body.
 
-        // Handle audio file processing
-        if (base64Audio && fileType) {
-            // 1. Transcribe the audio using inlineData (current approach)
-            // NOTE: For very large audio files, consider integrating the Gemini Files API
-            // which allows you to upload files separately and reference them by ID,
-            // potentially reducing token costs for the raw audio data. This would require
-            // additional logic to upload the file to the Files API first.
-            const transcriptionPayload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: "Transcribe the following audio exactly as spoken:" },
-                        {
-                            inlineData: {
-                                mimeType: fileType,
-                                data: base64Audio
-                            }
-                        }
-                    ]
-                }]
-            };
+        // A more robust approach for large files would be:
+        // 1. Frontend sends file as 'multipart/form-data' directly.
+        // 2. Serverless function uses 'busboy' or 'formidable' to parse the multipart data.
+        // 3. The parsed file stream is then sent to Gemini Files API.
 
-            const transcriptionResult = await callGeminiApi(transcriptionPayload, 'audio');
-            
-            if (transcriptionResult.candidates && transcriptionResult.candidates.length > 0 &&
-                transcriptionResult.candidates[0].content && transcriptionResult.candidates[0].content.parts &&
-                transcriptionResult.candidates[0].content.parts.length > 0) {
-                transcribedText = transcriptionResult.candidates[0].content.parts[0].text;
-            } else {
-                throw new Error("Gemini API did not return a valid transcription.");
-            }
-        } else if (youtubeLink) {
-            // Handle YouTube link processing (simulated)
-            // In a real application, this would involve a backend library
-            // to fetch the YouTube transcript.
-            const getYouTubeVideoId = (url) => {
-                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-                const match = url.match(regExp);
-                return (match && match[2].length === 11) ? match[2] : null;
-            };
-            const videoId = getYouTubeVideoId(youtubeLink);
-            if (!videoId) {
-                return res.status(400).json({ error: 'Invalid YouTube link or video ID could not be extracted.' });
-            }
-            // Simulate fetching transcript
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-            transcribedText = `Simulated transcript for YouTube video ID: ${videoId}\n\nThis is a demonstration of how YouTube transcript summarization would work. In a production environment, this text would be the actual transcript extracted from the YouTube video using a backend service that utilizes libraries like youtube-transcript-api (Python) or equivalent.`;
+        // For now, let's adapt to the existing frontend sending Base64,
+        // but note the limitation for extremely large files still applies to the initial POST to Vercel.
+        // If the 413 persists, the frontend must send raw binary data.
 
-            if (!transcribedText || transcribedText.trim() === '') {
-                throw new Error('Could not retrieve transcript for this video. It might not have captions enabled or the simulated fetch failed.');
-            }
-        } else {
-            return res.status(400).json({ error: 'No audio file or YouTube link provided for processing.' });
+        const { base64Audio, fileType } = req.body;
+
+        if (!base64Audio || !fileType) {
+            return res.status(400).json({ error: 'Missing base64Audio or fileType in request body.' });
         }
 
-        // 2. Summarize the transcribed text
-        const summarizationPayload = {
-            contents: [{
-                role: "user",
-                parts: [{ text: `${summarizationPrompt}\n${transcribedText}` }]
-            }]
-        };
-        const summarizationResult = await callGeminiApi(summarizationPayload, 'text');
+        const uploadPayload = {
+            displayName: `uploaded_audio_${Date.now()}`, // A display name for the file in Gemini Files API
+            mimeType: fileType,
+            // The Gemini Files API expects the raw bytes, not Base64 in the 'data' field directly.
+            // When using fetch, you typically send the raw binary data in the body.
+            // For this serverless function, if we receive Base64, we need to convert it back to a Buffer.
+            // However, the Gemini Files API 'upload' endpoint expects the raw file content in the body,
+            // not within a JSON payload like generateContent's inlineData.
+            // The `v1beta/files:upload` endpoint is a special endpoint.
 
-        let summary = "Could not generate summary.";
-        if (summarizationResult.candidates && summarizationResult.candidates.length > 0 &&
-            summarizationResult.candidates[0].content && summarizationResult.candidates[0].content.parts &&
-            summarizationResult.candidates[0].content.parts.length > 0) {
-            summary = summarizationResult.candidates[0].content.parts[0].text;
-        } else {
-            throw new Error("Gemini API did not return a valid summary.");
-        }
+            // Let's correct this: The Gemini Files API upload endpoint is designed for raw binary upload.
+            // The frontend should send the raw binary data directly to this API endpoint.
+            // The `req.body` will then be the raw buffer.
 
-        // Send back the transcribed text and the summary to the frontend.
-        res.status(200).json({ transcribedText, summary });
+            // For Vercel serverless functions, when receiving binary data, req.body is a Buffer.
+            // We need to ensure the frontend sends 'Content-Type': 'application/octet-stream'
+            // or 'audio/mp3' etc. directly.
+
+            // Let's assume the frontend sends the raw audio as `application/octet-stream`
+            // and the `fileType` is passed as a query parameter or header for simplicity,
+            // or we infer it from a well-known type.
+            // For this example, we'll assume `req.body` is the raw audio Buffer.
+
+            // If the frontend is still sending JSON with base64, we need to convert:
+            // const audioBuffer = Buffer.from(base64Audio, 'base64');
+            // But the Gemini Files API expects raw stream/buffer in the request body, not JSON.
+
+            // This requires a fundamental change in how the frontend sends the file.
+            // For now, let's simulate the Gemini Files API interaction on the backend
+            // assuming we get the raw buffer.
+
+            // --- Corrected approach for Gemini Files API upload ---
+            // The Gemini Files API `v1beta/files:upload` endpoint expects the raw file content
+            // as the request body, NOT a JSON object with inlineData.
+            // The `mimeType` is passed in the `X-Goog-Upload-Content-Type` header.
+            // The `displayName` is a query parameter.
+
+            const uploadUrl = `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${GEMINI_API_KEY}`;
+
+            // If the frontend sends base64, convert it to a Buffer
+            const audioBuffer = Buffer.from(base64Audio, 'base64');
+
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Goog-Upload-Protocol': 'raw', // Indicates raw upload
+                    'X-Goog-Upload-Content-Type': fileType, // Original MIME type of the audio
+                    'Content-Type': fileType // Also set Content-Type for the request body
+                },
+                body: audioBuffer // Send the raw audio buffer as the body
+            });
+
+            if (!uploadResponse.ok) {
+                const errorData = await uploadResponse.json().catch(() => ({ message: uploadResponse.statusText }));
+                throw new Error(`Gemini Files API upload failed with status ${uploadResponse.status}: ${errorData.message || JSON.stringify(errorData)}`);
+            }
+
+            const uploadResult = await uploadResponse.json();
+            const fileId = uploadResult.file.name; // This is the 'files/XXXXXX' ID
+
+            res.status(200).json({ fileId });
 
     } catch (error) {
-        // Log the serverless function error and send a 500 status.
-        console.error('Serverless function error:', error);
-        res.status(500).json({ error: error.message || 'An unexpected error occurred during processing.' });
+        console.error('Serverless Upload API error:', error);
+        res.status(500).json({ error: error.message || 'An unexpected error occurred during file upload.' });
     }
 }
