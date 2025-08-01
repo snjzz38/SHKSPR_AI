@@ -1,17 +1,39 @@
 {
   "builds": [
     {
-      "src": "/api/Grader_API.js",
+      "src": "api/Grader_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Humanizer_API.js",
+      "src": "api/Humanizer_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/**",
+      "src": "api/Summarizer_API.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "AI_Grader/Grader.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "AI_Humanizer/Humanizer.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "AI_Summarizer/Summarizer.html",
       "use": "@vercel/static"
     }
+    // You can add a catch-all static build if you have other static assets
+    // that are not explicitly listed, but the above covers your HTML files.
+    // {
+    //   "src": "/**",
+    //   "use": "@vercel/static"
+    // }
   ],
   "rewrites": [
     {
@@ -19,12 +41,28 @@
       "destination": "/api/Humanizer_API.js"
     },
     {
-      "source": "/api/Grader_API",
+      "source": "/api/grader",
       "destination": "/api/Grader_API.js"
+    },
+    {
+      "source": "/api/summarize",
+      "destination": "/api/Summarizer_API.js"
     },
     {
       "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/AI_Grader/:path*",
+      "destination": "/AI_Grader/:path*"
+    },
+    {
+      "source": "/AI_Humanizer/:path*",
+      "destination": "/AI_Humanizer/:path*"
+    },
+    {
+      "source": "/AI_Summarizer/:path*",
+      "destination": "/AI_Summarizer/:path*"
     }
   ]
 }
