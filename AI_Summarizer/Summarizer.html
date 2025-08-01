@@ -665,22 +665,7 @@
             hideElement(errorDiv);
             errorDiv.textContent = '';
         }
-        // fileToBase64 is NO LONGER needed for the initial upload to our Vercel /api/upload endpoint
-        // as we will now send raw binary data.
-        // However, it might still be useful for other parts of the app or if you revert.
-        /*
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64String = reader.result.split(',')[1];
-                    resolve(base64String);
-                };
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        }
-        */
+        
         function generateSummarizationPrompt(concisenessLevel) {
             if (concisenessLevel >= 1 && concisenessLevel <= 2) {
                 return "Provide a very brief, one-sentence summary of the main idea:";
@@ -759,35 +744,74 @@
             }
             
             try {
-                // STEP 1: Upload the audio file as multipart/form-data to your Vercel /api/upload endpoint
-                // This is the most robust way to handle large file uploads in web applications.
-                const formData = new FormData();
-                formData.append('audioFile', file); // 'audioFile' will be the field name on the serverless function
-
-                const uploadResponse = await fetch('/api/upload', {
+                // STEP 1: Request a signed URL from your Vercel serverless function
+                const signedUrlResponse = await fetch('/api/generate-signed-url', {
                     method: 'POST',
-                    body: formData // No need to set Content-Type header; FormData does it automatically
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: `audio-${Date.now()}-${file.name}`, // Unique filename for GCS
+                        contentType: file.type // Original MIME type
+                    })
                 });
 
-                if (!uploadResponse.ok) {
-                    const errorData = await uploadResponse.json().catch(() => ({ message: uploadResponse.statusText }));
-                    throw new Error(`File upload failed: ${errorData.error || errorData.message || uploadResponse.statusText}`);
+                if (!signedUrlResponse.ok) {
+                    const errorData = await signedUrlResponse.json().catch(() => ({ message: signedUrlResponse.statusText }));
+                    throw new Error(`Failed to get signed URL: ${errorData.error || errorData.message || signedUrlResponse.statusText}`);
                 }
 
-                const uploadResult = await uploadResponse.json();
-                const fileId = uploadResult.fileId; // Get the file ID from the upload API
+                const signedUrlResult = await signedUrlResponse.json();
+                const signedUrl = signedUrlResult.signedUrl;
+                const gcsUri = signedUrlResult.gcsUri; // This is the gs:// URI for Gemini Files API
+
+                if (!signedUrl || !gcsUri) {
+                    throw new Error("Signed URL or GCS URI not received from server.");
+                }
+
+                // STEP 2: Upload the audio file directly to Google Cloud Storage using the signed URL
+                const directUploadResponse = await fetch(signedUrl, {
+                    method: 'PUT', // Use PUT for direct uploads to GCS signed URLs
+                    headers: {
+                        'Content-Type': file.type // Crucial: Set the content type for the GCS upload
+                    },
+                    body: file // Send the raw File object directly
+                });
+
+                if (!directUploadResponse.ok) {
+                    // GCS might return a raw error, try to parse as text if not JSON
+                    const errorText = await directUploadResponse.text();
+                    throw new Error(`Direct GCS upload failed: ${directUploadResponse.status} - ${errorText}`);
+                }
+
+                // STEP 3: Notify your /api/upload (Summarize_Upload_API.js) with the GCS URI
+                // This will register the file with the Gemini Files API
+                const registerResponse = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        gcsUri: gcsUri,
+                        fileType: file.type // Pass the original file type
+                    })
+                });
+
+                if (!registerResponse.ok) {
+                    const errorData = await registerResponse.json().catch(() => ({ message: registerResponse.statusText }));
+                    throw new Error(`Gemini Files API registration failed: ${errorData.error || errorData.message || registerResponse.statusText}`);
+                }
+
+                const registerResult = await registerResponse.json();
+                const fileId = registerResult.fileId; // This is the 'files/XXXXXX' ID from Gemini Files API
 
                 if (!fileId) {
-                    throw new Error("No file ID received from upload API.");
+                    throw new Error("No Gemini file ID received after registration.");
                 }
                 
-                // STEP 2: Send the fileId and other details to your Vercel /api/summarize endpoint
+                // STEP 4: Send the Gemini fileId and other details to your /api/summarize endpoint
                 const summarizeResponse = await fetch('/api/summarize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        fileId: fileId, // Send the file ID instead of base64Audio
-                        fileType: file.type, // Also send the file type for the summarizer API to use
+                        fileId: fileId, // Send the Gemini Files API ID
+                        fileType: file.type, // Still need this for Gemini's fileData part
                         summarizationPrompt: summarizationPromptInput.value
                     })
                 });
