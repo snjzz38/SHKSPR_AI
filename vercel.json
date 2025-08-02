@@ -76,5 +76,6 @@
       "source": "/AI_Summarizer/:path*",
       "destination": "/AI_Summarizer/:path*"
     }
-  ]
+  ],
+  "// NOTE": "This is a temporary comment to force Vercel to re-read this file."
 }
