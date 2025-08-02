@@ -19,24 +19,24 @@
   ],
   "functions": {
     "api/Grader_API.js": {
-      "memory": 1024,   
-      "maxDuration": 300 
+      "memory": 1024,
+      "maxDuration": 300
     },
     "api/Humanizer_API.js": {
-      "memory": 2048,   
-      "maxDuration": 60 
+      "memory": 2048,
+      "maxDuration": 60
     },
     "api/Summarizer_API.js": {
-      "memory": 2048,   
-      "maxDuration": 300 
+      "memory": 2048,
+      "maxDuration": 300
     },
     "api/Summarize_Upload_API.js": {
-      "memory": 2048,   
-      "maxDuration": 300 
+      "memory": 2048,
+      "maxDuration": 300
     },
     "api/GenerateSignedUrl_API.js": {
-      "memory": 128,    
-      "maxDuration": 10 
+      "memory": 128,
+      "maxDuration": 10
     }
   },
   "rewrites": [
