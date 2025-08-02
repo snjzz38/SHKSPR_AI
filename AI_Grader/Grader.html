@@ -164,6 +164,13 @@
             background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
         }
+        /* Specific style for model option buttons */
+        .dropdown-options .model-option {
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflow */
+            text-overflow: ellipsis; /* Show ellipsis for overflow */
+        }
+
 
         /* --- Hero Section --- */
         .hero {
@@ -601,6 +608,21 @@
             ];
 
             let currentStep = 0;
+            // The models are now just listed here and not user-selectable via a dropdown
+            const ALL_GEMINI_MODELS = [
+                'gemini-2.5-flash-lite',
+                'gemini-live-2.5-flash-preview',
+                'gemini-2.5-flash',
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-lite',
+                'gemini-2.0-flash-live-001',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-8b',
+                'gemini-1.5-pro'
+            ];
+            // You can set a default model here if needed, or the backend can handle it.
+            // For now, we'll assume the backend uses a default or picks one.
+            let selectedModel = 'gemini-1.5-flash'; // Keeping a default selected model internally
 
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
@@ -707,7 +729,8 @@
                         rubricData,
                         essayData,
                         extraInstructions,
-                        strictness
+                        strictness,
+                        model: selectedModel // Still include a default model in the payload
                     };
 
                     // Fetch from the backend API
