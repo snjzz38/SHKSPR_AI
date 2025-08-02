@@ -1,22 +1,4 @@
 {
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Grader/Grader.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Humanizer/Humanizer.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "AI_Summarizer/Summarizer.html",
-      "use": "@vercel/static"
-    }
-  ],
   "functions": {
     "api/Grader_API.js": {
       "memory": 1024,
