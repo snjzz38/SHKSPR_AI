@@ -79,12 +79,16 @@
             padding: 0;
         }
         body {
+            /* Changed font-family to Segoe UI to match header.html */
             font-family: 'Segoe UI', Arial, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             transition: background-color 0.6s, color 0.6s;
             overflow-x: hidden;
+            /* Added flex properties from header.html body for consistent particle behavior */
+            display: flex;
+            flex-direction: column;
         }
         .transition-all {
             transition: all 0.6s ease;
@@ -168,12 +172,12 @@
             top: 100%; /* Position directly below the button */
             right: 0;
             background-color: var(--card-bg);
-            border: none; /* Ensure no border */
             border-radius: 8px;
             padding: 10px; /* Keep internal padding for buttons */
             min-width: 150px;
             box-shadow: none !important; /* Force removal of any box-shadow */
             z-index: 10;
+            border: none; /* Explicitly remove border on the container */
         }
         .dropdown-container:hover .dropdown-options,
         .dropdown-options:hover {
@@ -182,7 +186,7 @@
         .dropdown-options button,
         .dropdown-options a { /* Apply to links as well */
             background: none;
-            border: none;
+            border: none; /* Ensure no border on individual options */
             color: var(--text-primary);
             padding: 8px;
             cursor: pointer;
@@ -191,11 +195,15 @@
             font-size: 0.9rem;
             display: block;
             text-decoration: none; /* Remove underline for links */
+            font-weight: bold; /* Made dropdown options bold */
+            box-shadow: none; /* Explicitly remove box-shadow from buttons */
         }
         .dropdown-options button:hover,
         .dropdown-options a:hover { /* Apply to links as well */
             background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
+            box-shadow: none; /* Ensure no box-shadow on hover */
+            color: var(--text-primary); /* Keep text color consistent on hover */
         }
 
         .hero {
@@ -366,7 +374,8 @@
             border: 1px solid var(--text-primary);
             border-radius: 8px;
             background: var(--bg-secondary);
-            font-family: 'Fira Mono', monospace;
+            /* Changed font-family to Segoe UI to match header.html */
+            font-family: 'Segoe UI', Arial, sans-serif;
             font-size: 0.9rem;
             resize: vertical;
             color: var(--text-primary);
@@ -420,27 +429,29 @@
     </style>
 </head>
 <body class="theme-blackwhite transition-all">
+  <!-- Particles container is needed for the JS to function correctly -->
   <div class="particles-container" id="particles"></div>
   <header class="main-header transition-all">
     <a href="../index.html" class="logo">SHKSPR</a>
     <div class="theme-controls">
-      <!-- Tools Dropdown Menu -->
+      <!-- Reordered elements: Limit Exceeded?, Tools, Themes -->
+      <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
       <div class="dropdown-container">
         <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
         <div class="dropdown-options">
           <a href="./Humanizer.html">AI Humanizer</a>
           <a href="../AI_Grader/Grader.html">AI Grader</a>
+          <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a> <!-- Added Summarizer link -->
         </div>
       </div>
-      <!-- Themes Dropdown Menu -->
       <div class="dropdown-container">
         <button class="dropdown-button" id="theme-button">🎨 Themes</button>
         <div class="dropdown-options">
           <button id="theme-blackwhite-btn">Black & White</button>
           <button id="theme-cyan-btn">Cyan</button>
           <button id="theme-purple-btn">Purple</button>
-          <button id="theme-green-btn">Green</button>
-          <button id="theme-red-btn">Red</button> <!-- Added Red Theme Button -->
+          <button id="theme-green-btn">Green</button> <!-- Green theme button -->
+          <button id="theme-red-btn">Red</button>
         </div>
       </div>
     </div>
@@ -711,7 +722,7 @@
         document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
         document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
         document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red')); // Added Red Theme Event Listener
+        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
 
         // Initialize theme and particles on page load
         const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
