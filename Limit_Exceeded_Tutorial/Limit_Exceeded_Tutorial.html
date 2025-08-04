@@ -276,16 +276,11 @@
             margin-bottom: 0.5rem;
         }
 
-        /* Updated link styling: blue by default, underline on hover */
-        a {
-            color: #007bff; /* Standard blue color for links */
-            text-decoration: none; /* No underline by default */
-        }
-        a:hover {
-            color: #0056b3; /* Darker blue on hover */
-            text-decoration: underline; /* Underline on hover */
-        }
 
+        a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
 
         /* Removed general button styling with box-shadow */
         /* button {
@@ -390,29 +385,29 @@
             <p>The AI Humanizer uses the Groq API Key <br>ALL OTHER APPLICATIONS use the Gemini API Key</p>
 
             <p class="sub-step-heading">Groq API Key:</p>
-            <p>Go to <a href="https://console.groq.com/keys" target="_blank">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/1.png" alt="Groq Create API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/2.png" alt="Groq Copy API Key" class="tutorial-image">
+            <p>Go to <a href="https://console.groq.com/keys" target="_blank" class="text-accent hover:text-white">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
+            <img src="1.png" alt="Groq Create API Key" class="tutorial-image">
+            <img src="2.png" alt="Groq Copy API Key" class="tutorial-image">
 
             <p class="sub-step-heading">Gemini API Key:</p>
-            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" target="_blank">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/3.jpg" alt="Gemini Create API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/4.png" alt="Gemini Copy API Key" class="tutorial-image">
+            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" target="_blank" class="text-accent hover:text-white">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
+            <img src="3.jpg" alt="Gemini Create API Key" class="tutorial-image">
+            <img src="4.png" alt="Gemini Copy API Key" class="tutorial-image">
 
             <p class="important-note font-bold text-red-400">IMPORTANT: Save your API key, you will need it later! Don't share it publicly as it's a security threat.</p>
 
             <p class="step-heading">Step 2: Add the API Key into the code:</p>
-            <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/5.png" alt="GitHub Local Use Folder" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/6.jpg" alt="GitHub File Text" class="tutorial-image">
+            <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" target="_blank" class="text-accent hover:text-white">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
+            <img src="5.png" alt="GitHub Local Use Folder" class="tutorial-image">
+            <img src="6.jpg" alt="GitHub File Text" class="tutorial-image">
 
-            <p>Go to <a href="https://www.codechef.com/html-online-compiler" target="_blank">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/9.png" alt="CodeChef Replace API Key" class="tutorial-image">
+            <p>Go to <a href="https://www.codechef.com/html-online-compiler" target="_blank" class="text-accent hover:text-white">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
+            <img src="7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
+            <img src="8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
+            <img src="9.png" alt="CodeChef Replace API Key" class="tutorial-image">
 
             <p class="step-heading">Step 3: Enjoy!</p>
-            <p>You can save this edited version of the code to use whenever you want! Keep in mind that the code might update, check the Github folder <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a> for any updates!</p>
+            <p>You can save this edited version of the code to use whenever you want!</p>
         </div>
     </div>
 
