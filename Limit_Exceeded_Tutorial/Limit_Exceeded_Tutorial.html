@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key Local Setup Tutorial</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- Theme Variables (EXACTLY from index.html) --- */
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
+        }
+        body.theme-cyan {
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #e0ffff;
+            --accent: #00f6ff;
+            --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255; /* Added for consistency */
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255; /* Added for consistency */
+        }
+        body.theme-green {
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+            --accent-rgb: 102, 255, 102; /* Added for consistency */
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #e0e0e0; /* Silvery white accent */
+            --card-bg: #222;
+            --accent-rgb: 224, 224, 224; /* RGB for silvery white */
+        }
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 { /* Note: .hero h1 might not exist in this tutorial, but keeping for glow consistency */
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+        }
+        body.theme-blackwhite .hero p { /* Note: .hero p might not exist in this tutorial, but keeping for consistency */
+            text-shadow: 0 0 8px var(--accent);
+        }
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles (EXACTLY from index.html) --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.6s, color 0.6s;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            padding: 0; /* Ensures no default body padding */
+        }
+        .transition-all { transition: all 0.6s ease; }
+
+        /* --- Particle System Styles (EXACTLY from index.html) --- */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        /* --- Header Styles (EXACTLY from index.html) --- */
+        header.main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+            width: 100%; /* Ensure header spans full width */
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none;
+            transition: all 0.6s ease;
+        }
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .dropdown-button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .dropdown-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        .dropdown-container {
+            position: relative;
+        }
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
+        .dropdown-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 150px;
+            z-index: 10;
+        }
+        .dropdown-options button,
+        .dropdown-options a {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none;
+        }
+        .dropdown-options button:hover,
+        .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* New wrapper for main content to enable centering */
+        .main-content-wrapper {
+            flex-grow: 1; /* Allows this wrapper to take up remaining vertical space */
+            display: flex;
+            align-items: center; /* Vertically centers content within this wrapper */
+            justify-content: center; /* Horizontally centers content within this wrapper */
+            width: 100%; /* Ensure it takes full width */
+            padding: 20px 0; /* Add some vertical padding for spacing */
+        }
+
+        /* --- Main Content Container (Adjusted for new header) --- */
+        .container {
+            max-width: 800px;
+            width: 95%;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0, 0.5);
+            padding: 2rem;
+            text-align: center;
+            /* Removed margin-top as it's handled by main-content-wrapper */
+            /* Removed margin-bottom as it's handled by main-content-wrapper's padding */
+        }
+
+        h1.tutorial-title { /* Specific class for tutorial title to differentiate from header logo */
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            text-shadow:
+                0 0 10px rgba(var(--accent-rgb), 0.7),
+                0 0 20px rgba(var(--accent-rgb), 0.5);
+        }
+
+        /* --- Spacing & Font Size Adjustments for Tutorial Content --- */
+        .limit-exceeded-text {
+            font-size: 1.25rem; /* Made larger */
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 2rem; /* Consistent spacing */
+        }
+
+        .step-heading {
+            font-weight: bold;
+            font-size: 1.75rem; /* Made larger */
+            margin-top: 4rem; /* Increased spacing before each step */
+            margin-bottom: 1.5rem; /* Increased spacing after step heading */
+            text-align: left;
+        }
+
+        .sub-step-heading {
+            font-weight: bold;
+            font-size: 1.4rem; /* Made larger, but smaller than step-heading */
+            margin-top: 2.5rem; /* Spacing for sub-steps like Groq/Gemini API Key */
+            margin-bottom: 1rem; /* Spacing after sub-step heading */
+            text-align: left;
+        }
+
+        p {
+            font-size: 1rem;
+            margin-bottom: 1rem; /* Default paragraph spacing */
+            line-height: 1.6;
+            text-align: left; /* Ensure all paragraphs are left-aligned */
+        }
+
+        p.important-note {
+            margin-top: 2.5rem; /* More space for important note */
+            margin-bottom: 2.5rem;
+            text-align: left;
+        }
+
+        .tutorial-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1.5rem auto; /* Increased margin for images */
+            display: block; /* Ensures image is centered */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        ol {
+            margin-bottom: 1.5rem; /* Spacing for ordered lists */
+            padding-left: 20px; /* Indent for list items */
+        }
+        ol li {
+            margin-bottom: 0.5rem;
+        }
+
+
+        a {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        /* Removed general button styling with box-shadow */
+        /* button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8);
+            transform: translateY(-2px);
+        } */
+
+        #message {
+            margin-top: 1rem;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none; /* Hidden by default */
+        }
+
+        #message.success {
+            background-color: rgba(0, 255, 0, 0.15);
+            border: 1px solid #68d391;
+            color: #ccffcc;
+        }
+
+        #message.error {
+            background-color: rgba(255, 0, 0, 0.2);
+            border: 1px solid #f56565;
+            color: #ffcccc;
+        }
+
+        .code-block {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: left;
+            margin-top: 1.5rem;
+            overflow-x: auto;
+        }
+        .code-block pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Footer styling (copied from index.html for consistency) */
+        footer.main-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            text-shadow: 0 0 5px var(--accent);
+            background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+            margin-top: auto; /* Pushes footer to the bottom */
+        }
+    </style>
+</head>
+<body class="theme-blackwhite transition-all">
+    <div class="particles-container" id="particles"></div>
+
+    <header class="main-header transition-all">
+        <a href="./index.html" class="logo">SHKSPR</a>
+        <div class="theme-controls">
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+                <div class="dropdown-options">
+                    <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="./AI_Grader/Grader.html">AI Grader</a>
+                </div>
+            </div>
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+                <div class="dropdown-options">
+                    <button id="theme-blackwhite-btn">Black & White</button>
+                    <button id="theme-cyan-btn">Cyan</button>
+                    <button id="theme-purple-btn">Purple</button>
+                    <button id="theme-green-btn">Green</button>
+                    <button id="theme-red-btn">Red</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content-wrapper">
+        <div class="container">
+            <h1 class="tutorial-title">API Key Local Setup Tutorial</h1>
+            
+            <p class="limit-exceeded-text">The "Limit Exceeded" error is due to the free plan limitations I have. However, you can run the application yourself to avoid these issues.</p>
+
+            <p class="step-heading">Step 1: Obtain your API Key</p>
+            <p>The AI Humanizer uses the Groq API Key <br>ALL OTHER APPLICATIONS use the Gemini API Key</p>
+
+            <p class="sub-step-heading">Groq API Key:</p>
+            <p>Go to <a href="https://console.groq.com/keys" target="_blank" class="text-accent hover:text-white">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
+            <img src="1.png" alt="Groq Create API Key" class="tutorial-image">
+            <img src="2.png" alt="Groq Copy API Key" class="tutorial-image">
+
+            <p class="sub-step-heading">Gemini API Key:</p>
+            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" target="_blank" class="text-accent hover:text-white">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
+            <img src="3.jpg" alt="Gemini Create API Key" class="tutorial-image">
+            <img src="4.png" alt="Gemini Copy API Key" class="tutorial-image">
+
+            <p class="important-note font-bold text-red-400">IMPORTANT: Save your API key, you will need it later! Don't share it publicly as it's a security threat.</p>
+
+            <p class="step-heading">Step 2: Add the API Key into the code:</p>
+            <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" target="_blank" class="text-accent hover:text-white">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
+            <img src="5.png" alt="GitHub Local Use Folder" class="tutorial-image">
+            <img src="6.jpg" alt="GitHub File Text" class="tutorial-image">
+
+            <p>Go to <a href="https://www.codechef.com/html-online-compiler" target="_blank" class="text-accent hover:text-white">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
+            <img src="7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
+            <img src="8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
+            <img src="9.png" alt="CodeChef Replace API Key" class="tutorial-image">
+
+            <p class="step-heading">Step 3: Enjoy!</p>
+            <p>You can save this edited version of the code to use whenever you want!</p>
+        </div>
+    </div>
+
+    <script>
+        // Set the workerSrc for PDF.js (Keeping this as it was in Grader.html, though not strictly needed here)
+        if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+        }
+
+        // --- Theming and Particle System (EXACTLY from index.html) ---
+        window.setTheme = function(theme) {
+            console.log(`Setting theme to: ${theme}`); // Debug log
+            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+            localStorage.setItem('shkspr-theme', theme);
+            window.initParticles();
+        }
+
+        window.Particle = class Particle {
+            constructor(container, colors) {
+                this.container = container;
+                this.element = document.createElement('div');
+                this.element.classList.add('particle');
+                this.container.appendChild(this.element);
+                this.size = Math.random() * 6 + 2;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.opacity = Math.random() * 0.5 + 0.3;
+                this.element.style.width = `${this.size}px`;
+                this.element.style.height = `${this.size}px`;
+                this.element.style.backgroundColor = this.color;
+                this.element.style.opacity = this.opacity;
+                this.update();
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                    this.vx *= -1;
+                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                }
+                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                    this.vy *= -1;
+                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                }
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+            }
+            remove() {
+                this.container.removeChild(this.element);
+            }
+        }
+
+        let particles = [];
+        let animationId;
+
+        window.initParticles = function() {
+            console.log('Initializing particles...'); // Debug log
+            const container = document.getElementById('particles');
+            if (!container) {
+                console.error('Particles container not found!'); // Debug error
+                return;
+            }
+            particles.forEach(p => p.remove());
+            particles = [];
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            let colors = [accentColor];
+            if (document.body.classList.contains('theme-blackwhite')) {
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; /* Silvery shades for particles */
+            } else if (document.body.classList.contains('theme-cyan')) {
+                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+            } else if (document.body.classList.contains('theme-purple')) {
+                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+            } else if (document.body.classList.contains('theme-green')) {
+                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+            } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
+                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+            }
+            for (let i = 0; i < 60; i++) {
+                particles.push(new window.Particle(container, colors));
+            }
+            window.animateParticles();
+        }
+
+        window.animateParticles = function() {
+            particles.forEach(p => p.update());
+            animationId = requestAnimationFrame(window.animateParticles);
+        }
+
+        // --- Tutorial Specific Logic (Modified to remove API key input/test) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded. Attaching event listeners.'); // Debug log
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', (event) => {
+                console.log('Black & White button clicked!', event.target);
+                event.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; // Temp feedback
+                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
+                window.setTheme('theme-blackwhite');
+            });
+            document.getElementById('theme-cyan-btn').addEventListener('click', (event) => {
+                console.log('Cyan button clicked!', event.target);
+                event.target.style.backgroundColor = 'rgba(0, 246, 255, 0.2)'; // Temp feedback
+                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
+                window.setTheme('theme-cyan');
+            });
+            document.getElementById('theme-purple-btn').addEventListener('click', (event) => {
+                console.log('Purple button clicked!', event.target);
+                event.target.style.backgroundColor = 'rgba(204, 102, 255, 0.2)'; // Temp feedback
+                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
+                window.setTheme('theme-purple');
+            });
+            document.getElementById('theme-green-btn').addEventListener('click', (event) => {
+                console.log('Green button clicked!', event.target);
+                event.target.style.backgroundColor = 'rgba(102, 255, 102, 0.2)'; // Temp feedback
+                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
+                window.setTheme('theme-green');
+            });
+            document.getElementById('theme-red-btn').addEventListener('click', (event) => {
+                console.log('Red button clicked!', event.target);
+                event.target.style.backgroundColor = 'rgba(255, 51, 51, 0.2)'; // Temp feedback
+                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
+                window.setTheme('theme-red');
+            });
+
+            // --- Init Theme and Particles ---
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            console.log(`Initial theme: ${savedTheme}`); // Debug log
+            window.setTheme(savedTheme);
+        });
+    </script>
+</body>
+</html>
