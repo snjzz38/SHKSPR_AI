@@ -419,7 +419,6 @@
 
         // --- Theming and Particle System (EXACTLY from index.html) ---
         window.setTheme = function(theme) {
-            console.log(`Setting theme to: ${theme}`); // Debug log
             document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
             localStorage.setItem('shkspr-theme', theme);
             window.initParticles();
@@ -466,10 +465,9 @@
         let animationId;
 
         window.initParticles = function() {
-            console.log('Initializing particles...'); // Debug log
             const container = document.getElementById('particles');
             if (!container) {
-                console.error('Particles container not found!'); // Debug error
+                console.error('Particles container not found!');
                 return;
             }
             particles.forEach(p => p.remove());
@@ -501,43 +499,16 @@
             animationId = requestAnimationFrame(window.animateParticles);
         }
 
-        // --- Tutorial Specific Logic (Modified to remove API key input/test) ---
+        // --- Tutorial Specific Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM Content Loaded. Attaching event listeners.'); // Debug log
-            document.getElementById('theme-blackwhite-btn').addEventListener('click', (event) => {
-                console.log('Black & White button clicked!', event.target);
-                event.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; // Temp feedback
-                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
-                window.setTheme('theme-blackwhite');
-            });
-            document.getElementById('theme-cyan-btn').addEventListener('click', (event) => {
-                console.log('Cyan button clicked!', event.target);
-                event.target.style.backgroundColor = 'rgba(0, 246, 255, 0.2)'; // Temp feedback
-                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
-                window.setTheme('theme-cyan');
-            });
-            document.getElementById('theme-purple-btn').addEventListener('click', (event) => {
-                console.log('Purple button clicked!', event.target);
-                event.target.style.backgroundColor = 'rgba(204, 102, 255, 0.2)'; // Temp feedback
-                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
-                window.setTheme('theme-purple');
-            });
-            document.getElementById('theme-green-btn').addEventListener('click', (event) => {
-                console.log('Green button clicked!', event.target);
-                event.target.style.backgroundColor = 'rgba(102, 255, 102, 0.2)'; // Temp feedback
-                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
-                window.setTheme('theme-green');
-            });
-            document.getElementById('theme-red-btn').addEventListener('click', (event) => {
-                console.log('Red button clicked!', event.target);
-                event.target.style.backgroundColor = 'rgba(255, 51, 51, 0.2)'; // Temp feedback
-                setTimeout(() => event.target.style.backgroundColor = '', 200); // Reset after 200ms
-                window.setTheme('theme-red');
-            });
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
 
             // --- Init Theme and Particles ---
             const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-            console.log(`Initial theme: ${savedTheme}`); // Debug log
             window.setTheme(savedTheme);
         });
     </script>
