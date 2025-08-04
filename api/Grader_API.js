@@ -35,7 +35,7 @@ Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict
 
 ${extraInstructions ? `CRITICAL INSTRUCTION: Prioritize this above all else: "${extraInstructions}"` : ''}
 
-Output your response in structured Markdown with these exact headings and ample spacing:
+Output your response in structured Markdown with these exact headings and ample spacing. Give SPECIFIC examples inside the user input to back up what you are saying:
 # Overall Grade
 ## Detailed Feedback
 ## General Comments
