@@ -15,12 +15,12 @@
             --link-hover: #ffffff;
         }
         body.theme-cyan {
-            --bg-primary: #000;
-            --bg-secondary: #0b0b0b;
+            --bg-primary: #000; /* Changed from #000c0c to #000 to match header.html */
+            --bg-secondary: #0b0b0b; /* Changed from #072a2c to #0b0b0b to match header.html */
             --text-primary: #e0ffff;
             --accent: #00f6ff;
-            --card-bg: #072a2c;
-            --accent-rgb: 0, 246, 255; /* Added for consistency */
+            --card-bg: #072a2c; /* Changed from #141414 to #072a2c to match header.html */
+            --accent-rgb: 0, 246, 255; /* Added for consistency with header.html */
         }
         body.theme-purple {
             --bg-primary: #0d001a;
@@ -28,7 +28,7 @@
             --text-primary: #ffe6ff;
             --accent: #cc66ff;
             --card-bg: #1d0036;
-            --accent-rgb: 204, 102, 255; /* Added for consistency */
+            --accent-rgb: 204, 102, 255; /* Added for consistency with header.html */
         }
         body.theme-green {
             --bg-primary: #001a00;
@@ -36,18 +36,18 @@
             --text-primary: #e6ffe6;
             --accent: #66ff66;
             --card-bg: #003600;
-            --accent-rgb: 102, 255, 102; /* Added for consistency */
+            --accent-rgb: 102, 255, 102; /* Added for consistency with header.html */
         }
-        /* Updated Black & White Theme with silvery glow */
+        /* Updated Black & White Theme with silvery glow from header.html */
         body.theme-blackwhite {
             --bg-primary: #000;
             --bg-secondary: #111;
             --text-primary: #fff;
-            --accent: #e0e0e0; /* Silvery white accent */
+            --accent: #e0e0e0; /* Silvery white accent from header.html */
             --card-bg: #222;
-            --accent-rgb: 224, 224, 224; /* RGB for silvery white */
+            --accent-rgb: 224, 224, 224; /* RGB for silvery white from header.html */
         }
-        /* Glow intensity for Black & White theme - adjusted for silvery glow */
+        /* Glow intensity for Black & White theme - adjusted for silvery glow from header.html */
         body.theme-blackwhite .logo,
         body.theme-blackwhite .hero h1 {
             text-shadow:
@@ -62,7 +62,7 @@
             text-shadow: 0 0 8px var(--accent);
         }
 
-        /* New Red Theme */
+        /* New Red Theme from header.html */
         body.theme-red {
             --bg-primary: #1a0000;
             --bg-secondary: #2b0000;
@@ -113,17 +113,17 @@
             will-change: transform;
         }
 
-        header.main-header { /* Added main-header class for consistency */
+        header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 20px 10%;
             background-color: var(--bg-secondary);
+            box-shadow: none; /* Removed box-shadow to eliminate green glow */
             transition: background-color 0.6s, color 0.6s;
             position: relative;
             z-index: 10;
         }
-
         .logo {
             font-size: 2.5rem;
             font-weight: bold;
@@ -138,13 +138,13 @@
             text-decoration: none;
             transition: all 0.6s ease;
         }
-
         .theme-controls {
             display: flex;
             gap: 10px;
             align-items: center;
+            position: relative;
         }
-
+        /* Common styling for dropdown buttons */
         .dropdown-button {
             background: var(--card-bg);
             color: var(--text-primary);
@@ -155,32 +155,37 @@
             font-size: 0.9rem;
             transition: all 0.3s;
         }
-
         .dropdown-button:hover {
             background: var(--text-primary);
             color: var(--bg-primary);
         }
 
+        /* Common styling for dropdown containers */
         .dropdown-container {
             position: relative;
         }
-
         .dropdown-container:hover .dropdown-options {
             display: block;
         }
 
+        /* Common styling for dropdown options */
         .dropdown-options {
             display: none;
             position: absolute;
             top: 100%;
             right: 0;
             background-color: var(--card-bg);
+            border: none;
             border-radius: 8px;
             padding: 10px;
             min-width: 150px;
+            box-shadow: none !important;
             z-index: 10;
         }
-
+        .dropdown-container:hover .dropdown-options,
+        .dropdown-options:hover {
+            display: block;
+        }
         .dropdown-options button,
         .dropdown-options a {
             background: none;
@@ -194,7 +199,6 @@
             display: block;
             text-decoration: none;
         }
-
         .dropdown-options button:hover,
         .dropdown-options a:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -210,9 +214,8 @@
             padding: 50px 20px 30px 20px;
             position: relative;
             z-index: 5;
-            flex-grow: 1;
+            flex-grow: 1; /* Allow hero section to grow and push footer down */
         }
-
         .hero h1 {
             font-size: 3.2rem;
             color: var(--text-primary);
@@ -225,7 +228,6 @@
             margin-bottom: 20px;
             transition: all 0.6s ease;
         }
-
         .hero p {
             font-size: 1.2rem;
             margin-bottom: 30px;
@@ -234,14 +236,12 @@
             color: var(--text-primary);
             transition: all 0.6s ease;
         }
-
         .cta-buttons {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
             justify-content: center;
         }
-
         .cta-button {
             background: var(--accent);
             color: var(--bg-primary);
@@ -251,19 +251,17 @@
             font-weight: bold;
             font-size: 1.1rem;
             transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5); /* Use accent-rgb for dynamic shadow */
+            box-shadow: 0 0 15px rgba(0, 246, 255, 0.5);
             border: none;
             cursor: pointer;
         }
-
         .cta-button:hover {
             background: var(--text-primary);
             color: var(--bg-primary);
             box-shadow: 0 0 25px var(--accent);
             transform: translateY(-3px);
         }
-
-        footer.main-footer { /* Added main-footer class for consistency */
+        footer {
             text-align: center;
             padding: 20px;
             font-size: 0.9rem;
@@ -273,22 +271,28 @@
             transition: background-color 0.6s, color 0.6s;
             position: relative;
             z-index: 10;
-            margin-top: auto;
+            margin-top: auto; /* Push footer to the bottom */
         }
     </style>
 </head>
 <body class="theme-blackwhite transition-all">
   <div class="particles-container" id="particles"></div>
-  <header class="main-header transition-all">
+  <header class="transition-all">
     <a href="./index.html" class="logo">SHKSPR</a>
     <div class="theme-controls">
+      <!-- "Limit Exceeded?" link outside the dropdown -->
+      <a href="./Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
+
+      <!-- Tools Dropdown Menu (unchanged as per request) -->
       <div class="dropdown-container">
         <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
         <div class="dropdown-options">
           <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
           <a href="./AI_Grader/Grader.html">AI Grader</a>
+          <a href="./AI_Summarizer/Summarizer.html">AI Summarizer</a>
         </div>
       </div>
+      <!-- Themes Dropdown Menu -->
       <div class="dropdown-container">
         <button class="dropdown-button" id="theme-button">🎨 Themes</button>
         <div class="dropdown-options">
@@ -296,23 +300,25 @@
           <button id="theme-cyan-btn">Cyan</button>
           <button id="theme-purple-btn">Purple</button>
           <button id="theme-green-btn">Green</button>
-          <button id="theme-red-btn">Red</button> <!-- New Red Theme Button -->
+          <button id="theme-red-btn">Red</button> <!-- Added Red theme button -->
         </div>
       </div>
     </div>
   </header>
-  <section class="hero">
-    <h1>Welcome to SHKSPR</h1>
-    <p>Your ultimate AI-powered study companion. Humanize text, grade essays, and more.</p>
-    <div class="cta-buttons">
-      <a href="./AI_Humanizer/Humanizer.html" class="cta-button">Humanize Text</a>
-      <a href="./AI_Grader/Grader.html" class="cta-button">Grade Essay</a>
-    </div>
-  </section>
-  <footer class="main-footer transition-all">
-    <p>&copy; 2025 Shkspr. All rights reserved.</p>
-  </footer>
+    <section class="hero">
+        <h1>Welcome to SHKSPR</h1>
+        <p>Your ultimate AI-powered study companion. Humanize text, grade essays, and more.</p>
+        <div class="cta-buttons">
+            <a href="./AI_Humanizer/Humanizer.html" class="cta-button">Humanize Text</a>
+            <a href="./AI_Grader/Grader.html" class="cta-button">Grade Essay</a>
+            <a href="./AI_Summarizer/Summarizer.html" class="cta-button">Summarize Text</a>
+        </div>
+    </section>
+    <footer class="transition-all">
+        <p>&copy; 2025 Shkspr. All rights reserved.</p>
+    </footer>
 <script>
+    // --- Global functions for theming and particles ---
     window.setTheme = function(theme) {
       document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
       localStorage.setItem('shkspr-theme', theme);
@@ -355,10 +361,8 @@
         this.container.removeChild(this.element);
       }
     }
-
     let particles = [];
     let animationId;
-
     window.initParticles = function() {
       const container = document.getElementById('particles');
       if (!container) return;
@@ -377,27 +381,30 @@
         colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
       } else if (document.body.classList.contains('theme-green')) {
         colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-      } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
+      } else if (document.body.classList.contains('theme-red')) { /* Added Red Theme particles */
         colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
       }
-      for (let i = 0; i < 60; i++) {
+      const particleCount = 60;
+      for (let i = 0; i < particleCount; i++) {
         particles.push(new window.Particle(container, colors));
       }
       window.animateParticles();
     }
-
     window.animateParticles = function() {
-      particles.forEach(p => p.update());
+      particles.forEach(particle => particle.update());
       animationId = requestAnimationFrame(window.animateParticles);
     }
+    // End of global functions for theming and particles
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Theme control logic
         document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
         document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
         document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
         document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red')); /* New Red Theme Event Listener */
+        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red')); // Event listener for Red theme
 
+        // Initialize theme and particles on page load
         const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
         window.setTheme(savedTheme);
     });
