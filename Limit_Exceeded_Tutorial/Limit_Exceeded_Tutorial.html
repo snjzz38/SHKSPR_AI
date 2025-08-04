@@ -108,7 +108,7 @@
             will-change: transform;
         }
 
-        /* --- Header Styles (EXACTLY from index.html) --- */
+        /* --- Header Styles (EXACTLY from header.html) --- */
         header.main-header {
             display: flex;
             justify-content: space-between;
@@ -356,15 +356,18 @@
     <div class="particles-container" id="particles"></div>
 
     <header class="main-header transition-all">
-        <a href="./index.html" class="logo">SHKSPR</a>
+        <a href="../index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
             <div class="dropdown-container">
                 <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
                 <div class="dropdown-options">
-                    <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
-                    <a href="./AI_Grader/Grader.html">AI Grader</a>
+                    <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="../AI_Grader/Grader.html">AI Grader</a>
+                    <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
                 </div>
             </div>
+            <!-- Moved "Limit Exceeded?" button outside the tools dropdown and styled it -->
+            <a href="./Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <div class="dropdown-container">
                 <button class="dropdown-button" id="theme-button">🎨 Themes</button>
                 <div class="dropdown-options">
@@ -389,25 +392,25 @@
 
             <p class="sub-step-heading">Groq API Key:</p>
             <p>Go to <a href="https://console.groq.com/keys" style="color: cyan;" target="_blank">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/1.png" alt="Groq Create API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/2.png" alt="Groq Copy API Key" class="tutorial-image">
+            <img src="1.png" alt="Groq Create API Key" class="tutorial-image">
+            <img src="2.png" alt="Groq Copy API Key" class="tutorial-image">
 
             <p class="sub-step-heading">Gemini API Key:</p>
             <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" style="color: cyan;" target="_blank">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/3.jpg" alt="Gemini Create API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/4.png" alt="Gemini Copy API Key" class="tutorial-image">
+            <img src="3.jpg" alt="Gemini Create API Key" class="tutorial-image">
+            <img src="4.png" alt="Gemini Copy API Key" class="tutorial-image">
 
             <p class="important-note font-bold text-red-400">IMPORTANT: Save your API key, you will need it later! Don't share it publicly as it's a security threat.</p>
 
             <p class="step-heading">Step 2: Add the API Key into the code:</p>
             <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/5.png" alt="GitHub Local Use Folder" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/6.jpg" alt="GitHub File Text" class="tutorial-image">
+            <img src="5.png" alt="GitHub Local Use Folder" class="tutorial-image">
+            <img src="6.jpg" alt="GitHub File Text" class="tutorial-image">
 
             <p>Go to <a href="https://www.codechef.com/html-online-compiler" style="color: cyan;" target="_blank">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
-            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/9.png" alt="CodeChef Replace API Key" class="tutorial-image">
+            <img src="7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
+            <img src="8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
+            <img src="9.png" alt="CodeChef Replace API Key" class="tutorial-image">
 
             <p class="step-heading">Step 3: Enjoy!</p>
             <p>You can save this edited version of the code to use whenever you want! <br><br> Keep in mind that the code may update, you can check the Github Folder <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a> for any updates. <br>You would probably NEVER need to make a new API key as the code updates separately.</p>
