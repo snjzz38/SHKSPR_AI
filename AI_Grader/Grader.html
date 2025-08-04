@@ -644,6 +644,19 @@
             animationId = requestAnimationFrame(window.animateParticles);
         }
 
+        // Define the models
+        const ALL_GEMINI_MODELS = [
+            'gemini-2.5-flash-lite',
+            'gemini-live-2.5-flash-preview',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            'gemini-2.0-flash-live-001',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-8b',
+            'gemini-1.5-pro'
+        ];
+
         // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             // Theme initialization from header.html
@@ -767,6 +780,10 @@
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
 
+                let availableModels = [...ALL_GEMINI_MODELS]; // Create a mutable copy for this attempt
+                let attemptCount = 0;
+                const MAX_ATTEMPTS = availableModels.length * 2; // Allow retrying models, but with a cap
+
                 try {
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
@@ -779,31 +796,62 @@
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
 
-                    const payload = {
-                        instructionsData,
-                        rubricData,
-                        essayData,
-                        extraInstructions,
-                        strictness
-                    };
+                    let result = null;
+                    while (availableModels.length > 0 && attemptCount < MAX_ATTEMPTS) {
+                        attemptCount++;
+                        const randomIndex = Math.floor(Math.random() * availableModels.length);
+                        const selectedModel = availableModels[randomIndex];
 
-                    // Fetch from the backend API
-                    const response = await fetch('/api/Grader_API', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                        console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
+                        dom.loadingIndicator.querySelector('span').textContent = `Grading in Progress (Model: ${selectedModel})...`;
 
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(`Server Error: ${errorData.error || response.statusText}`);
+                        const payload = {
+                            instructionsData,
+                            rubricData,
+                            essayData,
+                            extraInstructions,
+                            strictness,
+                            model: selectedModel // Pass the selected model to the backend
+                        };
+
+                        try {
+                            const response = await fetch('/api/Grader_API', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) {
+                                const errorData = await response.json();
+                                const errorMessage = errorData.error || response.statusText;
+                                console.warn(`Model ${selectedModel} failed: ${errorMessage}. Retrying with another model.`);
+                                // Remove the failed model from available models for this attempt
+                                availableModels.splice(randomIndex, 1);
+                                // Implement exponential backoff
+                                await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5))); // Max 5 seconds delay
+                                continue; // Try next model
+                            }
+
+                            result = await response.json();
+                            if (!result.text) {
+                                throw new Error("Received an empty response from the server.");
+                            }
+                            break; // Success, exit loop
+
+                        } catch (fetchError) {
+                            console.error(`Fetch error for model ${selectedModel}:`, fetchError);
+                            // If it's a network error or unhandled exception, remove model and retry
+                            availableModels.splice(randomIndex, 1);
+                            await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5)));
+                            continue;
+                        }
                     }
 
-                    const result = await response.json();
-                    const text = result.text;
-                    if (!text) throw new Error("Received an empty response from the server.");
+                    if (!result) {
+                        throw new Error("All model attempts failed or no successful response received.");
+                    }
 
-                    dom.resultContentDiv.innerHTML = marked.parse(text);
+                    dom.resultContentDiv.innerHTML = marked.parse(result.text);
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
@@ -813,6 +861,7 @@
                     displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
                 } finally {
                     toggleLoading(false);
+                    dom.loadingIndicator.querySelector('span').textContent = `Grading in Progress...`; // Reset text
                 }
             };
 
