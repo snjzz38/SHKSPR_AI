@@ -276,11 +276,14 @@
             margin-bottom: 0.5rem;
         }
 
-
-        a {
-            color: var(--accent);
-            text-decoration: underline;
+        /* Styling for links within the main content to be cyan and underlined on hover */
+        a[style*="color: cyan;"] {
+            text-decoration: none; /* No underline by default */
         }
+        a[style*="color: cyan;"]:hover {
+            text-decoration: underline; /* Underline on hover */
+        }
+
 
         /* Removed general button styling with box-shadow */
         /* button {
@@ -385,29 +388,29 @@
             <p>The AI Humanizer uses the Groq API Key <br>ALL OTHER APPLICATIONS use the Gemini API Key</p>
 
             <p class="sub-step-heading">Groq API Key:</p>
-            <p>Go to <a href="https://console.groq.com/keys" style="color: cyan;" target="_blank" class="text-accent hover:text-white">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
-            <img src="1.png" alt="Groq Create API Key" class="tutorial-image">
-            <img src="2.png" alt="Groq Copy API Key" class="tutorial-image">
+            <p>Go to <a href="https://console.groq.com/keys" style="color: cyan;" target="_blank">https://console.groq.com/keys</a> and make an account (its free!), then click "Create API Key", give it a name (whatever you want). And <strong>Copy the value it gives you</strong>.</p>
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/1.png" alt="Groq Create API Key" class="tutorial-image">
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/2.png" alt="Groq Copy API Key" class="tutorial-image">
 
             <p class="sub-step-heading">Gemini API Key:</p>
-            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" style="color: cyan;" target="_blank" class="text-accent hover:text-white">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
-            <img src="3.jpg" alt="Gemini Create API Key" class="tutorial-image">
-            <img src="4.png" alt="Gemini Copy API Key" class="tutorial-image">
+            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" style="color: cyan;" target="_blank">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in if you need to, and accept whatever Terms of Service they give you. Then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/3.jpg" alt="Gemini Create API Key" class="tutorial-image">
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/4.png" alt="Gemini Copy API Key" class="tutorial-image">
 
             <p class="important-note font-bold text-red-400">IMPORTANT: Save your API key, you will need it later! Don't share it publicly as it's a security threat.</p>
 
             <p class="step-heading">Step 2: Add the API Key into the code:</p>
-            <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank" class="text-accent hover:text-white">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
-            <img src="5.png" alt="GitHub Local Use Folder" class="tutorial-image">
-            <img src="6.jpg" alt="GitHub File Text" class="tutorial-image">
+            <p>Go to <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a>, pick a project to run like Humanizer.html or Grader.html for example. <strong>Copy the file text</strong>.</p>
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/5.png" alt="GitHub Local Use Folder" class="tutorial-image">
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/6.jpg" alt="GitHub File Text" class="tutorial-image">
 
-            <p>Go to <a href="https://www.codechef.com/html-online-compiler" style="color: cyan;" target="_blank" class="text-accent hover:text-white">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
-            <img src="7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
-            <img src="8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
-            <img src="9.png" alt="CodeChef Replace API Key" class="tutorial-image">
+            <p>Go to <a href="https://www.codechef.com/html-online-compiler" style="color: cyan;" target="_blank">https://www.codechef.com/html-online-compiler</a>, and go paste the code under the "index.html" section (<strong>IMPORTANT!</strong>), then click in the text and do ctrl f and search for "your-api-key-here", <strong>replace the "your-api-key-here" with the API key you made before</strong>, run the code and enjoy your working code!</p>
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
+            <img src="https://raw.githubusercontent.com/snjzz38/SHKSPR_AI/main/Limit_Exceeded_Tutorial/9.png" alt="CodeChef Replace API Key" class="tutorial-image">
 
             <p class="step-heading">Step 3: Enjoy!</p>
-            <p>You can save this edited version of the code to use whenever you want! <br><br> Keep in mind that the code may update, you can check the Github Folder <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank" class="text-accent hover:text-white">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a> for any updates. <br>You would probably NEVER need to make a new API key as the code updates separately.</p>
+            <p>You can save this edited version of the code to use whenever you want! <br><br> Keep in mind that the code may update, you can check the Github Folder <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank">https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use</a> for any updates. <br>You would probably NEVER need to make a new API key as the code updates separately.</p>
         </div>
     </div>
 
@@ -417,7 +420,7 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
         }
 
-        // --- Theming and Particle System (EXACTLY from index.html) ---
+        // --- Theming and Particle System (EXACTLY from header.html) ---
         window.setTheme = function(theme) {
             document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
             localStorage.setItem('shkspr-theme', theme);
@@ -499,7 +502,7 @@
             animationId = requestAnimationFrame(window.animateParticles);
         }
 
-        // --- Tutorial Specific Logic ---
+        // --- Event Listeners for Theme Buttons (EXACTLY from header.html) ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
             document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
@@ -507,7 +510,6 @@
             document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
             document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
 
-            // --- Init Theme and Particles ---
             const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
             window.setTheme(savedTheme);
         });
