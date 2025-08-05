@@ -224,6 +224,40 @@
             text-shadow: 0 0 8px var(--accent);
         }
 
+        /* Input Step Container */
+        .input-step-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .input-step {
+            width: 100%;
+            display: none; /* Hidden by default, shown by JS */
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-step.active {
+            display: flex;
+        }
+
+        .input-step h2 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .input-step p.subtitle {
+            font-size: 0.9rem;
+            color: rgba(var(--accent-rgb), 0.7);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
         textarea {
             width: 100%;
             padding: 15px;
@@ -243,6 +277,13 @@
             box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
         }
 
+        .input-navigation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
         .action-buttons {
             display: flex;
             justify-content: center;
@@ -250,7 +291,7 @@
             flex-wrap: wrap;
         }
 
-        .generate-button, .clear-button {
+        .generate-button, .clear-button, .nav-button {
             background-color: var(--accent);
             color: var(--bg-primary);
             border: none;
@@ -263,14 +304,21 @@
             box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
 
-        .generate-button:hover, .clear-button:hover {
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6);
         }
 
-        .generate-button:active, .clear-button:active {
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled) {
             transform: translateY(0);
             box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3);
+        }
+
+        .nav-button:disabled {
+            background-color: var(--card-bg);
+            color: rgba(var(--accent-rgb), 0.5);
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         /* Flashcard display and navigation */
@@ -357,30 +405,6 @@
             margin-top: 10px;
         }
 
-        .nav-button {
-            background-color: var(--accent);
-            color: var(--bg-primary);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
-        }
-
-        .nav-button:disabled {
-            background-color: var(--card-bg);
-            color: rgba(var(--accent-rgb), 0.5);
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .nav-button:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.5);
-        }
 
         .message-box {
             background-color: rgba(var(--accent-rgb), 0.1);
@@ -440,7 +464,7 @@
                 font-size: 1rem;
                 padding: 10px 20px;
             }
-            .action-buttons, .flashcard-navigation {
+            .action-buttons, .flashcard-navigation, .input-navigation-buttons {
                 flex-direction: column;
             }
             .flashcard-wrapper {
@@ -484,8 +508,26 @@
 
   <main class="container">
     <h1>AI Flashcard Generator</h1>
-    <textarea id="inputText" placeholder="Enter text here to generate flashcards. For example: 'Photosynthesis is the process used by plants, algae and cyanobacteria to convert light energy into chemical energy.'"></textarea>
-    <textarea id="customInstructions" placeholder="Optional: Add custom instructions for the AI, e.g., 'Focus on key terms only', 'Generate 3 flashcards', 'Use simple language.'"></textarea>
+
+    <div class="input-step-container">
+        <div id="inputStep1" class="input-step active">
+            <h2>Step 1: Enter Your Text</h2>
+            <p class="subtitle">Provide the main content from which flashcards will be generated.</p>
+            <textarea id="inputText" placeholder="Enter text here to generate flashcards. For example: 'Photosynthesis is the process used by plants, algae and cyanobacteria to convert light energy into chemical energy.'"></textarea>
+        </div>
+
+        <div id="inputStep2" class="input-step">
+            <h2>Step 2: Add Custom Instructions (Optional)</h2>
+            <p class="subtitle">Guide the AI on how to create your flashcards.</p>
+            <textarea id="customInstructions" placeholder="Optional: Add custom instructions for the AI, e.g., 'Focus on key terms only', 'Generate 3 flashcards', 'Use simple language.'"></textarea>
+        </div>
+
+        <div class="input-navigation-buttons">
+            <button id="inputPrevButton" class="nav-button" disabled>Back</button>
+            <button id="inputNextButton" class="nav-button">Next</button>
+        </div>
+    </div>
+
     <div class="action-buttons">
       <button id="generateButton" class="generate-button">Generate Flashcards</button>
       <button id="clearButton" class="clear-button">Clear All</button>
@@ -604,15 +646,31 @@
         const generateButton = document.getElementById('generateButton');
         const clearButton = document.getElementById('clearButton');
         const flashcardWrapper = document.getElementById('flashcardWrapper');
-        const flashcardDisplayArea = document.getElementById('flashcardDisplayArea');
         const messageBox = document.getElementById('messageBox');
         const loadingBarContainer = document.getElementById('loadingBarContainer');
         const loadingBar = document.getElementById('loadingBar');
-        const prevButton = document.getElementById('prevButton');
-        const nextButton = document.getElementById('nextButton');
+        const prevButton = document.getElementById('prevButton'); // Flashcard navigation
+        const nextButton = document.getElementById('nextButton'); // Flashcard navigation
+
+        // Input step elements
+        const inputSteps = [
+            document.getElementById('inputStep1'),
+            document.getElementById('inputStep2')
+        ];
+        const inputPrevButton = document.getElementById('inputPrevButton');
+        const inputNextButton = document.getElementById('inputNextButton');
+        let currentInputStepIndex = 0;
 
         let flashcardsData = [];
         let currentFlashcardIndex = 0;
+
+        // Define available Gemini models
+        const ALL_GEMINI_MODELS = [
+            'gemini-2.5-flash-preview-05-20', // This is the default and should be preferred if available
+            'gemini-2.0-flash-preview',
+            'gemini-1.5-flash-preview',
+            'gemini-pro', // A common general-purpose model
+        ];
 
         // Function to display messages
         function showMessage(message, type = 'info') {
@@ -670,6 +728,37 @@
             nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
         }
 
+        // Function to shuffle an array
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Function to display a specific input step
+        function showInputStep(index) {
+            inputSteps.forEach((step, i) => {
+                if (i === index) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+
+            currentInputStepIndex = index;
+            inputPrevButton.disabled = currentInputStepIndex === 0;
+            inputNextButton.disabled = currentInputStepIndex === inputSteps.length - 1;
+
+            // If on the last input step, enable generate button
+            if (currentInputStepIndex === inputSteps.length - 1) {
+                generateButton.style.display = 'block'; // Show generate button
+            } else {
+                generateButton.style.display = 'none'; // Hide generate button
+            }
+        }
+
         // Function to generate flashcards using AI
         async function generateFlashcards() {
             const text = inputText.value.trim();
@@ -722,8 +811,7 @@ Text: "${text}"`;
                 }
             };
 
-            const apiKey = "your-api-key-here"; // Changed to placeholder
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const apiKey = "your-api-key-here"; // Placeholder for local testing
 
             // Simulate loading progress
             let progress = 0;
@@ -734,12 +822,14 @@ Text: "${text}"`;
                 }
             }, 200);
 
-            // Exponential backoff retry logic
-            const maxRetries = 3;
-            let retries = 0;
+            let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]); // Create a shuffled copy
             let success = false;
+            let lastError = null;
 
-            while (retries < maxRetries && !success) {
+            for (const modelName of modelsToTry) {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                console.log(`Attempting to generate flashcards with model: ${modelName}`);
+
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -749,7 +839,7 @@ Text: "${text}"`;
 
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(`API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+                        throw new Error(`API error with ${modelName}: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
                     }
 
                     const result = await response.json();
@@ -767,30 +857,43 @@ Text: "${text}"`;
                             displayFlashcard(0); // Display the first flashcard
                         }
                         success = true; // Mark as successful
+                        break; // Exit loop on success
                     } else {
-                        throw new Error('Unexpected API response structure.');
+                        throw new Error(`Unexpected API response structure from ${modelName}.`);
                     }
                 } catch (error) {
-                    console.error('Error generating flashcards:', error);
-                    retries++;
-                    if (retries < maxRetries) {
-                        const delay = Math.pow(2, retries) * 1000; // Exponential delay
-                        await new Promise(res => setTimeout(res, delay));
-                        console.log(`Retrying... (${retries}/${maxRetries})`);
-                    } else {
-                        showMessage(`Failed to generate flashcards after ${maxRetries} attempts. Please try again later or with different text.`, 'error');
-                    }
+                    console.error(`Error with model ${modelName}:`, error);
+                    lastError = error; // Store the last error
+                    // Continue to the next model in the loop
                 }
             }
+
             clearInterval(interval); // Stop simulating progress
             loadingBar.style.width = '100%'; // Complete loading bar
             setTimeout(() => {
                 loadingBarContainer.style.display = 'none'; // Hide loading bar after a short delay
                 loadingBar.style.width = '0%'; // Reset for next use
             }, 500);
+
+            if (!success) {
+                showMessage(`Failed to generate flashcards after trying all available models. Last error: ${lastError ? lastError.message : 'Unknown error.'}`, 'error');
+            }
         }
 
-        // Event listeners for navigation buttons
+        // Event listeners for input navigation buttons
+        inputPrevButton.addEventListener('click', () => {
+            if (currentInputStepIndex > 0) {
+                showInputStep(currentInputStepIndex - 1);
+            }
+        });
+
+        inputNextButton.addEventListener('click', () => {
+            if (currentInputStepIndex < inputSteps.length - 1) {
+                showInputStep(currentInputStepIndex + 1);
+            }
+        });
+
+        // Event listeners for flashcard navigation buttons
         prevButton.addEventListener('click', () => {
             if (currentFlashcardIndex > 0) {
                 displayFlashcard(currentFlashcardIndex - 1);
@@ -811,8 +914,13 @@ Text: "${text}"`;
             flashcardsData = [];
             currentFlashcardIndex = 0;
             displayFlashcard(currentFlashcardIndex); // Clear displayed card and disable buttons
+            showInputStep(0); // Go back to the first input step
             showMessage('All content and flashcards cleared.');
         });
+
+        // Initialize the first input step and hide generate button initially
+        showInputStep(0);
+        generateButton.style.display = 'none'; // Hide generate button until last step
     });
 </script>
 </body>
