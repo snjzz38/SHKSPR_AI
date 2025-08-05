@@ -1034,14 +1034,17 @@
                 });
 
                 if (!response.ok) {
-                    // Attempt to parse error response as JSON, if not, fallback to text
+                    // Clone the response so its body stream can be read multiple times if needed for debugging
+                    const clonedResponse = response.clone();
                     let errorDetails = `Status: ${response.status} ${response.statusText}`;
                     try {
+                        // Try to parse as JSON first
                         const errorJson = await response.json();
                         errorDetails += ` - ${JSON.stringify(errorJson)}`;
                     } catch (e) {
-                        const errorText = await response.text();
-                        errorDetails += ` - Response Body: "${errorText.substring(0, 100)}..."`; // Truncate long bodies
+                        // If JSON parsing fails, read as text
+                        const errorText = await clonedResponse.text(); // Use cloned response here
+                        errorDetails += ` - Response Body: "${errorText.substring(0, Math.min(errorText.length, 500))}..."`; // Truncate long bodies
                     }
                     throw new Error(`Serverless function error: ${errorDetails}`);
                 }
