@@ -1,19 +1,20 @@
 {
+  "version": 2,
   "builds": [
     {
-      "src": "/api/Grader_API.js",
+      "src": "api/Grader_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Humanizer_API.js",
+      "src": "api/Humanizer_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Flashcard.js",
+      "src": "api/Flashcard.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/**",
+      "src": "public/**",
       "use": "@vercel/static"
     }
   ],
@@ -23,11 +24,11 @@
       "destination": "/api/Humanizer_API.js"
     },
     {
-      "source": "/api/Grader_API",
+      "source": "/api/grader",
       "destination": "/api/Grader_API.js"
     },
     {
-      "source": "/api/Flashcard",
+      "source": "/api/flashcard",
       "destination": "/api/Flashcard.js"
     },
     {
@@ -37,6 +38,12 @@
   ],
   "functions": {
     "api/Flashcard.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/Grader_API.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/Humanizer_API.js": {
       "runtime": "nodejs18.x"
     }
   },
