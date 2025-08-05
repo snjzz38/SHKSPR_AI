@@ -1,1 +1,1193 @@
-E
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Flashcard Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PDF.js CDN for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <style>
+        /* --- Theme Variables (from header.html) --- */
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
+            --accent-rgb: 255, 255, 255; /* Default for black & white */
+        }
+        body.theme-cyan {
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #e0ffff;
+            --accent: #00f6ff;
+            --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255;
+        }
+        body.theme-green {
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+            --accent-rgb: 102, 255, 102;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #e0e0e0;
+            --card-bg: #222;
+            --accent-rgb: 224, 224, 224;
+        }
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 { /* Hero h1 is not in header, but kept for glow consistency */
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+        }
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles (from header.html and new additions) --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.6s, color 0.6s;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            align-items: center; /* Center content horizontally */
+        }
+
+        .transition-all {
+            transition: all 0.6s ease;
+        }
+
+        /* --- Particles Container (from header.html) --- */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        /* --- Header Specific Styles (from header.html) --- */
+        header.main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s;
+            position: relative;
+            z-index: 10;
+            width: 100%; /* Ensure header spans full width */
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none;
+            transition: all 0.6s ease;
+        }
+
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .dropdown-button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .dropdown-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+
+        .dropdown-container {
+            position: relative;
+        }
+
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
+
+        .dropdown-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 150px;
+            z-index: 10;
+        }
+
+        .dropdown-options button,
+        .dropdown-options a {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none;
+        }
+
+        .dropdown-options button:hover,
+        .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* --- Flashcard Generator Specific Styles --- */
+        .container {
+            max-width: 900px;
+            width: 90%;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: background-color 0.6s, color 0.6s;
+            position: relative; /* For loading bar */
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-shadow: 0 0 8px var(--accent);
+        }
+
+        /* Input Step Container */
+        .input-step-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .input-step {
+            width: 100%;
+            display: none; /* Hidden by default, shown by JS */
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-step.active {
+            display: flex;
+        }
+
+        .input-step h2 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .input-step p.subtitle {
+            font-size: 0.9rem;
+            color: rgba(var(--accent-rgb), 0.7);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 150px;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--text-primary);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+        }
+
+        /* File Upload Styles */
+        .file-upload-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            position: relative; /* Needed for absolute positioning of input */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px; /* Limit width */
+        }
+
+        .file-input-label {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            white-space: nowrap; /* Prevent text wrap */
+            z-index: 1; /* Ensure label is above hidden input */
+        }
+
+        .file-input-label:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        #fileInput {
+            position: absolute; /* Position over the label */
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0; /* Make it invisible but clickable */
+            cursor: pointer;
+            z-index: 2; /* Ensure input is above label for click capture */
+        }
+
+        .file-name-display {
+            flex-grow: 1;
+            padding: 8px 10px;
+            border: 1px solid var(--card-bg);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+            color: rgba(var(--accent-rgb), 0.8);
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-clear-button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .file-clear-button:hover {
+            color: var(--text-primary);
+        }
+
+        .file-list-container {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 15px;
+        }
+
+        .file-list-toggle-button {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        .file-list-toggle-button:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            max-height: 0; /* Hidden by default */
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+            border: 1px solid var(--card-bg);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+        }
+
+        .file-list.expanded {
+            max-height: 200px; /* Adjust as needed */
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+            font-size: 0.9rem;
+        }
+
+        .file-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-list-item span {
+            flex-grow: 1;
+            margin-right: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-item button {
+            background: none;
+            border: none;
+            color: #ff6666; /* Red color for delete */
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .file-list-item button:hover {
+            color: #ff0000;
+        }
+
+
+        .input-navigation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .generate-button, .clear-button, .nav-button {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
+        }
+
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6);
+        }
+
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3);
+        }
+
+        .nav-button:disabled {
+            background-color: var(--card-bg);
+            color: rgba(var(--accent-rgb), 0.5);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Flashcard display and navigation */
+        .flashcard-display-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .flashcard-wrapper {
+            width: 100%;
+            max-width: 400px; /* Limit single flashcard width */
+            perspective: 1000px;
+            height: 250px; /* Fixed height for consistency */
+        }
+
+        .flashcard {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.6s;
+            position: relative;
+            overflow: hidden; /* Hide overflowing content during flip */
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Safari */
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            word-wrap: break-word; /* Ensure long words break */
+            overflow-y: auto; /* Allow scrolling for long content */
+            box-sizing: border-box; /* Include padding in width/height */
+        }
+
+        .flashcard-front {
+            background-color: var(--card-bg);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+        }
+
+        .flashcard-back {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            transform: rotateY(180deg);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+        }
+
+        .flashcard-navigation {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+
+        .message-box {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1rem;
+            display: none; /* Hidden by default */
+        }
+
+        /* Loading Bar Styles */
+        .loading-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--card-bg);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none; /* Hidden by default */
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent);
+            border-radius: 4px;
+            transition: width 0.4s ease-in-out;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header.main-header {
+                flex-direction: column;
+                padding: 15px 5%;
+                gap: 15px;
+            }
+            .logo {
+                font-size: 2rem;
+            }
+            .theme-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .container {
+                width: 95%;
+                margin: 20px auto;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .generate-button, .clear-button, .nav-button {
+                width: 100%;
+                font-size: 1rem;
+                padding: 10px 20px;
+            }
+            .action-buttons, .flashcard-navigation, .input-navigation-buttons {
+                flex-direction: column;
+            }
+            .flashcard-wrapper {
+                height: 200px;
+            }
+            .flashcard-front, .flashcard-back {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="theme-blackwhite transition-all">
+  <!-- Particles container is needed for the JS to function correctly -->
+  <div class="particles-container" id="particles"></div>
+
+  <header class="main-header transition-all">
+    <a href="#" class="logo">SHKSPR</a>
+    <div class="theme-controls">
+      <!-- Moved "Limit Exceeded?" button to the first position -->
+      <a href="#" class="dropdown-button">Limit Exceeded?</a>
+      <div class="dropdown-container">
+        <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+        <div class="dropdown-options">
+          <a href="#">AI Humanizer</a>
+          <a href="#">AI Grader</a>
+          <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
+        </div>
+      </div>
+      <div class="dropdown-container">
+        <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+        <div class="dropdown-options">
+          <button id="theme-blackwhite-btn">Black & White</button>
+          <button id="theme-cyan-btn">Cyan</button>
+          <button id="theme-purple-btn">Purple</button>
+          <button id="theme-green-btn">Green</button>
+          <button id="theme-red-btn">Red</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>AI Flashcard Generator</h1>
+
+    <div class="input-step-container">
+        <div id="inputStep1" class="input-step active">
+            <h2>Step 1: Enter Your Text</h2>
+            <p class="subtitle">Provide the main content from which flashcards will be generated.</p>
+            <textarea id="inputText" placeholder="Enter text here to generate flashcards. For example: 'Photosynthesis is the process used by plants, algae and cyanobacteria to convert light energy into chemical energy.' You can also paste an image (Ctrl+V) here!"></textarea>
+            <div class="file-upload-container">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".txt,.md,.pdf,image/png,image/jpg,image/jpeg,image/gif,image/webp" multiple>
+                    <label for="fileInput" class="file-input-label">Upload Files</label>
+                    <span id="fileNameDisplay" class="file-name-display">No files chosen</span>
+                    <button id="clearFileButton" class="file-clear-button" style="display:none;">&times;</button>
+                </div>
+                <p class="subtitle">Supported: .txt, .md, .png, .jpg, .jpeg, .gif, .webp. PDFs only take in text.</p>
+                <div class="file-list-container">
+                    <button id="toggleFileListButton" class="file-list-toggle-button" style="display:none;">Show Uploaded Files (0)</button>
+                    <ul id="fileList" class="file-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="inputStep2" class="input-step">
+            <h2>Step 2: Add Custom Instructions (Optional)</h2>
+            <p class="subtitle">Guide the AI on how to create your flashcards.</p>
+            <textarea id="customInstructions" placeholder="Optional: Add custom instructions for the AI, e.g., 'Focus on key terms only', 'Generate 3 flashcards', 'Use simple language.'"></textarea>
+        </div>
+
+        <div class="input-navigation-buttons">
+            <button id="inputPrevButton" class="nav-button" disabled>Back</button>
+            <button id="inputNextButton" class="nav-button">Next</button>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+      <button id="generateButton" class="generate-button">Generate Flashcards</button>
+      <button id="clearButton" class="clear-button">Clear All</button>
+    </div>
+    <div id="loadingBarContainer" class="loading-bar-container">
+        <div id="loadingBar" class="loading-bar"></div>
+    </div>
+    <div id="messageBox" class="message-box"></div>
+
+    <div id="flashcardDisplayArea" class="flashcard-display-area">
+        <div id="flashcardWrapper" class="flashcard-wrapper">
+            <!-- Single flashcard will be inserted here -->
+        </div>
+        <div class="flashcard-navigation">
+            <button id="prevButton" class="nav-button" disabled>Previous</button>
+            <button id="nextButton" class="nav-button" disabled>Next</button>
+        </div>
+    </div>
+  </main>
+
+<script>
+    // Set the workerSrc for PDF.js
+    // This is crucial for PDF.js to load its worker script correctly.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+
+    // Particle class and related functions (from header.html)
+    window.setTheme = function(theme) {
+      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+      localStorage.setItem('shkspr-theme', theme);
+      window.initParticles();
+    }
+
+    window.Particle = class Particle {
+      constructor(container, colors) {
+        this.container = container;
+        this.element = document.createElement('div');
+        this.element.classList.add('particle');
+        this.container.appendChild(this.element);
+        this.size = Math.random() * 6 + 2;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.opacity = Math.random() * 0.5 + 0.3;
+        this.element.style.width = `${this.size}px`;
+        this.element.style.height = `${this.size}px`;
+        this.element.style.backgroundColor = this.color;
+        this.element.style.opacity = this.opacity;
+        this.update();
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+          this.vx *= -1;
+          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+        }
+        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+          this.vy *= -1;
+          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+        }
+        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+      }
+      remove() {
+        this.container.removeChild(this.element);
+      }
+    }
+
+    let particles = [];
+    let animationId;
+
+    window.initParticles = function() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      particles.forEach(p => p.remove());
+      particles = [];
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+      let colors = [accentColor];
+      if (document.body.classList.contains('theme-blackwhite')) {
+        colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+      } else if (document.body.classList.contains('theme-cyan')) {
+        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+      } else if (document.body.classList.contains('theme-purple')) {
+        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+      } else if (document.body.classList.contains('theme-green')) {
+        colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+      } else if (document.body.classList.contains('theme-red')) {
+        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+      }
+      for (let i = 0; i < 60; i++) {
+        particles.push(new window.Particle(container, colors));
+      }
+      window.animateParticles();
+    }
+
+    window.animateParticles = function() {
+      particles.forEach(p => p.update());
+      animationId = requestAnimationFrame(window.animateParticles);
+    }
+
+    // Main application logic for flashcard generator
+    document.addEventListener('DOMContentLoaded', () => {
+        // Theme initialization from header.html
+        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+        window.setTheme(savedTheme);
+
+        // Flashcard generator elements
+        const inputText = document.getElementById('inputText');
+        const customInstructions = document.getElementById('customInstructions');
+        const generateButton = document.getElementById('generateButton');
+        const clearButton = document.getElementById('clearButton');
+        const flashcardWrapper = document.getElementById('flashcardWrapper');
+        const messageBox = document.getElementById('messageBox');
+        const loadingBarContainer = document.getElementById('loadingBarContainer');
+        const loadingBar = document.getElementById('loadingBar');
+        const prevButton = document.getElementById('prevButton'); // Flashcard navigation
+        const nextButton = document.getElementById('nextButton'); // Flashcard navigation
+
+        // Input step elements
+        const inputSteps = [
+            document.getElementById('inputStep1'),
+            document.getElementById('inputStep2')
+        ];
+        const inputPrevButton = document.getElementById('inputPrevButton');
+        const inputNextButton = document.getElementById('inputNextButton');
+        let currentInputStepIndex = 0;
+
+        // File upload elements
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const clearFileButton = document.getElementById('clearFileButton');
+        const fileList = document.getElementById('fileList');
+        const toggleFileListButton = document.getElementById('toggleFileListButton');
+
+        let uploadedFilesData = []; // Stores objects: { id: unique, name: string, type: string, content: string/base64 }
+
+        let flashcardsData = [];
+        let currentFlashcardIndex = 0;
+
+        // Function to display messages
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Function to create a flashcard element
+        function createFlashcardElement(frontText, backText) {
+            const flashcard = document.createElement('div');
+            flashcard.classList.add('flashcard');
+
+            const flashcardInner = document.createElement('div');
+            flashcardInner.classList.add('flashcard-inner');
+
+            const flashcardFront = document.createElement('div');
+            flashcardFront.classList.add('flashcard-front');
+            flashcardFront.textContent = frontText;
+
+            const flashcardBack = document.createElement('div');
+            flashcardBack.classList.add('flashcard-back');
+            flashcardBack.textContent = backText;
+
+            flashcardInner.appendChild(flashcardFront);
+            flashcardInner.appendChild(flashcardBack);
+            flashcard.appendChild(flashcardInner);
+
+            flashcard.addEventListener('click', () => {
+                flashcard.classList.toggle('flipped');
+            });
+
+            return flashcard;
+        }
+
+        // Function to display a specific flashcard
+        function displayFlashcard(index) {
+            if (flashcardsData.length === 0) {
+                flashcardWrapper.innerHTML = '';
+                prevButton.disabled = true;
+                nextButton.disabled = true;
+                return;
+            }
+
+            currentFlashcardIndex = index;
+            const card = flashcardsData[currentFlashcardIndex];
+            flashcardWrapper.innerHTML = ''; // Clear previous card
+            flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
+
+            // Update navigation button states
+            prevButton.disabled = currentFlashcardIndex === 0;
+            nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
+        }
+
+        // Function to display a specific input step
+        function showInputStep(index) {
+            inputSteps.forEach((step, i) => {
+                if (i === index) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+
+            currentInputStepIndex = index;
+            inputPrevButton.disabled = currentInputStepIndex === 0;
+            inputNextButton.disabled = currentInputStepIndex === inputSteps.length - 1;
+
+            // If on the last input step, enable generate button
+            if (currentInputStepIndex === inputSteps.length - 1) {
+                generateButton.style.display = 'block'; // Show generate button
+            } else {
+                generateButton.style.display = 'none'; // Hide generate button
+            }
+        }
+
+        // Function to read file content (text, PDF, image)
+        async function readFileContent(file) {
+            return new Promise(async (resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
+                if (file.type.startsWith('image/')) {
+                    reader.onload = (e) => {
+                        resolve({
+                            type: file.type,
+                            content: e.target.result.split(',')[1] // Base64 content
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    try {
+                        const loadingTask = pdfjsLib.getDocument({ data: await file.arrayBuffer() });
+                        const pdf = await loadingTask.promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        resolve({
+                            type: 'text/plain', // Treat PDF content as plain text
+                            content: fullText
+                        });
+                    } catch (pdfError) {
+                        // If PDF parsing fails, still resolve but with an empty string for content
+                        console.error(`Error parsing PDF ${file.name}: ${pdfError.message}`);
+                        resolve({
+                            type: 'text/plain',
+                            content: '' // Provide empty content if parsing fails
+                        });
+                    }
+                } else if (file.type.startsWith('text/')) {
+                    reader.onload = (e) => {
+                        resolve({
+                            type: file.type,
+                            content: e.target.result
+                        });
+                    };
+                    reader.readAsText(file);
+                } else {
+                    reject(new Error(`Unsupported file type: ${file.type}`));
+                }
+            });
+        }
+
+        // Function to update the displayed file list
+        function updateFileListDisplay() {
+            fileList.innerHTML = '';
+            if (uploadedFilesData.length === 0) {
+                toggleFileListButton.style.display = 'none';
+                fileNameDisplay.textContent = 'No files chosen';
+                clearFileButton.style.display = 'none';
+                fileList.classList.remove('expanded'); // Collapse if no files
+                toggleFileListButton.textContent = 'Show Uploaded Files (0)';
+            } else {
+                toggleFileListButton.style.display = 'block';
+                toggleFileListButton.textContent = `Show Uploaded Files (${uploadedFilesData.length})`;
+                fileNameDisplay.textContent = `${uploadedFilesData.length} file(s) chosen`;
+                clearFileButton.style.display = 'inline-block';
+
+                uploadedFilesData.forEach((fileObj, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('file-list-item');
+                    listItem.innerHTML = `
+                        <span>${fileObj.name} (${fileObj.type.includes('/') ? fileObj.type.split('/')[1] : fileObj.type})</span>
+                        <button data-id="${fileObj.id}">&times;</button>
+                    `;
+                    fileList.appendChild(listItem);
+                });
+            }
+        }
+
+        // Function to generate flashcards using the Vercel serverless function
+        async function generateFlashcards() {
+            const text = inputText.value.trim();
+            const instructions = customInstructions.value.trim();
+
+            if (!text && uploadedFilesData.length === 0) {
+                showMessage('Please enter some text or upload/paste a file to generate flashcards.', 'error');
+                return;
+            }
+
+            flashcardsData = []; // Clear previous data
+            currentFlashcardIndex = 0;
+            displayFlashcard(currentFlashcardIndex); // Clear display
+
+            loadingBarContainer.style.display = 'block'; // Show loading bar container
+            loadingBar.style.width = '0%'; // Reset loading bar
+
+            // Simulate loading progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress < 90) { // Stop just before 100 to show completion
+                    progress += 5;
+                    loadingBar.style.width = `${progress}%`;
+                }
+            }, 200);
+
+            try {
+                const response = await fetch('/api/Flashcard', { // Call your Vercel serverless function
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        inputText: text,
+                        customInstructions: instructions,
+                        uploadedFiles: uploadedFilesData
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Serverless function error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+                }
+
+                const result = await response.json();
+
+                if (result.flashcards && result.flashcards.length > 0) {
+                    flashcardsData = result.flashcards;
+                    displayFlashcard(0); // Display the first flashcard
+                    showMessage('Flashcards generated successfully!', 'success');
+                } else {
+                    showMessage('No flashcards could be generated from the provided content. Please try different content.', 'info');
+                }
+            } catch (error) {
+                console.error('Error generating flashcards:', error);
+                showMessage(`Failed to generate flashcards: ${error.message}. Please try again.`, 'error');
+            } finally {
+                clearInterval(interval); // Stop simulating progress
+                loadingBar.style.width = '100%'; // Complete loading bar
+                setTimeout(() => {
+                    loadingBarContainer.style.display = 'none'; // Hide loading bar after a short delay
+                    loadingBar.style.width = '0%'; // Reset for next use
+                }, 500);
+            }
+        }
+
+        // --- File Upload Event Listener ---
+        fileInput.addEventListener('change', async (event) => {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) {
+                updateFileListDisplay(); // Clear display if no files selected
+                return;
+            }
+
+            let newFiles = [];
+            for (const file of files) {
+                try {
+                    const fileContent = await readFileContent(file);
+                    newFiles.push({
+                        id: Date.now() + Math.random(), // Unique ID for deletion
+                        name: file.name,
+                        type: fileContent.type,
+                        content: fileContent.content
+                    });
+                    showMessage(`File "${file.name}" loaded successfully.`, 'success');
+                } catch (error) {
+                    showMessage(`Error loading "${file.name}": ${error.message}`, 'error');
+                }
+            }
+            uploadedFilesData = [...uploadedFilesData, ...newFiles]; // Add new files to existing
+            updateFileListDisplay();
+            fileInput.value = ''; // Clear the file input to allow re-uploading the same file
+        });
+
+        // Toggle file list visibility
+        toggleFileListButton.addEventListener('click', () => {
+            fileList.classList.toggle('expanded');
+        });
+
+        // Clear individual file from list
+        fileList.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.id) {
+                const fileIdToRemove = parseFloat(event.target.dataset.id);
+                uploadedFilesData = uploadedFilesData.filter(fileObj => fileObj.id !== fileIdToRemove);
+                updateFileListDisplay();
+                showMessage('File removed.');
+            }
+        });
+
+        clearFileButton.addEventListener('click', () => {
+            uploadedFilesData = [];
+            updateFileListDisplay();
+            showMessage('All uploaded files cleared.');
+        });
+
+        // --- Paste Event Listener for Images ---
+        inputText.addEventListener('paste', (event) => {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            let imageFound = false;
+
+            for (const item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newFile = {
+                            id: Date.now() + Math.random(),
+                            name: 'Pasted Image',
+                            type: blob.type,
+                            content: e.target.result.split(',')[1]
+                        };
+                        uploadedFilesData.push(newFile);
+                        updateFileListDisplay();
+                        inputText.value = ''; // Clear text area if image is pasted
+                        showMessage('Image pasted. Flashcards will be generated from its content.', 'info');
+                    };
+                    reader.readAsDataURL(blob);
+                    imageFound = true;
+                    event.preventDefault(); // Prevent default paste behavior (e.g., pasting image as text)
+                    break;
+                }
+            }
+            if (!imageFound && items.length > 0 && items[0].type === 'text/plain') {
+                // If text is pasted, allow default behavior, but ensure file list is updated
+                updateFileListDisplay(); // Just in case a file was previously selected
+            }
+        });
+
+
+        // Event listeners for input navigation buttons
+        inputPrevButton.addEventListener('click', () => {
+            if (currentInputStepIndex > 0) {
+                showInputStep(currentInputStepIndex - 1);
+            }
+        });
+
+        inputNextButton.addEventListener('click', () => {
+            if (currentInputStepIndex < inputSteps.length - 1) {
+                showInputStep(currentInputStepIndex + 1);
+            }
+        });
+
+        // Event listeners for flashcard navigation buttons
+        prevButton.addEventListener('click', () => {
+            if (currentFlashcardIndex > 0) {
+                displayFlashcard(currentFlashcardIndex - 1);
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (currentFlashcardIndex < flashcardsData.length - 1) {
+                displayFlashcard(currentFlashcardIndex + 1);
+            }
+        });
+
+        // Event listeners for action buttons
+        generateButton.addEventListener('click', generateFlashcards);
+        clearButton.addEventListener('click', () => {
+            inputText.value = '';
+            customInstructions.value = '';
+            uploadedFilesData = []; // Clear all uploaded files
+            updateFileListDisplay(); // Update display after clearing
+            flashcardsData = [];
+            currentFlashcardIndex = 0;
+            displayFlashcard(currentFlashcardIndex); // Clear displayed card and disable buttons
+            showInputStep(0); // Go back to the first input step
+            showMessage('All content and flashcards cleared.');
+        });
+
+        // Initialize the first input step and hide generate button initially
+        showInputStep(0);
+        generateButton.style.display = 'none'; // Hide generate button until last step
+        updateFileListDisplay(); // Initialize file list display
+    });
+</script>
+</body>
+</html>
