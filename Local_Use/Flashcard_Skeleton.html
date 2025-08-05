@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>AI Flashcard Generator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- PDF.js CDN for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
         /* --- Theme Variables (from header.html) --- */
         :root {
@@ -277,6 +279,155 @@
             box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
         }
 
+        /* File Upload Styles */
+        .file-upload-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            position: relative; /* Needed for absolute positioning of input */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px; /* Limit width */
+        }
+
+        .file-input-label {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            white-space: nowrap; /* Prevent text wrap */
+            z-index: 1; /* Ensure label is above hidden input */
+        }
+
+        .file-input-label:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        #fileInput {
+            position: absolute; /* Position over the label */
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0; /* Make it invisible but clickable */
+            cursor: pointer;
+            z-index: 2; /* Ensure input is above label for click capture */
+        }
+
+        .file-name-display {
+            flex-grow: 1;
+            padding: 8px 10px;
+            border: 1px solid var(--card-bg);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+            color: rgba(var(--accent-rgb), 0.8);
+            font-size: 0.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-clear-button {
+            background: none;
+            border: none;
+            color: var(--accent);
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .file-clear-button:hover {
+            color: var(--text-primary);
+        }
+
+        .file-list-container {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 15px;
+        }
+
+        .file-list-toggle-button {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        .file-list-toggle-button:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            max-height: 0; /* Hidden by default */
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+            border: 1px solid var(--card-bg);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+        }
+
+        .file-list.expanded {
+            max-height: 200px; /* Adjust as needed */
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+            font-size: 0.9rem;
+        }
+
+        .file-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-list-item span {
+            flex-grow: 1;
+            margin-right: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-list-item button {
+            background: none;
+            border: none;
+            color: #ff6666; /* Red color for delete */
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .file-list-item button:hover {
+            color: #ff0000;
+        }
+
+
         .input-navigation-buttons {
             display: flex;
             justify-content: center;
@@ -513,7 +664,20 @@
         <div id="inputStep1" class="input-step active">
             <h2>Step 1: Enter Your Text</h2>
             <p class="subtitle">Provide the main content from which flashcards will be generated.</p>
-            <textarea id="inputText" placeholder="Enter text here to generate flashcards. For example: 'Photosynthesis is the process used by plants, algae and cyanobacteria to convert light energy into chemical energy.'"></textarea>
+            <textarea id="inputText" placeholder="Enter text here to generate flashcards. For example: 'Photosynthesis is the process used by plants, algae and cyanobacteria to convert light energy into chemical energy.' You can also paste an image (Ctrl+V) here!"></textarea>
+            <div class="file-upload-container">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".txt,.md,.pdf,image/png,image/jpg,image/jpeg,image/gif,image/webp" multiple>
+                    <label for="fileInput" class="file-input-label">Upload Files</label>
+                    <span id="fileNameDisplay" class="file-name-display">No files chosen</span>
+                    <button id="clearFileButton" class="file-clear-button" style="display:none;">&times;</button>
+                </div>
+                <p class="subtitle">Supported: .txt, .md, .png, .jpg, .jpeg, .gif, .webp. PDFs only take in text.</p>
+                <div class="file-list-container">
+                    <button id="toggleFileListButton" class="file-list-toggle-button" style="display:none;">Show Uploaded Files (0)</button>
+                    <ul id="fileList" class="file-list"></ul>
+                </div>
+            </div>
         </div>
 
         <div id="inputStep2" class="input-step">
@@ -549,6 +713,10 @@
   </main>
 
 <script>
+    // Set the workerSrc for PDF.js
+    // This is crucial for PDF.js to load its worker script correctly.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+
     // Particle class and related functions (from header.html)
     window.setTheme = function(theme) {
       document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
@@ -661,25 +829,38 @@
         const inputNextButton = document.getElementById('inputNextButton');
         let currentInputStepIndex = 0;
 
+        // File upload elements
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const clearFileButton = document.getElementById('clearFileButton');
+        const fileList = document.getElementById('fileList');
+        const toggleFileListButton = document.getElementById('toggleFileListButton');
+
+        let uploadedFilesData = []; // Stores objects: { id: unique, name: string, type: string, content: string/base64 }
+
         let flashcardsData = [];
         let currentFlashcardIndex = 0;
 
-        // Define available Gemini models
+        // Define available Gemini models (updated as per your request)
         const ALL_GEMINI_MODELS = [
-            'gemini-2.5-flash-preview-05-20', // This is the default and should be preferred if available
-            'gemini-2.0-flash-preview',
-            'gemini-1.5-flash-preview',
-            'gemini-pro', // A common general-purpose model
+            'gemini-2.5-flash-lite',
+            'gemini-live-2.5-flash-preview',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            'gemini-2.0-flash-live-001',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-8b',
         ];
 
         // Function to display messages
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
-            messageBox.className = `message-box ${type}`; // Add type for styling if needed (e.g., 'error', 'success')
+            messageBox.className = `message-box ${type}`;
             messageBox.style.display = 'block';
             setTimeout(() => {
                 messageBox.style.display = 'none';
-            }, 5000); // Hide after 5 seconds
+            }, 5000);
         }
 
         // Function to create a flashcard element
@@ -759,13 +940,90 @@
             }
         }
 
+        // Function to read file content (text, PDF, image)
+        async function readFileContent(file) {
+            return new Promise(async (resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
+                if (file.type.startsWith('image/')) {
+                    reader.onload = (e) => {
+                        resolve({
+                            type: file.type,
+                            content: e.target.result.split(',')[1] // Base64 content
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    try {
+                        const loadingTask = pdfjsLib.getDocument({ data: await file.arrayBuffer() });
+                        const pdf = await loadingTask.promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        resolve({
+                            type: 'text/plain', // Treat PDF content as plain text
+                            content: fullText
+                        });
+                    } catch (pdfError) {
+                        // If PDF parsing fails, still resolve but with an an empty string for content
+                        console.error(`Error parsing PDF ${file.name}: ${pdfError.message}`);
+                        resolve({
+                            type: 'text/plain',
+                            content: '' // Provide empty content if parsing fails
+                        });
+                    }
+                } else if (file.type.startsWith('text/')) {
+                    reader.onload = (e) => {
+                        resolve({
+                            type: file.type,
+                            content: e.target.result
+                        });
+                    };
+                    reader.readAsText(file);
+                } else {
+                    reject(new Error(`Unsupported file type: ${file.type}`));
+                }
+            });
+        }
+
+        // Function to update the displayed file list
+        function updateFileListDisplay() {
+            fileList.innerHTML = '';
+            if (uploadedFilesData.length === 0) {
+                toggleFileListButton.style.display = 'none';
+                fileNameDisplay.textContent = 'No files chosen';
+                clearFileButton.style.display = 'none';
+                fileList.classList.remove('expanded'); // Collapse if no files
+                toggleFileListButton.textContent = 'Show Uploaded Files (0)';
+            } else {
+                toggleFileListButton.style.display = 'block';
+                toggleFileListButton.textContent = `Show Uploaded Files (${uploadedFilesData.length})`;
+                fileNameDisplay.textContent = `${uploadedFilesData.length} file(s) chosen`;
+                clearFileButton.style.display = 'inline-block';
+
+                uploadedFilesData.forEach((fileObj, index) => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('file-list-item');
+                    listItem.innerHTML = `
+                        <span>${fileObj.name} (${fileObj.type.includes('/') ? fileObj.type.split('/')[1] : fileObj.type})</span>
+                        <button data-id="${fileObj.id}">&times;</button>
+                    `;
+                    fileList.appendChild(listItem);
+                });
+            }
+        }
+
         // Function to generate flashcards using AI
         async function generateFlashcards() {
             const text = inputText.value.trim();
             const instructions = customInstructions.value.trim();
 
-            if (!text) {
-                showMessage('Please enter some text to generate flashcards.', 'error');
+            if (!text && uploadedFilesData.length === 0) {
+                showMessage('Please enter some text or upload/paste a file to generate flashcards.', 'error');
                 return;
             }
 
@@ -777,21 +1035,38 @@
             loadingBar.style.width = '0%'; // Reset loading bar
 
             let chatHistory = [];
-            let prompt = `Generate a list of flashcards (front and back) from the following text. Provide the output as a JSON array of objects, where each object has 'front' and 'back' properties. Make sure the 'front' is a question or term and the 'back' is its answer or definition. Aim for 5-10 flashcards if possible, or fewer if the text is short.
+            let promptParts = [];
 
-Text: "${text}"`;
-
-            if (instructions) {
-                prompt += `\n\nCustom Instructions: "${instructions}"`;
+            // Add text input if available
+            if (text) {
+                promptParts.push({ text: `Here is some text content: "${text}"` });
             }
 
-            prompt += `\n\nExample JSON format:
+            // Add uploaded file content
+            uploadedFilesData.forEach(fileObj => {
+                if (fileObj.type.startsWith('image/')) {
+                    promptParts.push({ text: `From the following image file (${fileObj.name}):` });
+                    promptParts.push({ inlineData: { mimeType: fileObj.type, data: fileObj.content } });
+                } else if (fileObj.type.startsWith('text/') || fileObj.type === 'application/pdf') {
+                    // For PDF, we've already extracted text in readFileContent
+                    promptParts.push({ text: `From the following text content (${fileObj.name}): "${fileObj.content}"` });
+                }
+            });
+
+            // Explicitly tell the AI to combine information from all sources and ensure flashcards per file
+            promptParts.push({ text: `\n\nGenerate a list of flashcards (front and back) from ALL the provided text and image content. It is crucial to **make sure at least one flashcard is generated for each distinct file or text input provided**, and ideally more. Ensure the 'front' is a question or term and the 'back' is its answer or definition. Aim for 5-10 flashcards per file/input if possible, or fewer if the content is short.` });
+
+            if (instructions) {
+                promptParts.push({ text: `\n\nAlso follow these specific instructions: "${instructions}"` });
+            }
+
+            promptParts.push({ text: `\n\nProvide the output as a JSON array of objects, where each object has 'front' and 'back' properties. Example JSON format:
 [
   { "front": "What is photosynthesis?", "back": "The process used by plants to convert light energy into chemical energy." },
   { "front": "What are the key inputs for photosynthesis?", "back": "Carbon dioxide, water, and light energy." }
-]`;
+]`});
 
-            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            chatHistory.push({ role: "user", parts: promptParts });
 
             const payload = {
                 contents: chatHistory,
@@ -851,7 +1126,7 @@ Text: "${text}"`;
                         const parsedFlashcards = JSON.parse(jsonString);
 
                         if (parsedFlashcards.length === 0) {
-                            showMessage('No flashcards could be generated from the provided text. Please try different text.', 'info');
+                            showMessage('No flashcards could be generated from the provided content. Please try different content.', 'info');
                         } else {
                             flashcardsData = parsedFlashcards;
                             displayFlashcard(0); // Display the first flashcard
@@ -879,6 +1154,89 @@ Text: "${text}"`;
                 showMessage(`Failed to generate flashcards after trying all available models. Last error: ${lastError ? lastError.message : 'Unknown error.'}`, 'error');
             }
         }
+
+        // --- File Upload Event Listener ---
+        fileInput.addEventListener('change', async (event) => {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) {
+                updateFileListDisplay(); // Clear display if no files selected
+                return;
+            }
+
+            let newFiles = [];
+            for (const file of files) {
+                try {
+                    const fileContent = await readFileContent(file);
+                    newFiles.push({
+                        id: Date.now() + Math.random(), // Unique ID for deletion
+                        name: file.name,
+                        type: fileContent.type,
+                        content: fileContent.content
+                    });
+                    showMessage(`File "${file.name}" loaded successfully.`, 'success');
+                } catch (error) {
+                    showMessage(`Error loading "${file.name}": ${error.message}`, 'error');
+                }
+            }
+            uploadedFilesData = [...uploadedFilesData, ...newFiles]; // Add new files to existing
+            updateFileListDisplay();
+            fileInput.value = ''; // Clear the file input to allow re-uploading the same file
+        });
+
+        // Toggle file list visibility
+        toggleFileListButton.addEventListener('click', () => {
+            fileList.classList.toggle('expanded');
+        });
+
+        // Clear individual file from list
+        fileList.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.id) {
+                const fileIdToRemove = parseFloat(event.target.dataset.id);
+                uploadedFilesData = uploadedFilesData.filter(fileObj => fileObj.id !== fileIdToRemove);
+                updateFileListDisplay();
+                showMessage('File removed.');
+            }
+        });
+
+        clearFileButton.addEventListener('click', () => {
+            uploadedFilesData = [];
+            updateFileListDisplay();
+            showMessage('All uploaded files cleared.');
+        });
+
+        // --- Paste Event Listener for Images ---
+        inputText.addEventListener('paste', (event) => {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            let imageFound = false;
+
+            for (const item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newFile = {
+                            id: Date.now() + Math.random(),
+                            name: 'Pasted Image',
+                            type: blob.type,
+                            content: e.target.result.split(',')[1]
+                        };
+                        uploadedFilesData.push(newFile);
+                        updateFileListDisplay();
+                        inputText.value = ''; // Clear text area if image is pasted
+                        showMessage('Image pasted. Flashcards will be generated from its content.', 'info');
+                    };
+                    reader.readAsDataURL(blob);
+                    imageFound = true;
+                    event.preventDefault(); // Prevent default paste behavior (e.g., pasting image as text)
+                    break;
+                }
+            }
+            if (!imageFound && items.length > 0 && items[0].type === 'text/plain') {
+                // If text is pasted, allow default behavior, but ensure file list is updated
+                updateFileListDisplay(); // Just in case a file was previously selected
+            }
+        });
+
 
         // Event listeners for input navigation buttons
         inputPrevButton.addEventListener('click', () => {
@@ -911,6 +1269,8 @@ Text: "${text}"`;
         clearButton.addEventListener('click', () => {
             inputText.value = '';
             customInstructions.value = '';
+            uploadedFilesData = []; // Clear all uploaded files
+            updateFileListDisplay(); // Update display after clearing
             flashcardsData = [];
             currentFlashcardIndex = 0;
             displayFlashcard(currentFlashcardIndex); // Clear displayed card and disable buttons
@@ -921,6 +1281,7 @@ Text: "${text}"`;
         // Initialize the first input step and hide generate button initially
         showInputStep(0);
         generateButton.style.display = 'none'; // Hide generate button until last step
+        updateFileListDisplay(); // Initialize file list display
     });
 </script>
 </body>
