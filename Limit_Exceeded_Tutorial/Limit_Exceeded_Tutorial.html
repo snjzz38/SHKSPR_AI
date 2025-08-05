@@ -148,6 +148,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
+            font-weight: bold; /* Made the main buttons bold */
         }
         .dropdown-button:hover {
             background: var(--text-primary);
@@ -182,6 +183,7 @@
             font-size: 0.9rem;
             display: block;
             text-decoration: none;
+            /* Removed font-weight: bold; from here to unbold dropdown options */
         }
         .dropdown-options button:hover,
         .dropdown-options a:hover {
@@ -358,6 +360,8 @@
     <header class="main-header transition-all">
         <a href="../index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
+            <!-- "Limit Exceeded?" button as a standalone button -->
+            <a href="./Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <div class="dropdown-container">
                 <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
                 <div class="dropdown-options">
@@ -366,8 +370,6 @@
                     <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
                 </div>
             </div>
-            <!-- Moved "Limit Exceeded?" button outside the tools dropdown and styled it -->
-            <a href="./Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <div class="dropdown-container">
                 <button class="dropdown-button" id="theme-button">🎨 Themes</button>
                 <div class="dropdown-options">
