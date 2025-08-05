@@ -1,15 +1,16 @@
 {
+  "version": 2,
   "builds": [
     {
-      "src": "/api/Grader_API.js",
+      "src": "api/Grader_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Humanizer_API.js",
+      "src": "api/Humanizer_API.js",
       "use": "@vercel/node"
     },
     {
-      "src": "/api/Flashcard.js",
+      "src": "api/Flashcard.js",
       "use": "@vercel/node"
     },
     {
@@ -34,10 +35,5 @@
       "source": "/",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/Flashcard.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  ]
 }
