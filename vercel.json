@@ -39,8 +39,5 @@
     "api/Flashcard.js": {
       "runtime": "nodejs18.x"
     }
-  },
-  "env": {
-    "FLASHCARD_1": "@flashcard_1"
   }
 }
