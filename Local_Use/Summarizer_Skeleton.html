@@ -49,6 +49,16 @@
             --card-bg: #222;
             --accent-rgb: 224, 224, 224;
         }
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 { /* Hero h1 is not in header, but kept for glow consistency */
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+        }
         body.theme-red {
             --bg-primary: #1a0000;
             --bg-secondary: #2b0000;
@@ -138,6 +148,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
+            font-weight: bold;
         }
         .dropdown-button:hover {
             background: var(--text-primary);
@@ -417,13 +428,15 @@
     <header class="main-header transition-all">
         <a href="./index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
+            <!-- Moved "Limit Exceeded?" button to the first position -->
+            <a href="https://shkspr.vercel.app/Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <!-- Tools Dropdown Menu -->
             <div class="dropdown-container">
                 <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
                 <div class="dropdown-options">
-                    <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
-                    <a href="./AI_Grader/Grader.html">AI Grader</a>
-                    <a href="./AI_Summarizer/MP3Summarizer.html">AI Summarizer</a>
+                <a href="https://shkspr.vercel.app/AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                <a href="https://shkspr.vercel.app/AI_Grader/Grader.html">AI Grader</a>
+                <a href="shkspr-summarizer.tiiny.site">AI Summarizer</a>
                 </div>
             </div>
             <!-- Themes Dropdown Menu -->
@@ -499,7 +512,7 @@
             'gemini-2.0-flash-lite',
             'gemini-1.5-flash',
             'gemini-1.5-flash-8b',
-            'gemini-1.5-pro' // Re-included based on user's preference, but be aware of potential quota issues
+            'gemini-1.5-pro' 
         ];
         const MAX_RETRIES = ALL_GEMINI_MODELS.length;
         
