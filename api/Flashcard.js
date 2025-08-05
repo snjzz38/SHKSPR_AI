@@ -41,11 +41,12 @@ module.exports = async (req, res) => {
         const { inputText, customInstructions, uploadedFiles } = req.body;
 
         // Retrieve API key from environment variables
-        const apiKey = process.env.GEMINI_API_KEY;
+        // *** MODIFIED: Changed from process.env.GEMINI_API_KEY to process.env.FLASHCARD_1 ***
+        const apiKey = process.env.FLASHCARD_1;
 
         if (!apiKey) {
-            console.error('Server Configuration Error: GEMINI_API_KEY not configured.');
-            return res.status(500).json({ error: 'Server Configuration Error', message: 'Gemini API Key not configured on the server.' });
+            console.error('Server Configuration Error: FLASHCARD_1 environment variable not configured.');
+            return res.status(500).json({ error: 'Server Configuration Error', message: 'FLASHCARD_1 environment variable not configured on the server.' });
         }
 
         if (!inputText && (!uploadedFiles || uploadedFiles.length === 0)) {
