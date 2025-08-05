@@ -10,7 +10,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/Flashcard.js",
+      "src": "api/Flashcard_API.js",
       "use": "@vercel/node"
     },
     {
@@ -28,8 +28,8 @@
       "destination": "/api/Grader_API.js"
     },
     {
-      "source": "/api/Flashcard",
-      "destination": "/api/Flashcard.js"
+      "source": "/api/Flashcard_API",
+      "destination": "/api/Flashcard_API.js"
     },
     {
       "source": "/",
