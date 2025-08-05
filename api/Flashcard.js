@@ -41,7 +41,6 @@ module.exports = async (req, res) => {
         const { inputText, customInstructions, uploadedFiles } = req.body;
 
         // Retrieve API key from environment variables
-        // *** MODIFIED: Changed from process.env.GEMINI_API_KEY to process.env.FLASHCARD_1 ***
         const apiKey = process.env.FLASHCARD_1;
 
         if (!apiKey) {
