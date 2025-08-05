@@ -9,6 +9,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "/api/Flashcard.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "/**",
       "use": "@vercel/static"
     }
@@ -23,8 +27,20 @@
       "destination": "/api/Grader_API.js"
     },
     {
+      "source": "/api/Flashcard",
+      "destination": "/api/Flashcard.js"
+    },
+    {
       "source": "/",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/Flashcard.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "FLASHCARD_1": "@flashcard_1"
+  }
 }
