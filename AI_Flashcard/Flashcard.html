@@ -1023,7 +1023,7 @@
             }, 200);
 
             try {
-                const response = await fetch('/api/Flashcard.js', { // Call your Vercel serverless function
+                const response = await fetch('/api/Flashcard', { // Call your Vercel serverless function
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
