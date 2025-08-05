@@ -1034,8 +1034,16 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`Serverless function error: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+                    // Attempt to parse error response as JSON, if not, fallback to text
+                    let errorDetails = `Status: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails += ` - ${JSON.stringify(errorJson)}`;
+                    } catch (e) {
+                        const errorText = await response.text();
+                        errorDetails += ` - Response Body: "${errorText.substring(0, 100)}..."`; // Truncate long bodies
+                    }
+                    throw new Error(`Serverless function error: ${errorDetails}`);
                 }
 
                 const result = await response.json();
