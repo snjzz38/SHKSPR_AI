@@ -15,12 +15,12 @@
             --link-hover: #ffffff;
         }
         body.theme-cyan {
-            --bg-primary: #000; /* Changed from #000c0c to #000 to match header.html */
-            --bg-secondary: #0b0b0b; /* Changed from #072a2c to #0b0b0b to match header.html */
-            --text-primary: #e0ffff;
+            --bg-primary: #000; /* Matched header.html */
+            --bg-secondary: #0b0b0b; /* Matched header.html */
+            --text-primary: #e0ffff; /* Matched header.html */
             --accent: #00f6ff;
-            --card-bg: #072a2c; /* Changed from #141414 to #072a2c to match header.html */
-            --accent-rgb: 0, 246, 255; /* Added for consistency with header.html */
+            --card-bg: #072a2c; /* Matched header.html */
+            --accent-rgb: 0, 246, 255;
         }
         body.theme-purple {
             --bg-primary: #0d001a;
@@ -28,7 +28,7 @@
             --text-primary: #ffe6ff;
             --accent: #cc66ff;
             --card-bg: #1d0036;
-            --accent-rgb: 204, 102, 255; /* Added for consistency with header.html */
+            --accent-rgb: 204, 102, 255;
         }
         body.theme-green {
             --bg-primary: #001a00;
@@ -36,7 +36,7 @@
             --text-primary: #e6ffe6;
             --accent: #66ff66;
             --card-bg: #003600;
-            --accent-rgb: 102, 255, 102; /* Added for consistency with header.html */
+            --accent-rgb: 102, 255, 102;
         }
         /* Updated Black & White Theme with silvery glow from header.html */
         body.theme-blackwhite {
@@ -59,7 +59,7 @@
                 0 0 60px var(--accent);
         }
         body.theme-blackwhite .hero p {
-            text-shadow: 0 0 8px var(--accent);
+            text-shadow: 0 0 8px var(--accent); /* Matched header.html's implied glow */
         }
 
         /* New Red Theme from header.html */
@@ -133,8 +133,7 @@
                 0 0 20px var(--accent),
                 0 0 30px var(--accent),
                 0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
+                0 0 50px var(--accent);
             text-decoration: none;
             transition: all 0.6s ease;
         }
@@ -154,6 +153,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
+            font-weight: bold; /* Added from header.html */
         }
         .dropdown-button:hover {
             background: var(--text-primary);
@@ -198,6 +198,7 @@
             font-size: 0.9rem;
             display: block;
             text-decoration: none;
+            /* Removed font-weight: bold; from here to unbold dropdown options, consistent with header.html */
         }
         .dropdown-options button:hover,
         .dropdown-options a:hover {
@@ -283,13 +284,14 @@
       <!-- "Limit Exceeded?" link outside the dropdown -->
       <a href="./Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
 
-      <!-- Tools Dropdown Menu (unchanged as per request) -->
+      <!-- Tools Dropdown Menu -->
       <div class="dropdown-container">
         <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
         <div class="dropdown-options">
           <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
           <a href="./AI_Grader/Grader.html">AI Grader</a>
-          <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
+          <a href="./AI_Summarizer/Summarizer.html">AI Summarizer</a>
+          <a href="./AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
         </div>
       </div>
       <!-- Themes Dropdown Menu -->
@@ -311,7 +313,8 @@
         <div class="cta-buttons">
             <a href="./AI_Humanizer/Humanizer.html" class="cta-button">Humanize Text</a>
             <a href="./AI_Grader/Grader.html" class="cta-button">Grade Essay</a>
-            <a href="https://shkspr-summarizer.tiiny.site" class="cta-button">Summarize Text</a>
+            <a href="./AI_Summarizer/Summarizer.html" class="cta-button">Summarize Text</a>
+            <a href="./AI_Flashcard/Flashcard.html" class="cta-button">Generate Flashcards</a>
         </div>
     </section>
     <footer class="transition-all">
