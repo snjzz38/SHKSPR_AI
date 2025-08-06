@@ -632,16 +632,17 @@
   <div class="particles-container" id="particles"></div>
 
   <header class="main-header transition-all">
-    <a href="#" class="logo">SHKSPR</a>
+    <a href="../../index.html" class="logo">SHKSPR</a>
     <div class="theme-controls">
       <!-- Moved "Limit Exceeded?" button to the first position -->
-      <a href="#" class="dropdown-button">Limit Exceeded?</a>
+      <a href="../../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
       <div class="dropdown-container">
         <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
         <div class="dropdown-options">
-          <a href="#">AI Humanizer</a>
-          <a href="#">AI Grader</a>
+          <a href="../../AI_Humanizer/Humanizer.html">AI Humanizer</a>
+          <a href="../../AI_Grader/Grader.html">AI Grader</a>
           <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
+          <a href="../../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
         </div>
       </div>
       <div class="dropdown-container">
@@ -752,7 +753,7 @@
         }
         if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
           this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+          this.y = this.y <= 0 ? 0 : window.innerHeight - the.size;
         }
         this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
       }
