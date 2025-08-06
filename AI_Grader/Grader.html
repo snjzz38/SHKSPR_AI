@@ -432,7 +432,8 @@
                 <div class="dropdown-options">
                     <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
                     <a href="./Grader.html">AI Grader</a>
-                    <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
+                    <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
+                    <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
                 </div>
             </div>
             <div class="dropdown-container">
@@ -572,7 +573,7 @@
             window.initParticles();
         }
 
-        window.Particle = class Particle { /* Changed to window.Particle for consistency */
+        window.Particle = class Particle {
             constructor(container, colors) {
                 this.container = container;
                 this.element = document.createElement('div');
@@ -654,6 +655,7 @@
             'gemini-2.0-flash-live-001',
             'gemini-1.5-flash',
             'gemini-1.5-flash-8b',
+            'gemini-1.5-pro'
         ];
 
         // --- Grader Application Logic ---
