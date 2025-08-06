@@ -490,7 +490,7 @@
 
         .flashcard {
             background-color: var(--card-bg);
-            border-radius: 50%;
+            border-radius: 12px; /* Changed from 50% to 12px for rounded rectangle */
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             height: 100%;
             display: flex;
@@ -539,7 +539,7 @@
         .flashcard-front {
             background-color: var(--card-bg);
             border: 2px solid var(--accent);
-            border-radius: 50%;
+            border-radius: 12px; /* Changed from 50% to 12px for rounded rectangle */
         }
 
         .flashcard-back {
@@ -547,7 +547,7 @@
             color: var(--bg-primary);
             transform: rotateY(180deg);
             border: 2px solid var(--accent);
-            border-radius: 50%;
+            border-radius: 12px; /* Changed from 50% to 12px for rounded rectangle */
         }
 
         .flashcard-navigation {
@@ -752,7 +752,7 @@
         }
         if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
           this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - the.size;
+          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
         }
         this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
       }
