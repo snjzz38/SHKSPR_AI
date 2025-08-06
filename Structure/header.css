@@ -148,10 +148,9 @@ header.main-header {
 .dropdown-button:hover {
     background: var(--text-primary);
     color: var(--bg-primary);
-    /* Added glow effect here */
-    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.7), /* Softer inner glow */
-                0 0 25px rgba(var(--accent-rgb), 0.5); /* Wider outer glow */
-    transform: translateY(-2px); /* Slight lift effect */
+    /* Updated glow effect to match index.html's CTA buttons */
+    box-shadow: 0 0 25px var(--accent); /* Stronger, single glow */
+    transform: translateY(-3px); /* Consistent lift effect */
 }
 
 .dropdown-container {
