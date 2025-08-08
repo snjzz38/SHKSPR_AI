@@ -753,7 +753,7 @@
         }
         if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
           this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - the.size;
+          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
         }
         this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
       }
@@ -763,16 +763,20 @@
     }
 
     let particles = [];
-    let animationId;
+    let animationId = null; // Initialize to null
 
     window.initParticles = function() {
       const container = document.getElementById('particles');
       if (!container) return;
-      particles.forEach(p => p.remove());
-      particles = [];
+
+      // Stop any existing animation loop before starting a new one
       if (animationId) {
         cancelAnimationFrame(animationId);
       }
+      
+      particles.forEach(p => p.remove());
+      particles = [];
+
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
@@ -1201,7 +1205,5 @@
         updateFileListDisplay(); // Initialize file list display
     });
 </script>
-    <link rel="stylesheet" href="../Structure/header.css">
-    <script src="../Structure/header.js"></script>
 </body>
 </html>
