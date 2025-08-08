@@ -1,1 +1,927 @@
-Not Ready
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini MP3 Audio Summarization</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- Theme Variables (from header.html) --- */
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
+            --accent-rgb: 255, 255, 255; /* Default for black & white */
+        }
+        body.theme-cyan {
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #e0ffff;
+            --accent: #00f6ff;
+            --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255;
+        }
+        body.theme-green {
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+            --accent-rgb: 102, 255, 102;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #e0e0e0;
+            --card-bg: #222;
+            --accent-rgb: 224, 224, 224;
+        }
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 { /* Hero h1 is not in header, but kept for glow consistency */
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+        }
+        body.theme-red {
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden;
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+        header.main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
+            transition: background-color 0.3s, color 0.3s;
+            position: relative;
+            z-index: 10;
+            width: 100%;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: relative;
+        }
+        .dropdown-button {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .dropdown-button:hover {
+            background: var(--text-primary);
+            color: var(--bg-primary);
+        }
+        .dropdown-container {
+            position: relative;
+        }
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
+        .dropdown-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: var(--card-bg);
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 150px;
+            box-shadow: none !important;
+            z-index: 10;
+        }
+        .dropdown-options button,
+        .dropdown-options a {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none;
+        }
+        .dropdown-options button:hover,
+        .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 50px 20px 30px 20px;
+            position: relative;
+            z-index: 5;
+            width: 100%;
+        }
+        .hero h1 {
+            font-size: 3.2rem;
+            color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 8px var(--accent);
+            max-width: 600px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 90%;
+            width: 800px;
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            text-align: center;
+            transition: background-color 0.3s;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        .button {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+        }
+        .button:hover {
+            background-color: var(--text-primary);
+            color: var(--bg-primary);
+            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.7);
+        }
+        .button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(var(--accent-rgb), 0.3);
+            border-left-color: var(--accent);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #ef4444;
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            text-align: left;
+        }
+        .data-display {
+            margin-top: 1.5rem;
+            text-align: left;
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+            word-wrap: break-word;
+            color: var(--text-primary);
+            transition: background-color 0.3s;
+        }
+        .data-display pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .file-input-wrapper {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 2px dashed var(--accent);
+            background-color: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .custom-file-upload:hover {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--text-primary);
+        }
+        .file-name-display {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            margin-top: 0.5rem;
+        }
+        .prompt-input-group {
+            margin-top: 1rem;
+            text-align: left;
+            width: 100%;
+        }
+        .prompt-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .prompt-input-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--accent);
+            border-radius: 0.5rem;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            min-height: 80px;
+            resize: vertical;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .prompt-input-group textarea:focus {
+            outline: none;
+            border-color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
+        }
+        .slider-group {
+            margin-top: 1rem;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .slider-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            width: 100%;
+            text-align: center;
+        }
+        .slider-group input[type="range"] {
+            width: 80%;
+            -webkit-appearance: none;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        .slider-group input[type="range"]:hover {
+            opacity: 1;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
+        }
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
+        }
+        .slider-value {
+            margin-top: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .input-section {
+            margin-bottom: 1.5rem;
+        }
+        .hidden {
+            display: none;
+        }
+        h1, h2 {
+            color: var(--text-primary);
+            text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+        p {
+            color: var(--text-primary);
+            transition: color 0.3s;
+        }
+    </style>
+</head>
+<body class="theme-blackwhite transition-all">
+    <div class="particles-container" id="particles"></div>
+    <header class="main-header transition-all">
+        <a href="https://shkspr.vercel.app/index.html" class="logo">SHKSPR</a>
+        <div class="theme-controls">
+            <!-- Moved "Limit Exceeded?" button to the first position -->
+            <a href="https://shkspr.vercel.app/Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
+            <!-- Tools Dropdown Menu -->
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+                <div class="dropdown-options">
+                    <a href="https://shkspr.vercel.app/AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="https://shkspr.vercel.app/AI_Grader/Grader.html">AI Grader</a>
+                    <a href="https://shkspr.vercel.app/AI_Summarizer/MP3Summarizer.html">AI Summarizer</a>
+                    <a href="https://shkspr.vercel.app/AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
+                </div>
+            </div>
+            <!-- Themes Dropdown Menu -->
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+                <div class="dropdown-options">
+                    <button id="theme-blackwhite-btn">Black & White</button>
+                    <button id="theme-cyan-btn">Cyan</button>
+                    <button id="theme-purple-btn">Purple</button>
+                    <button id="theme-green-btn">Green</button>
+                    <button id="theme-red-btn">Red</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <section class="hero">
+        <h1>Gemini MP3 Audio Summarization</h1>
+        <p>
+            Upload an audio file (MP3, M4A) to transcribe and summarize it using the Gemini AI model.
+        </p>
+    </section>
+
+    <div class="container">
+        <div class="p-4 rounded-lg" style="border-color: var(--bg-secondary);">
+            <h2 class="text-2xl font-semibold mb-4">Summarize Audio Content</h2>
+            
+            <!-- File Input Section -->
+            <div class="input-section" id="fileInputSection">
+                <div class="file-input-wrapper">
+                    <label for="audioFileInput" class="custom-file-upload">
+                        Choose Audio File (MP3, M4A)
+                    </label>
+                    <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
+                    <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+                </div>
+            </div>
+            
+            <div class="slider-group">
+                <label for="concisenessSlider">Conciseness (1-10):</label>
+                <input type="range" id="concisenessSlider" min="1" max="10" value="5">
+                <span id="concisenessValue" class="slider-value">5</span>
+            </div>
+            <div class="prompt-input-group">
+                <label for="summarizationPrompt">Summarization Prompt:</label>
+                <textarea id="summarizationPrompt" rows="4"></textarea>
+            </div>
+            <button id="processBtn" class="button flex items-center justify-center mx-auto mt-4" disabled>
+                Process Content
+                <span id="processLoadingIndicator" class="loading-spinner hidden"></span>
+            </button>
+            <!-- Error message display for processing -->
+            <div id="processErrorMessage" class="error-message hidden"></div>
+            <!-- Transcribed Text display area -->
+            <div id="transcribedTextDisplay" class="data-display hidden">
+                <h2 class="text-xl font-semibold mb-2">Transcribed Text:</h2>
+                <pre id="transcribedTextContent" class="text-sm"></pre>
+            </div>
+            <!-- Summary display area -->
+            <div id="summaryDisplay" class="data-display hidden">
+                <h2 class="text-xl font-semibold mb-2">Summary:</h2>
+                <pre id="summaryContent" class="text-sm"></pre>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Global variable for the API key, initialized to null
+        let GEMINI_API_KEY = null;
+        const ALL_GEMINI_MODELS = [
+            'gemini-2.5-flash-preview-05-20',
+            'gemini-2.5-flash',
+            'gemini-2.5-flash-lite-preview-06-17',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-8b',
+        ];
+        const MAX_RETRIES = ALL_GEMINI_MODELS.length;
+        
+        // DOM Elements
+        const audioFileInput = document.getElementById('audioFileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const processBtn = document.getElementById('processBtn');
+        const processLoadingIndicator = document.getElementById('processLoadingIndicator');
+        const processErrorMessageDiv = document.getElementById('processErrorMessage');
+        const transcribedTextDisplay = document.getElementById('transcribedTextDisplay');
+        const transcribedTextContent = document.getElementById('transcribedTextContent');
+        const summaryDisplay = document.getElementById('summaryDisplay');
+        const summaryContent = document.getElementById('summaryContent');
+        const summarizationPromptInput = document.getElementById('summarizationPrompt');
+        const concisenessSlider = document.getElementById('concisenessSlider');
+        const concisenessValueSpan = document.getElementById('concisenessValue');
+        
+        // --- Global functions for theming and particles (copied from header.html) ---
+        window.setTheme = function(theme) {
+            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+            localStorage.setItem('shkspr-theme', theme);
+            window.initParticles();
+        }
+
+        window.Particle = class Particle {
+            constructor(container, colors) {
+                this.container = container;
+                this.element = document.createElement('div');
+                this.element.classList.add('particle');
+                this.container.appendChild(this.element);
+                this.size = Math.random() * 6 + 2;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.x = Math.random() * window.innerWidth;
+                this.y = Math.random() * window.innerHeight;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.opacity = Math.random() * 0.5 + 0.3;
+                this.element.style.width = `${this.size}px`;
+                this.element.style.height = `${this.size}px`;
+                this.element.style.backgroundColor = this.color;
+                this.element.style.opacity = this.opacity;
+                this.update();
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                    this.vx *= -1;
+                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                }
+                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                    this.vy *= -1;
+                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                }
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+            }
+            remove() {
+                this.container.removeChild(this.element);
+            }
+        }
+        let particles = [];
+        let animationId;
+        window.initParticles = function() {
+            const container = document.getElementById('particles');
+            if (!container) return;
+            particles.forEach(p => p.remove());
+            particles = [];
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            let colors = [accentColor];
+            if (document.body.classList.contains('theme-blackwhite')) {
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+            } else if (document.body.classList.contains('theme-cyan')) {
+                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+            } else if (document.body.classList.contains('theme-purple')) {
+                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+            } else if (document.body.classList.contains('theme-green')) {
+                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+            } else if (document.body.classList.contains('theme-red')) {
+                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+            }
+            const particleCount = 60;
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new window.Particle(container, colors));
+            }
+            window.animateParticles();
+        }
+        window.animateParticles = function() {
+            particles.forEach(particle => particle.update());
+            animationId = requestAnimationFrame(window.animateParticles);
+        }
+        // End of global functions for theming and particles
+
+        // Utility Functions
+        function hideElement(element) {
+            element.classList.add('hidden');
+        }
+        function showElement(element) {
+            element.classList.remove('hidden');
+        }
+        function displayError(errorDiv, message) {
+            errorDiv.textContent = `Error: ${message}`;
+            showElement(errorDiv);
+        }
+        function clearError(errorDiv) {
+            hideElement(errorDiv);
+            errorDiv.textContent = '';
+        }
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64String = reader.result.split(',')[1];
+                    resolve(base64String);
+                };
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function generateSummarizationPrompt(concisenessLevel) {
+            if (concisenessLevel >= 1 && concisenessLevel <= 2) {
+                return "Provide a very brief, one-sentence summary of the main idea:";
+            } else if (concisenessLevel >= 3 && concisenessLevel <= 4) {
+                return "Summarize in 2-3 key bullet points, focusing on main topics:";
+            } else if (concisenessLevel >= 5 && concisenessLevel <= 6) {
+                return "Summarize concisely in 3-5 key bullet points, highlighting main topics and conclusions:";
+            } else if (concisenessLevel >= 7 && concisenessLevel <= 8) {
+                return "Provide a detailed summary including all major points and supporting details:";
+            } else if (concisenessLevel >= 9 && concisenessLevel <= 10) {
+                return "Generate a comprehensive summary including all significant information and arguments:";
+            }
+            return "Summarize the following text:";
+        }
+        function updateSummarizationPrompt() {
+            const level = parseInt(concisenessSlider.value, 10);
+            concisenessValueSpan.textContent = level;
+            summarizationPromptInput.value = generateSummarizationPrompt(level);
+        }
+        
+        async function getApiKeyFromFile() {
+            try {
+                const response = await fetch('Grok4.txt');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const apiKey = (await response.text()).trim();
+
+                let output = "";
+                for (let i = 0; i < apiKey.length; i++) {
+                    if ((i + 1) % 5 === 1) {
+                        output += apiKey[i];
+                    }
+                }
+                return output;
+
+            } catch (error) {
+                console.error("Failed to load API key from Grok4.txt:", error);
+                return null;
+            }
+        }
+
+        (async () => {
+            const unobfuscatedKey = await getApiKeyFromFile();
+            if (unobfuscatedKey !== null) {
+                // console.log(unobfuscatedKey);
+            }
+        })();
+
+        
+        // Gemini API Interaction with Exponential Backoff and Model Fallback
+        async function callGeminiApi(payload, retriesLeft = MAX_RETRIES, triedModels = new Set()) {
+            // Use the globally set API key
+            const apiKey = GEMINI_API_KEY; 
+
+            if (!apiKey) {
+                throw new Error("Gemini API Key is not configured.");
+            }
+
+            let modelsToTry = ALL_GEMINI_MODELS.filter(model => !triedModels.has(model));
+
+            if (modelsToTry.length === 0) {
+                throw new Error('All available models have been tried and failed.');
+            }
+            
+            // Prioritize models known to be more stable for multimodal/flash
+            const preferredModels = [
+                'gemini-2.5-flash-preview-05-20',
+                'gemini-2.5-flash',
+                'gemini-2.5-flash-lite-preview-06-17',
+                'gemini-1.5-flash'
+            ];
+            
+            // Filter and reorder models to try preferred ones first
+            let currentModel;
+            for (const model of preferredModels) {
+                if (modelsToTry.includes(model)) {
+                    currentModel = model;
+                    break;
+                }
+            }
+            if (!currentModel) {
+                // If no preferred models are left, pick any remaining
+                currentModel = modelsToTry[Math.floor(Math.random() * modelsToTry.length)];
+            }
+            triedModels.add(currentModel); // Mark this model as tried
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+                    const errorMessage = `API call failed with model ${currentModel} (Status: ${response.status}): ${errorData.message || JSON.stringify(errorData)}`;
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                return result;
+
+            } catch (error) {
+                console.error(`API call error with model ${currentModel}:`, error);
+                const isRetryableError = (error.message.includes('status 400') && 
+                                            (error.message.includes('context window') || error.message.includes('too large') || error.message.includes('input_text_too_long'))) ||
+                                         (error.message.includes('status 429')) || // Rate limit
+                                         (error.message.includes('status 503') && error.message.includes('overloaded'));
+
+                if (isRetryableError && retriesLeft > 1) {
+                    const delay = 1500 * (MAX_RETRIES - retriesLeft + 1);
+                    console.warn(`Retrying with another model in ${delay}ms... Retries left: ${retriesLeft - 1}`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callGeminiApi(payload, retriesLeft - 1, triedModels);
+                } else {
+                    throw error;
+                }
+            }
+        }
+        
+        // Main Processing Function for Audio Files
+        async function processAudioFile() {
+            clearError(processErrorMessageDiv);
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+            showElement(processLoadingIndicator);
+            processBtn.disabled = true;
+            
+            // Check if API key is loaded
+            if (!GEMINI_API_KEY) {
+                displayError(processErrorMessageDiv, "API key not loaded. Please reload the page.");
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+
+            const file = audioFileInput.files[0];
+            if (!file) {
+                displayError(processErrorMessageDiv, 'Please select an audio file first.');
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+                return;
+            }
+            
+            try {
+                const base64Audio = await fileToBase64(file);
+                const summarizationPrompt = summarizationPromptInput.value;
+
+                // Combined prompt for transcription and summarization
+                const combinedPrompt = `Please perform two distinct tasks on the following audio content:
+                1. Transcribe the entire audio content accurately.
+                2. After providing the full transcription, generate a summary of ONLY that transcribed text based on this specific instruction: "${summarizationPrompt}"
+
+                Your response MUST be formatted strictly as follows, with no additional text or conversational filler outside these two sections:
+
+                Transcribed Text:
+                [THE FULL TRANSCRIPTION OF THE AUDIO GOES HERE]
+
+                Summary:
+                [THE GENERATED SUMMARY BASED ON THE TRANSCRIPTION AND YOUR INSTRUCTION GOES HERE]
+
+                Ensure the 'Summary:' section contains ONLY the summary and does NOT repeat any part of the 'Transcribed Text:'.`;
+                
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: combinedPrompt },
+                                {
+                                    inlineData: {
+                                        mimeType: file.type, // Use the actual MIME type of the uploaded file
+                                        data: base64Audio
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                };
+
+                const result = await callGeminiApi(payload);
+                
+                let fullTextResponse = "No response from AI.";
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    fullTextResponse = result.candidates[0].content.parts[0].text;
+                }
+
+                // Robust parsing for transcription and summary using regex
+                let transcription = "Could not extract transcription from AI response. Full AI response:\n" + fullTextResponse;
+                let summary = "Could not extract summary from AI response. Full AI response:\n" + fullTextResponse;
+
+                const transcriptionMatch = fullTextResponse.match(/Transcribed Text:\s*([\s\S]*?)(?=\n\s*Summary:|$)/i);
+                const summaryMatch = fullTextResponse.match(/Summary:\s*([\s\S]*)/i);
+
+                if (transcriptionMatch && transcriptionMatch[1]) {
+                    transcription = transcriptionMatch[1].trim();
+                }
+
+                if (summaryMatch && summaryMatch[1]) {
+                    summary = summaryMatch[1].trim();
+                }
+                
+                // If parsing fails to separate, and only one part is found, assign it appropriately
+                if (!transcriptionMatch && summaryMatch) {
+                    transcription = "Transcription section not explicitly found, but summary extracted.";
+                } else if (transcriptionMatch && !summaryMatch) {
+                    summary = "Summary section not found in AI response. Please refine prompt or check AI output format.";
+                } else if (!transcriptionMatch && !summaryMatch && fullTextResponse.length > 0 && fullTextResponse !== "No response from AI.") {
+                    // If neither header is found, and there's a response, display it as a fallback for both
+                    transcription = "Could not parse distinct sections. Full AI response:\n" + fullTextResponse;
+                    summary = "Could not parse distinct sections. Full AI response:\n" + fullTextResponse;
+                }
+
+                transcribedTextContent.textContent = transcription;
+                summaryContent.textContent = summary;
+                
+            } catch (error) {
+                console.error('Failed to process audio:', error);
+                displayError(processErrorMessageDiv, error.message);
+                transcribedTextContent.textContent = "Error during processing.";
+                summaryContent.textContent = "Error during processing.";
+            } finally {
+                showElement(transcribedTextDisplay);
+                showElement(summaryDisplay);
+                hideElement(processLoadingIndicator);
+                processBtn.disabled = false;
+            }
+        }
+        
+        // Event Listeners
+        audioFileInput.addEventListener('change', () => {
+            if (audioFileInput.files.length > 0) {
+                fileNameDisplay.textContent = audioFileInput.files[0].name;
+                // Enable the button only if the API key is already loaded
+                processBtn.disabled = !GEMINI_API_KEY;
+            } else {
+                fileNameDisplay.textContent = 'No file chosen';
+                processBtn.disabled = true;
+            }
+            clearError(processErrorMessageDiv);
+            transcribedTextContent.textContent = '';
+            summaryContent.textContent = '';
+            hideElement(transcribedTextDisplay);
+            hideElement(summaryDisplay);
+        });
+
+
+        
+        concisenessSlider.addEventListener('input', updateSummarizationPrompt);
+        
+        // New async initialization function
+        async function initializeApp() {
+            updateSummarizationPrompt();
+            
+            // Disable the process button until the API key is loaded
+            processBtn.disabled = true;
+            displayError(processErrorMessageDiv, "Loading API key...");
+            
+            GEMINI_API_KEY = await getApiKeyFromFile();
+
+            // Once the key is loaded, remove the loading message and enable the button if a file is selected
+            clearError(processErrorMessageDiv);
+            if (GEMINI_API_KEY && audioFileInput.files.length > 0) {
+                processBtn.disabled = false;
+            }
+
+            // Initialize theme and particles on page load
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme);
+
+            // Theme button event listeners from header.html
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+            
+            processBtn.addEventListener('click', processAudioFile);
+        }
+
+        // Call the new initialization function on DOM load
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
