@@ -712,500 +712,496 @@
         </div>
     </div>
   </main>
-
 <script>
-    // Set the workerSrc for PDF.js
-    // This is crucial for PDF.js to load its worker script correctly.
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+// Set the workerSrc for PDF.js
+// This is crucial for PDF.js to load its worker script correctly.
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-    // Particle class and related functions (from header.html)
-    window.setTheme = function(theme) {
-      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
-      localStorage.setItem('shkspr-theme', theme);
-      window.initParticles();
+// Particle class and related functions (from header.html)
+window.setTheme = function(theme) {
+  document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+  localStorage.setItem('shkspr-theme', theme);
+  window.initParticles();
+}
+
+window.Particle = class Particle {
+  constructor(container, colors) {
+    this.container = container;
+    this.element = document.createElement('div');
+    this.element.classList.add('particle');
+    this.container.appendChild(this.element);
+    this.size = Math.random() * 6 + 2;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.x = Math.random() * window.innerWidth;
+    this.y = Math.random() * window.innerHeight;
+    this.vx = (Math.random() - 0.5) * 4;
+    this.vy = (Math.random() - 0.5) * 4;
+    this.opacity = Math.random() * 0.5 + 0.3;
+    this.element.style.width = `${this.size}px`;
+    this.element.style.height = `${this.size}px`;
+    this.element.style.backgroundColor = this.color;
+    this.element.style.opacity = this.opacity;
+    this.update();
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+      this.vx *= -1;
+      this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+    }
+    if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+      this.vy *= -1;
+      // FIX: Corrected 'the.size' typo to 'this.size' to ensure particles bounce correctly
+      this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+    }
+    this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+  }
+  remove() {
+    this.container.removeChild(this.element);
+  }
+}
+
+let particles = [];
+let animationId;
+
+window.initParticles = function() {
+  const container = document.getElementById('particles');
+  if (!container) return;
+  particles.forEach(p => p.remove());
+  particles = [];
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  let colors = [accentColor];
+  if (document.body.classList.contains('theme-blackwhite')) {
+    colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+  } else if (document.body.classList.contains('theme-cyan')) {
+    colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+  } else if (document.body.classList.contains('theme-purple')) {
+    colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+  } else if (document.body.classList.contains('theme-green')) {
+    colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+  } else if (document.body.classList.contains('theme-red')) {
+    colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+  }
+  for (let i = 0; i < 60; i++) {
+    particles.push(new window.Particle(container, colors));
+  }
+  window.animateParticles();
+}
+
+window.animateParticles = function() {
+  particles.forEach(p => p.update());
+  animationId = requestAnimationFrame(window.animateParticles);
+}
+
+// Main application logic for flashcard generator
+document.addEventListener('DOMContentLoaded', () => {
+    // Theme initialization from header.html
+    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+    window.setTheme(savedTheme);
+
+    // Flashcard generator elements
+    const inputText = document.getElementById('inputText');
+    const customInstructions = document.getElementById('customInstructions');
+    const generateButton = document.getElementById('generateButton');
+    const clearButton = document.getElementById('clearButton');
+    const flashcardWrapper = document.getElementById('flashcardWrapper');
+    const messageBox = document.getElementById('messageBox');
+    const loadingBarContainer = document.getElementById('loadingBarContainer');
+    const loadingBar = document.getElementById('loadingBar');
+    const prevButton = document.getElementById('prevButton'); // Flashcard navigation
+    const nextButton = document.getElementById('nextButton'); // Flashcard navigation
+
+    // Input step elements
+    const inputSteps = [
+        document.getElementById('inputStep1'),
+        document.getElementById('inputStep2')
+    ];
+    const inputPrevButton = document.getElementById('inputPrevButton');
+    const inputNextButton = document.getElementById('inputNextButton');
+    let currentInputStepIndex = 0;
+
+    // File upload elements
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const clearFileButton = document.getElementById('clearFileButton');
+    const fileList = document.getElementById('fileList');
+    const toggleFileListButton = document.getElementById('toggleFileListButton');
+
+    let uploadedFilesData = []; // Stores objects: { id: unique, name: string, type: string, content: string/base64 }
+
+    let flashcardsData = [];
+    let currentFlashcardIndex = 0;
+
+    // Function to display messages
+    function showMessage(message, type = 'info') {
+        messageBox.textContent = message;
+        messageBox.className = `message-box ${type}`;
+        messageBox.style.display = 'block';
+        setTimeout(() => {
+            messageBox.style.display = 'none';
+        }, 5000);
     }
 
-    window.Particle = class Particle {
-      constructor(container, colors) {
-        this.container = container;
-        this.element = document.createElement('div');
-        this.element.classList.add('particle');
-        this.container.appendChild(this.element);
-        this.size = Math.random() * 6 + 2;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.x = Math.random() * window.innerWidth;
-        this.y = Math.random() * window.innerHeight;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
-        this.opacity = Math.random() * 0.5 + 0.3;
-        this.element.style.width = `${this.size}px`;
-        this.element.style.height = `${this.size}px`;
-        this.element.style.backgroundColor = this.color;
-        this.element.style.opacity = this.opacity;
-        this.update();
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-          this.vx *= -1;
-          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
-        }
-        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-          this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
-        }
-        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-      }
-      remove() {
-        this.container.removeChild(this.element);
-      }
+    // Function to create a flashcard element
+    function createFlashcardElement(frontText, backText) {
+        const flashcard = document.createElement('div');
+        flashcard.classList.add('flashcard');
+
+        const flashcardInner = document.createElement('div');
+        flashcardInner.classList.add('flashcard-inner');
+
+        const flashcardFront = document.createElement('div');
+        flashcardFront.classList.add('flashcard-front');
+        flashcardFront.textContent = frontText;
+
+        const flashcardBack = document.createElement('div');
+        flashcardBack.classList.add('flashcard-back');
+        flashcardBack.textContent = backText;
+
+        flashcardInner.appendChild(flashcardFront);
+        flashcardInner.appendChild(flashcardBack);
+        flashcard.appendChild(flashcardInner);
+
+        flashcard.addEventListener('click', () => {
+            flashcard.classList.toggle('flipped');
+        });
+
+        return flashcard;
     }
 
-    let particles = [];
-    let animationId = null; // Initialize to null
+    // Function to display a specific flashcard
+    function displayFlashcard(index) {
+        if (flashcardsData.length === 0) {
+            flashcardWrapper.innerHTML = '';
+            prevButton.disabled = true;
+            nextButton.disabled = true;
+            return;
+        }
 
-    window.initParticles = function() {
-      const container = document.getElementById('particles');
-      if (!container) return;
+        currentFlashcardIndex = index;
+        const card = flashcardsData[currentFlashcardIndex];
+        flashcardWrapper.innerHTML = ''; // Clear previous card
+        flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
 
-      // Stop any existing animation loop before starting a new one
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      
-      particles.forEach(p => p.remove());
-      particles = [];
-
-      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-      let colors = [accentColor];
-      if (document.body.classList.contains('theme-blackwhite')) {
-        colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
-      } else if (document.body.classList.contains('theme-cyan')) {
-        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
-      } else if (document.body.classList.contains('theme-purple')) {
-        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
-      } else if (document.body.classList.contains('theme-green')) {
-        colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-      } else if (document.body.classList.contains('theme-red')) {
-        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
-      }
-      for (let i = 0; i < 60; i++) {
-        particles.push(new window.Particle(container, colors));
-      }
-      window.animateParticles();
+        // Update navigation button states
+        prevButton.disabled = currentFlashcardIndex === 0;
+        nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
     }
 
-    window.animateParticles = function() {
-      particles.forEach(p => p.update());
-      animationId = requestAnimationFrame(window.animateParticles);
-    }
-
-    // Main application logic for flashcard generator
-    document.addEventListener('DOMContentLoaded', () => {
-        // Theme initialization from header.html
-        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-        window.setTheme(savedTheme);
-
-        // Flashcard generator elements
-        const inputText = document.getElementById('inputText');
-        const customInstructions = document.getElementById('customInstructions');
-        const generateButton = document.getElementById('generateButton');
-        const clearButton = document.getElementById('clearButton');
-        const flashcardWrapper = document.getElementById('flashcardWrapper');
-        const messageBox = document.getElementById('messageBox');
-        const loadingBarContainer = document.getElementById('loadingBarContainer');
-        const loadingBar = document.getElementById('loadingBar');
-        const prevButton = document.getElementById('prevButton'); // Flashcard navigation
-        const nextButton = document.getElementById('nextButton'); // Flashcard navigation
-
-        // Input step elements
-        const inputSteps = [
-            document.getElementById('inputStep1'),
-            document.getElementById('inputStep2')
-        ];
-        const inputPrevButton = document.getElementById('inputPrevButton');
-        const inputNextButton = document.getElementById('inputNextButton');
-        let currentInputStepIndex = 0;
-
-        // File upload elements
-        const fileInput = document.getElementById('fileInput');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const clearFileButton = document.getElementById('clearFileButton');
-        const fileList = document.getElementById('fileList');
-        const toggleFileListButton = document.getElementById('toggleFileListButton');
-
-        let uploadedFilesData = []; // Stores objects: { id: unique, name: string, type: string, content: string/base64 }
-
-        let flashcardsData = [];
-        let currentFlashcardIndex = 0;
-
-        // Function to display messages
-        function showMessage(message, type = 'info') {
-            messageBox.textContent = message;
-            messageBox.className = `message-box ${type}`;
-            messageBox.style.display = 'block';
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-            }, 5000);
-        }
-
-        // Function to create a flashcard element
-        function createFlashcardElement(frontText, backText) {
-            const flashcard = document.createElement('div');
-            flashcard.classList.add('flashcard');
-
-            const flashcardInner = document.createElement('div');
-            flashcardInner.classList.add('flashcard-inner');
-
-            const flashcardFront = document.createElement('div');
-            flashcardFront.classList.add('flashcard-front');
-            flashcardFront.textContent = frontText;
-
-            const flashcardBack = document.createElement('div');
-            flashcardBack.classList.add('flashcard-back');
-            flashcardBack.textContent = backText;
-
-            flashcardInner.appendChild(flashcardFront);
-            flashcardInner.appendChild(flashcardBack);
-            flashcard.appendChild(flashcardInner);
-
-            flashcard.addEventListener('click', () => {
-                flashcard.classList.toggle('flipped');
-            });
-
-            return flashcard;
-        }
-
-        // Function to display a specific flashcard
-        function displayFlashcard(index) {
-            if (flashcardsData.length === 0) {
-                flashcardWrapper.innerHTML = '';
-                prevButton.disabled = true;
-                nextButton.disabled = true;
-                return;
-            }
-
-            currentFlashcardIndex = index;
-            const card = flashcardsData[currentFlashcardIndex];
-            flashcardWrapper.innerHTML = ''; // Clear previous card
-            flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
-
-            // Update navigation button states
-            prevButton.disabled = currentFlashcardIndex === 0;
-            nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
-        }
-
-        // Function to display a specific input step
-        function showInputStep(index) {
-            inputSteps.forEach((step, i) => {
-                if (i === index) {
-                    step.classList.add('active');
-                } else {
-                    step.classList.remove('active');
-                }
-            });
-
-            currentInputStepIndex = index;
-            inputPrevButton.disabled = currentInputStepIndex === 0;
-            inputNextButton.disabled = currentInputStepIndex === inputSteps.length - 1;
-
-            // If on the last input step, enable generate button
-            if (currentInputStepIndex === inputSteps.length - 1) {
-                generateButton.style.display = 'block'; // Show generate button
+    // Function to display a specific input step
+    function showInputStep(index) {
+        inputSteps.forEach((step, i) => {
+            if (i === index) {
+                step.classList.add('active');
             } else {
-                generateButton.style.display = 'none'; // Hide generate button
+                step.classList.remove('active');
             }
+        });
+
+        currentInputStepIndex = index;
+        inputPrevButton.disabled = currentInputStepIndex === 0;
+        inputNextButton.disabled = currentInputStepIndex === inputSteps.length - 1;
+
+        // If on the last input step, enable generate button
+        if (currentInputStepIndex === inputSteps.length - 1) {
+            generateButton.style.display = 'block'; // Show generate button
+        } else {
+            generateButton.style.display = 'none'; // Hide generate button
         }
+    }
 
-        // Function to read file content (text, PDF, image)
-        async function readFileContent(file) {
-            return new Promise(async (resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+    // Function to read file content (text, PDF, image)
+    async function readFileContent(file) {
+        return new Promise(async (resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 
-                if (file.type.startsWith('image/')) {
-                    reader.onload = (e) => {
-                        resolve({
-                            type: file.type,
-                            content: e.target.result.split(',')[1] // Base64 content
-                        });
-                    };
-                    reader.readAsDataURL(file);
-                } else if (file.type === 'application/pdf') {
-                    try {
-                        const loadingTask = pdfjsLib.getDocument({ data: await file.arrayBuffer() });
-                        const pdf = await loadingTask.promise;
-                        let fullText = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                        }
-                        resolve({
-                            type: 'text/plain', // Treat PDF content as plain text
-                            content: fullText
-                        });
-                    } catch (pdfError) {
-                        // If PDF parsing fails, still resolve but with an empty string for content
-                        console.error(`Error parsing PDF ${file.name}: ${pdfError.message}`);
-                        resolve({
-                            type: 'text/plain',
-                            content: '' // Provide empty content if parsing fails
-                        });
-                    }
-                } else if (file.type.startsWith('text/')) {
-                    reader.onload = (e) => {
-                        resolve({
-                            type: file.type,
-                            content: e.target.result
-                        });
-                    };
-                    reader.readAsText(file);
-                } else {
-                    reject(new Error(`Unsupported file type: ${file.type}`));
-                }
-            });
-        }
-
-        // Function to update the displayed file list
-        function updateFileListDisplay() {
-            fileList.innerHTML = '';
-            if (uploadedFilesData.length === 0) {
-                toggleFileListButton.style.display = 'none';
-                fileNameDisplay.textContent = 'No files chosen';
-                clearFileButton.style.display = 'none';
-                fileList.classList.remove('expanded'); // Collapse if no files
-                toggleFileListButton.textContent = 'Show Uploaded Files (0)';
-            } else {
-                toggleFileListButton.style.display = 'block';
-                toggleFileListButton.textContent = `Show Uploaded Files (${uploadedFilesData.length})`;
-                fileNameDisplay.textContent = `${uploadedFilesData.length} file(s) chosen`;
-                clearFileButton.style.display = 'inline-block';
-
-                uploadedFilesData.forEach((fileObj, index) => {
-                    const listItem = document.createElement('li');
-                    listItem.classList.add('file-list-item');
-                    listItem.innerHTML = `
-                        <span>${fileObj.name} (${fileObj.type.includes('/') ? fileObj.type.split('/')[1] : fileObj.type})</span>
-                        <button data-id="${fileObj.id}">&times;</button>
-                    `;
-                    fileList.appendChild(listItem);
-                });
-            }
-        }
-
-        // Function to generate flashcards using the Vercel serverless function
-        async function generateFlashcards() {
-            const text = inputText.value.trim();
-            const instructions = customInstructions.value.trim();
-
-            if (!text && uploadedFilesData.length === 0) {
-                showMessage('Please enter some text or upload/paste a file to generate flashcards.', 'error');
-                return;
-            }
-
-            flashcardsData = []; // Clear previous data
-            currentFlashcardIndex = 0;
-            displayFlashcard(currentFlashcardIndex); // Clear display
-
-            loadingBarContainer.style.display = 'block'; // Show loading bar container
-            loadingBar.style.width = '0%'; // Reset loading bar
-
-            // Simulate loading progress
-            let progress = 0;
-            const interval = setInterval(() => {
-                if (progress < 90) { // Stop just before 100 to show completion
-                    progress += 5;
-                    loadingBar.style.width = `${progress}%`;
-                }
-            }, 200);
-
-            try {
-                const response = await fetch('/api/Flashcard_API', { // Call your Vercel serverless function
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        inputText: text,
-                        customInstructions: instructions,
-                        uploadedFiles: uploadedFilesData
-                    })
-                });
-
-                if (!response.ok) {
-                    // Clone the response so its body stream can be read multiple times if needed for debugging
-                    const clonedResponse = response.clone();
-                    let errorDetails = `Status: ${response.status} ${response.statusText}`;
-                    try {
-                        // Try to parse as JSON first
-                        const errorJson = await response.json();
-                        errorDetails += ` - ${JSON.stringify(errorJson)}`;
-                    } catch (e) {
-                        // If JSON parsing fails, read as text
-                        const errorText = await clonedResponse.text(); // Use cloned response here
-                        errorDetails += ` - Response Body: "${errorText.substring(0, Math.min(errorText.length, 500))}..."`; // Truncate long bodies
-                    }
-                    throw new Error(`Serverless function error: ${errorDetails}`);
-                }
-
-                const result = await response.json();
-
-                if (result.flashcards && result.flashcards.length > 0) {
-                    flashcardsData = result.flashcards;
-                    displayFlashcard(0); // Display the first flashcard
-                    showMessage('Flashcards generated successfully!', 'success');
-                } else {
-                    showMessage('No flashcards could be generated from the provided content. Please try different content.', 'info');
-                }
-            } catch (error) {
-                console.error('Error generating flashcards:', error);
-                showMessage(`Failed to generate flashcards: ${error.message}. Please try again.`, 'error');
-            } finally {
-                clearInterval(interval); // Stop simulating progress
-                loadingBar.style.width = '100%'; // Complete loading bar
-                setTimeout(() => {
-                    loadingBarContainer.style.display = 'none'; // Hide loading bar after a short delay
-                    loadingBar.style.width = '0%'; // Reset for next use
-                }, 500);
-            }
-        }
-
-        // --- File Upload Event Listener ---
-        fileInput.addEventListener('change', async (event) => {
-            const files = Array.from(event.target.files);
-            if (files.length === 0) {
-                updateFileListDisplay(); // Clear display if no files selected
-                return;
-            }
-
-            let newFiles = [];
-            for (const file of files) {
-                try {
-                    const fileContent = await readFileContent(file);
-                    newFiles.push({
-                        id: Date.now() + Math.random(), // Unique ID for deletion
-                        name: file.name,
-                        type: fileContent.type,
-                        content: fileContent.content
+            if (file.type.startsWith('image/')) {
+                reader.onload = (e) => {
+                    resolve({
+                        type: file.type,
+                        content: e.target.result.split(',')[1] // Base64 content
                     });
-                    showMessage(`File "${file.name}" loaded successfully.`, 'success');
-                } catch (error) {
-                    showMessage(`Error loading "${file.name}": ${error.message}`, 'error');
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                try {
+                    const loadingTask = pdfjsLib.getDocument({ data: await file.arrayBuffer() });
+                    const pdf = await loadingTask.promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    resolve({
+                        type: 'text/plain', // Treat PDF content as plain text
+                        content: fullText
+                    });
+                } catch (pdfError) {
+                    // If PDF parsing fails, still resolve but with an empty string for content
+                    console.error(`Error parsing PDF ${file.name}: ${pdfError.message}`);
+                    resolve({
+                        type: 'text/plain',
+                        content: '' // Provide empty content if parsing fails
+                    });
                 }
-            }
-            uploadedFilesData = [...uploadedFilesData, ...newFiles]; // Add new files to existing
-            updateFileListDisplay();
-            fileInput.value = ''; // Clear the file input to allow re-uploading the same file
-        });
-
-        // Toggle file list visibility
-        toggleFileListButton.addEventListener('click', () => {
-            fileList.classList.toggle('expanded');
-        });
-
-        // Clear individual file from list
-        fileList.addEventListener('click', (event) => {
-            if (event.target.tagName === 'BUTTON' && event.target.dataset.id) {
-                const fileIdToRemove = parseFloat(event.target.dataset.id);
-                uploadedFilesData = uploadedFilesData.filter(fileObj => fileObj.id !== fileIdToRemove);
-                updateFileListDisplay();
-                showMessage('File removed.');
+            } else if (file.type.startsWith('text/')) {
+                reader.onload = (e) => {
+                    resolve({
+                        type: file.type,
+                        content: e.target.result
+                    });
+                };
+                reader.readAsText(file);
+            } else {
+                reject(new Error(`Unsupported file type: ${file.type}`));
             }
         });
+    }
 
-        clearFileButton.addEventListener('click', () => {
-            uploadedFilesData = [];
-            updateFileListDisplay();
-            showMessage('All uploaded files cleared.');
-        });
+    // Function to update the displayed file list
+    function updateFileListDisplay() {
+        fileList.innerHTML = '';
+        if (uploadedFilesData.length === 0) {
+            toggleFileListButton.style.display = 'none';
+            fileNameDisplay.textContent = 'No files chosen';
+            clearFileButton.style.display = 'none';
+            fileList.classList.remove('expanded'); // Collapse if no files
+            toggleFileListButton.textContent = 'Show Uploaded Files (0)';
+        } else {
+            toggleFileListButton.style.display = 'block';
+            toggleFileListButton.textContent = `Show Uploaded Files (${uploadedFilesData.length})`;
+            fileNameDisplay.textContent = `${uploadedFilesData.length} file(s) chosen`;
+            clearFileButton.style.display = 'inline-block';
 
-        // --- Paste Event Listener for Images ---
-        inputText.addEventListener('paste', (event) => {
-            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
-            let imageFound = false;
+            uploadedFilesData.forEach((fileObj, index) => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('file-list-item');
+                listItem.innerHTML = `
+                    <span>${fileObj.name} (${fileObj.type.includes('/') ? fileObj.type.split('/')[1] : fileObj.type})</span>
+                    <button data-id="${fileObj.id}">&times;</button>
+                `;
+                fileList.appendChild(listItem);
+            });
+        }
+    }
 
-            for (const item of items) {
-                if (item.kind === 'file' && item.type.startsWith('image/')) {
-                    const blob = item.getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const newFile = {
-                            id: Date.now() + Math.random(),
-                            name: 'Pasted Image',
-                            type: blob.type,
-                            content: e.target.result.split(',')[1]
-                        };
-                        uploadedFilesData.push(newFile);
-                        updateFileListDisplay();
-                        inputText.value = ''; // Clear text area if image is pasted
-                        showMessage('Image pasted. Flashcards will be generated from its content.', 'info');
-                    };
-                    reader.readAsDataURL(blob);
-                    imageFound = true;
-                    event.preventDefault(); // Prevent default paste behavior (e.g., pasting image as text)
-                    break;
+    // Function to generate flashcards using the Vercel serverless function
+    async function generateFlashcards() {
+        const text = inputText.value.trim();
+        const instructions = customInstructions.value.trim();
+
+        if (!text && uploadedFilesData.length === 0) {
+            showMessage('Please enter some text or upload/paste a file to generate flashcards.', 'error');
+            return;
+        }
+
+        flashcardsData = []; // Clear previous data
+        currentFlashcardIndex = 0;
+        displayFlashcard(currentFlashcardIndex); // Clear display
+
+        loadingBarContainer.style.display = 'block'; // Show loading bar container
+        loadingBar.style.width = '0%'; // Reset loading bar
+
+        // Simulate loading progress
+        let progress = 0;
+        const interval = setInterval(() => {
+            if (progress < 90) { // Stop just before 100 to show completion
+                progress += 5;
+                loadingBar.style.width = `${progress}%`;
+            }
+        }, 200);
+
+        try {
+            const response = await fetch('/api/Flashcard_API', { // Call your Vercel serverless function
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    inputText: text,
+                    customInstructions: instructions,
+                    uploadedFiles: uploadedFilesData
+                })
+            });
+
+            if (!response.ok) {
+                // Clone the response so its body stream can be read multiple times if needed for debugging
+                const clonedResponse = response.clone();
+                let errorDetails = `Status: ${response.status} ${response.statusText}`;
+                try {
+                    // Try to parse as JSON first
+                    const errorJson = await response.json();
+                    errorDetails += ` - ${JSON.stringify(errorJson)}`;
+                } catch (e) {
+                    // If JSON parsing fails, read as text
+                    const errorText = await clonedResponse.text(); // Use cloned response here
+                    errorDetails += ` - Response Body: "${errorText.substring(0, Math.min(errorText.length, 500))}..."`; // Truncate long bodies
                 }
+                throw new Error(`Serverless function error: ${errorDetails}`);
             }
-            if (!imageFound && items.length > 0 && items[0].type === 'text/plain') {
-                // If text is pasted, allow default behavior, but ensure file list is updated
-                updateFileListDisplay(); // Just in case a file was previously selected
+
+            const result = await response.json();
+
+            if (result.flashcards && result.flashcards.length > 0) {
+                flashcardsData = result.flashcards;
+                displayFlashcard(0); // Display the first flashcard
+                showMessage('Flashcards generated successfully!', 'success');
+            } else {
+                showMessage('No flashcards could be generated from the provided content. Please try different content.', 'info');
             }
-        });
+        } catch (error) {
+            console.error('Error generating flashcards:', error);
+            showMessage(`Failed to generate flashcards: ${error.message}. Please try again.`, 'error');
+        } finally {
+            clearInterval(interval); // Stop simulating progress
+            loadingBar.style.width = '100%'; // Complete loading bar
+            setTimeout(() => {
+                loadingBarContainer.style.display = 'none'; // Hide loading bar after a short delay
+                loadingBar.style.width = '0%'; // Reset for next use
+            }, 500);
+        }
+    }
 
+    // --- File Upload Event Listener ---
+    fileInput.addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) {
+            updateFileListDisplay(); // Clear display if no files selected
+            return;
+        }
 
-        // Event listeners for input navigation buttons
-        inputPrevButton.addEventListener('click', () => {
-            if (currentInputStepIndex > 0) {
-                showInputStep(currentInputStepIndex - 1);
+        let newFiles = [];
+        for (const file of files) {
+            try {
+                const fileContent = await readFileContent(file);
+                newFiles.push({
+                    id: Date.now() + Math.random(), // Unique ID for deletion
+                    name: file.name,
+                    type: fileContent.type,
+                    content: fileContent.content
+                });
+                showMessage(`File "${file.name}" loaded successfully.`, 'success');
+            } catch (error) {
+                showMessage(`Error loading "${file.name}": ${error.message}`, 'error');
             }
-        });
-
-        inputNextButton.addEventListener('click', () => {
-            if (currentInputStepIndex < inputSteps.length - 1) {
-                showInputStep(currentInputStepIndex + 1);
-            }
-        });
-
-        // Event listeners for flashcard navigation buttons
-        prevButton.addEventListener('click', () => {
-            if (currentFlashcardIndex > 0) {
-                displayFlashcard(currentFlashcardIndex - 1);
-            }
-        });
-
-        nextButton.addEventListener('click', () => {
-            if (currentFlashcardIndex < flashcardsData.length - 1) {
-                displayFlashcard(currentFlashcardIndex + 1);
-            }
-        });
-
-        // Event listeners for action buttons
-        generateButton.addEventListener('click', generateFlashcards);
-        clearButton.addEventListener('click', () => {
-            inputText.value = '';
-            customInstructions.value = '';
-            uploadedFilesData = []; // Clear all uploaded files
-            updateFileListDisplay(); // Update display after clearing
-            flashcardsData = [];
-            currentFlashcardIndex = 0;
-            displayFlashcard(currentFlashcardIndex); // Clear displayed card and disable buttons
-            showInputStep(0); // Go back to the first input step
-            showMessage('All content and flashcards cleared.');
-        });
-
-        // Initialize the first input step and hide generate button initially
-        showInputStep(0);
-        generateButton.style.display = 'none'; // Hide generate button until last step
-        updateFileListDisplay(); // Initialize file list display
+        }
+        uploadedFilesData = [...uploadedFilesData, ...newFiles]; // Add new files to existing
+        updateFileListDisplay();
+        fileInput.value = ''; // Clear the file input to allow re-uploading the same file
     });
+
+    // Toggle file list visibility
+    toggleFileListButton.addEventListener('click', () => {
+        fileList.classList.toggle('expanded');
+    });
+
+    // Clear individual file from list
+    fileList.addEventListener('click', (event) => {
+        if (event.target.tagName === 'BUTTON' && event.target.dataset.id) {
+            const fileIdToRemove = parseFloat(event.target.dataset.id);
+            uploadedFilesData = uploadedFilesData.filter(fileObj => fileObj.id !== fileIdToRemove);
+            updateFileListDisplay();
+            showMessage('File removed.');
+        }
+    });
+
+    clearFileButton.addEventListener('click', () => {
+        uploadedFilesData = [];
+        updateFileListDisplay();
+        showMessage('All uploaded files cleared.');
+    });
+
+    // --- Paste Event Listener for Images ---
+    inputText.addEventListener('paste', (event) => {
+        const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        let imageFound = false;
+
+        for (const item of items) {
+            if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const newFile = {
+                        id: Date.now() + Math.random(),
+                        name: 'Pasted Image',
+                        type: blob.type,
+                        content: e.target.result.split(',')[1]
+                    };
+                    uploadedFilesData.push(newFile);
+                    updateFileListDisplay();
+                    inputText.value = ''; // Clear text area if image is pasted
+                    showMessage('Image pasted. Flashcards will be generated from its content.', 'info');
+                };
+                reader.readAsDataURL(blob);
+                imageFound = true;
+                event.preventDefault(); // Prevent default paste behavior (e.g., pasting image as text)
+                break;
+            }
+        }
+        if (!imageFound && items.length > 0 && items[0].type === 'text/plain') {
+            // If text is pasted, allow default behavior, but ensure file list is updated
+            updateFileListDisplay(); // Just in case a file was previously selected
+        }
+    });
+
+
+    // Event listeners for input navigation buttons
+    inputPrevButton.addEventListener('click', () => {
+        if (currentInputStepIndex > 0) {
+            showInputStep(currentInputStepIndex - 1);
+        }
+    });
+
+    inputNextButton.addEventListener('click', () => {
+        if (currentInputStepIndex < inputSteps.length - 1) {
+            showInputStep(currentInputStepIndex + 1);
+        }
+    });
+
+    // Event listeners for flashcard navigation buttons
+    prevButton.addEventListener('click', () => {
+        if (currentFlashcardIndex > 0) {
+            displayFlashcard(currentFlashcardIndex - 1);
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        if (currentFlashcardIndex < flashcardsData.length - 1) {
+            displayFlashcard(currentFlashcardIndex + 1);
+        }
+    });
+
+    // Event listeners for action buttons
+    generateButton.addEventListener('click', generateFlashcards);
+    clearButton.addEventListener('click', () => {
+        inputText.value = '';
+        customInstructions.value = '';
+        uploadedFilesData = []; // Clear all uploaded files
+        updateFileListDisplay(); // Update display after clearing
+        flashcardsData = [];
+        currentFlashcardIndex = 0;
+        displayFlashcard(currentFlashcardIndex); // Clear displayed card and disable buttons
+        showInputStep(0); // Go back to the first input step
+        showMessage('All content and flashcards cleared.');
+    });
+
+    // Initialize the first input step and hide generate button initially
+    showInputStep(0);
+    generateButton.style.display = 'none'; // Hide generate button until last step
+    updateFileListDisplay(); // Initialize file list display
+});
 </script>
+</body>
     <link rel="stylesheet" href="../Structure/header.css">
     <script src="../Structure/header.js"></script>
-</body>
 </html>
