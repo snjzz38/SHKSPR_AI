@@ -1,90 +1,54 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+const express = require('express');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getJson } = require("serpapi"); // or another search library
 
-// This is the Vercel serverless function entry point
-export default async function handler(request, response) {
-    // Set a CORS header to allow requests from any origin (your frontend)
-    response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// IMPORTANT: Never expose API keys in client-side code.
+// In a real environment, these would be loaded from environment variables.
+const GEMINI_API_KEY = process.env.CITATION_1 || "YOUR_GEMINI_API_KEY";
+const SERP_API_KEY = process.env.SEARCH_1 || "YOUR_SERP_API_KEY";
 
-    if (request.method === 'OPTIONS') {
-        return response.status(200).end();
-    }
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const app = express();
+app.use(express.json());
 
-    if (request.method !== 'POST') {
-        return response.status(405).json({ error: 'Method Not Allowed' });
-    }
-
-    // IMPORTANT: Ensure your Vercel environment variable GEMINI_API_KEY is set.
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        console.error("Missing GEMINI_API_KEY in environment variables.");
-        return response.status(500).json({ error: 'Server configuration error: API key is missing.' });
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-preview-05-20",
-        tools: [{
-            functionDeclarations: [
-                {
-                    name: "google_search",
-                    description: "Search for information on Google.",
-                    parameters: {
-                        type: "OBJECT",
-                        properties: {
-                            queries: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    }
-                }
-            ]
-        }]
-    });
-
+app.post('/api/generate-citations', async (req, res) => {
     try {
-        const { essayText, citationStyle, outputType } = request.body;
+        const { prompt, query } = req.body;
 
-        if (!essayText) {
-            return response.status(400).json({ error: 'Essay text is required in the request body.' });
+        if (!prompt || !query) {
+            return res.status(400).json({ error: 'Prompt and query are required in the request body.' });
         }
+        
+        // Use SerpApi to get real-time search results
+        const searchResponse = await getJson("google", {
+            q: query,
+            api_key: SERP_API_KEY,
+        });
 
-        // The prompt is designed to instruct the model to use the search tool and format the output correctly.
-        const prompt = `
-            You are a helpful AI that generates academic citations based on provided text.
-            
-            Task:
-            1. Analyze the following essay text to identify claims or facts that require an external source.
-            2. Use the 'google_search' tool to find a reputable source (e.g., academic journal, official report, book, or major news site) that supports each claim.
-            3. Based on the information found, generate a citation for each source in the requested style.
-            4. If the output type is 'bibliography', list the full citations. If the output type is 'in-text', generate only the in-text citations.
-            5. If no sources are found or the text doesn't contain citable information, respond with "No citations found."
+        // Extract snippets from organic results
+        const snippets = searchResponse["organic_results"]
+            .map(result => `Title: ${result.title}\nSource: ${result.source}\nLink: ${result.link}\nSnippet: ${result.snippet}`)
+            .join('\n\n');
 
-            Essay Text:
-            "${essayText}"
+        // Create a new prompt that includes the search results
+        const fullPrompt = `${prompt}\n\nWeb Search Results:\n---\n${snippets}\n---`;
 
-            Citation Style: ${citationStyle}
-            Output Type: ${outputType}
+        // The Gemini model is called with the full prompt
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
+        const result = await model.generateContent(fullPrompt);
+        const response = result.response;
+        const text = response.text();
 
-            Ensure each citation is properly formatted according to the specified style.
-        `;
-
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-
-        if (!text) {
-            return response.status(500).json({ error: 'The AI model did not return any text.' });
-        }
-
-        response.status(200).json({ citation: text });
+        res.json({ text });
 
     } catch (error) {
-        console.error('Error generating citation:', error);
-        response.status(500).json({ error: 'Failed to generate citation due to a server error.', details: error.message });
+        console.error('Error in serverless function:', error);
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
-}
+});
+
+// For local testing
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
