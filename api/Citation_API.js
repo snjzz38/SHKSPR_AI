@@ -19,13 +19,14 @@ export default async function handler(request, response) {
     // ⚠️ IMPORTANT: You MUST set this environment variable in your Vercel project settings.
     // Go to Project Settings -> Environment Variables, and add a variable named CITATION_1
     // with your Gemini API key as the value. The serverless function will not work without it.
+    // Also, ensure your Vercel project's package.json includes "@google/generative-ai" as a dependency.
     //
     const apiKey = process.env.CITATION_1;
 
     if (!apiKey) {
         console.error("Missing CITATION_1 in environment variables.");
         // We'll return a JSON error here, but Vercel may still send a generic page if the build fails.
-        return response.status(500).json({ error: 'Server configuration error: API key is missing.' });
+        return response.status(500).json({ error: 'Server configuration error: API key is missing. Please check your Vercel environment variables.' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
