@@ -15,11 +15,16 @@ export default async function handler(request, response) {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // IMPORTANT: Ensure your Vercel environment variable GEMINI_API_KEY is set.
+    //
+    // ⚠️ IMPORTANT: You MUST set this environment variable in your Vercel project settings.
+    // Go to Project Settings -> Environment Variables, and add a variable named GEMINI_API_KEY
+    // with your Gemini API key as the value. The serverless function will not work without it.
+    //
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
         console.error("Missing GEMINI_API_KEY in environment variables.");
+        // We'll return a JSON error here, but Vercel may still send a generic page if the build fails.
         return response.status(500).json({ error: 'Server configuration error: API key is missing.' });
     }
 
