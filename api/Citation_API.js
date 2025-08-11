@@ -54,31 +54,11 @@ export default async function handler(request, response) {
     });
 
     try {
-        const { essayText, citationStyle, outputType } = request.body;
+        const { prompt, essayText, citationStyle, outputType } = request.body;
 
-        if (!essayText) {
-            return response.status(400).json({ error: 'Essay text is required in the request body.' });
+        if (!essayText || !prompt) {
+            return response.status(400).json({ error: 'Essay text and prompt are required in the request body.' });
         }
-
-        // The prompt is designed to instruct the model to use the search tool and format the output correctly.
-        const prompt = `
-            You are a helpful AI that generates academic citations based on provided text.
-            
-            Task:
-            1. Analyze the following essay text to identify claims or facts that require an external source.
-            2. Use the 'google_search' tool to find a reputable source (e.g., academic journal, official report, book, or major news site) that supports each claim.
-            3. Based on the information found, generate a citation for each source in the requested style.
-            4. If the output type is 'bibliography', list the full citations. If the output type is 'in-text', generate only the in-text citations.
-            5. If no sources are found or the text doesn't contain citable information, respond with "No citations found."
-
-            Essay Text:
-            "${essayText}"
-
-            Citation Style: ${citationStyle}
-            Output Type: ${outputType}
-
-            Ensure each citation is properly formatted according to the specified style.
-        `;
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
