@@ -14,10 +14,6 @@
       "use": "@vercel/node"
     },
     {
-      "src": "api/Citation_API.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "/**",
       "use": "@vercel/static"
     }
@@ -28,24 +24,20 @@
       "destination": "/api/Humanizer_API.js"
     },
     {
-      "source": "/api/grader",
+      "source": "/api/Grader_API",
       "destination": "/api/Grader_API.js"
     },
     {
-      "source": "/api/flashcard",
+      "source": "/api/Flashcard_API",
       "destination": "/api/Flashcard_API.js"
     },
     {
-      "source": "/api/citation",
+      "source": "/api/Citation_API",
       "destination": "/api/Citation_API.js"
     },
     {
       "source": "/",
       "destination": "/index.html"
-    },
-    {
-      "source": "/citation",
-      "destination": "/Citation.html"
     }
   ]
 }
