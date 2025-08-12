@@ -53,10 +53,14 @@ export default async function handler(request, response) {
     });
 
     try {
-        // We now get the prompt directly from the request body.
-        const { prompt } = request.body;
+        // Log the full request body to help with debugging
+        console.log('Received request body:', request.body);
 
+        // Check if the body exists and has a prompt property
+        const prompt = request.body && request.body.prompt;
+        
         if (!prompt) {
+            console.error('Prompt is missing from the request body.');
             return response.status(400).json({ error: 'Prompt is required in the request body.' });
         }
 
