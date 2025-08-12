@@ -61,6 +61,18 @@ export default async function handler(request, response) {
         }
 
         const result = await model.generateContent(prompt);
+        
+        // --- START OF FIX ---
+        // The model may decide to call a tool instead of returning text.
+        // The current code does not handle tool calls and will fail if one is received.
+        // We check for a function call and return an informative error.
+        const functionCall = result.response.functionCall();
+        if (functionCall) {
+            console.error('Received a function call but no tool handler is implemented.');
+            return response.status(500).json({ error: 'The AI model attempted to call a tool, but this function does not support tool execution.' });
+        }
+        // --- END OF FIX ---
+
         const text = result.response.text();
 
         if (!text) {
