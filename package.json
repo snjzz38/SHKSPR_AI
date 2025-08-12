@@ -1,0 +1,12 @@
+{
+  "name": "shkspr-project",
+  "version": "1.0.0",
+  "description": "Serverless functions for the SHKSPR project",
+  "main": "api/Citation_API.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1"
+  }
+}
