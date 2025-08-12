@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const fetch = require('node-fetch'); // node-fetch is needed for the API call in this environment
+// This line tells your code to use the 'node-fetch' library.
+// For this to work, it must be listed as a dependency in your package.json.
+const fetch = require('node-fetch');
 
 // This is the Vercel serverless function entry point
 exports.default = async function handler(request, response) {
