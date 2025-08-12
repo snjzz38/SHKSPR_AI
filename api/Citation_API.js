@@ -64,9 +64,9 @@ export default async function handler(request, response) {
         const tool_handlers = {
             google_search: async (queries) => {
                 const searchApiKey = process.env.SEARCH_1; // Use the user-provided environment variable
-                const searchEngineId = "YOUR_SEARCH_ENGINE_ID"; // ⚠️ Replace with your actual Search Engine ID
+                const searchEngineId = "e5f6f17d0ff2a4ac3"; // ⚠️ This has been replaced with your actual Search Engine ID
 
-                if (!searchApiKey || searchEngineId === "YOUR_SEARCH_ENGINE_ID") {
+                if (!searchApiKey || searchEngineId === "e5f6f17d0ff2a4ac3") {
                     throw new Error('Search API key or Search Engine ID is not configured.');
                 }
 
