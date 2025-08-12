@@ -64,11 +64,15 @@ export default async function handler(request, response) {
         const tool_handlers = {
             google_search: async (queries) => {
                 const searchApiKey = process.env.SEARCH_1; // Use the user-provided environment variable
-                const searchEngineId = "e5f6f17d0ff2a4ac3"; // ⚠️ This has been replaced with your actual Search Engine ID
+                const searchEngineId = "e5f6f17d0ff2a4ac3"; // This has been replaced with your actual Search Engine ID
 
-                if (!searchApiKey || searchEngineId === "e5f6f17d0ff2a4ac3") {
+                if (!searchApiKey || searchEngineId === "YOUR_SEARCH_ENGINE_ID") {
                     throw new Error('Search API key or Search Engine ID is not configured.');
                 }
+                
+                console.log('Using Search API Key:', searchApiKey ? '✅' : '❌');
+                console.log('Using Search Engine ID:', searchEngineId);
+
 
                 const searchQuery = queries[0];
                 const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
@@ -80,6 +84,8 @@ export default async function handler(request, response) {
                     const data = await apiResponse.json();
 
                     if (!apiResponse.ok) {
+                         // We are now logging the exact error message from the API
+                         console.error('Google Custom Search API error response:', data);
                          throw new Error(data.error?.message || 'Google Custom Search API error');
                     }
 
