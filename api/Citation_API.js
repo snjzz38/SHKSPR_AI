@@ -101,10 +101,14 @@ export default async function handler(request, response) {
             // Send the full conversation history to the model to get the final text response.
             const secondResult = await model.generateContent({ contents: chatHistory });
 
-            const text = secondResult.response.text();
+            // Log the second result for debugging
+            console.log('Second result from model:', JSON.stringify(secondResult, null, 2));
+
+            // Safely get the text from the response
+            const text = secondResult?.response?.text();
             
             if (!text) {
-                return response.status(500).json({ error: 'The AI model did not return any text after the tool call.' });
+                return response.status(500).json({ error: 'The AI model did not return any text after the tool call, check the logs for details.' });
             }
 
             response.status(200).json({ citation: text });
