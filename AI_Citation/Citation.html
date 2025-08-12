@@ -643,13 +643,33 @@
                 // The API URL now points to your Vercel serverless function.
                 const backendUrl = '/api/citation';
 
+                // Construct the prompt on the client side
+                const prompt = `
+                    You are a helpful AI that generates academic citations based on provided text.
+                    
+                    Task:
+                    1. Analyze the following essay text to identify claims or facts that require an external source.
+                    2. Use the 'google_search' tool to find a reputable source (e.g., academic journal, official report, book, or major news site) that supports each claim.
+                    3. Based on the information found, generate a citation for each source in the requested style.
+                    4. If the output type is 'bibliography', list the full citations. If the output type is 'in-text', generate only the in-text citations.
+                    5. If no sources are found or the text doesn't contain citable information, respond with "No citations found."
+
+                    Essay Text:
+                    "${essayText}"
+
+                    Citation Style: ${citationStyle}
+                    Output Type: ${outputType}
+
+                    Ensure each citation is properly formatted according to the specified style.
+                `;
+
                 const response = await fetch(backendUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    // Now we only send the necessary data. The prompt is built on the server.
-                    body: JSON.stringify({ essayText, citationStyle, outputType }),
+                    // Send the prompt along with other data
+                    body: JSON.stringify({ essayText, citationStyle, outputType, prompt }),
                 });
 
                 if (!response.ok) {
@@ -666,14 +686,10 @@
                 const result = await response.json();
                 
                 // Display results from the backend.
-                if (result.citation) {
-                    outputArea.innerHTML = `<pre>${result.citation}</pre>`;
-                    outputSection.classList.remove('hidden');
-                    stopLoadingBar();
-                    setStatus('Citations generated successfully.', false);
-                } else {
-                    throw new Error('The AI model did not return any text.');
-                }
+                outputArea.innerHTML = `<pre>${result.citation}</pre>`;
+                outputSection.classList.remove('hidden');
+                stopLoadingBar();
+                setStatus('Citations generated successfully.', false);
             } catch (error) {
                 console.error('An error occurred during the process:', error);
                 showAlert('Error', `An unexpected error occurred: ${error.message}`);
