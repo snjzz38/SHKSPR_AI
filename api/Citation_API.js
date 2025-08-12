@@ -62,18 +62,14 @@ export default async function handler(request, response) {
 
         const result = await model.generateContent(prompt);
         
-        // Check if the model wants to call a tool.
         const functionCall = result.response.functionCall();
         
         if (functionCall) {
-            // --- START OF NEW TOOL-HANDLING LOGIC ---
+            // --- START OF FIXED TOOL-HANDLING LOGIC ---
             console.log('Model requested a tool call:', functionCall);
 
             const tool_handlers = {
                 google_search: async (queries) => {
-                    // ⚠️ IMPORTANT: We're simulating a search result here because
-                    // this serverless function cannot actually perform a web search.
-                    // To implement a real search, you would use a web search API.
                     console.log('Simulating Google Search for queries:', queries);
                     return {
                         query: queries[0],
@@ -93,15 +89,17 @@ export default async function handler(request, response) {
                 }
             };
             
-            // Execute the tool handler with the arguments from the model's request.
             const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
 
-            // Send the tool's response back to the model to get a final text response.
-            const secondResult = await model.generateContent({
-                prompt: prompt,
-                tool_code: functionCall, // Pass the original function call
-                tool_response: toolResponse // Pass the tool's response
-            });
+            // Construct the conversation history to send back to the model.
+            const chatHistory = [
+                { role: "user", parts: [{ text: prompt }] },
+                { role: "model", parts: [{ functionCall: functionCall }] },
+                { role: "tool", parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }] }
+            ];
+
+            // Send the full conversation history to the model to get the final text response.
+            const secondResult = await model.generateContent({ contents: chatHistory });
 
             const text = secondResult.response.text();
             
@@ -110,7 +108,7 @@ export default async function handler(request, response) {
             }
 
             response.status(200).json({ citation: text });
-            // --- END OF NEW TOOL-HANDLING LOGIC ---
+            // --- END OF FIXED TOOL-HANDLING LOGIC ---
 
         } else {
             // If no tool call, proceed as before.
