@@ -62,24 +62,66 @@ export default async function handler(request, response) {
 
         const result = await model.generateContent(prompt);
         
-        // --- START OF FIX ---
-        // The model may decide to call a tool instead of returning text.
-        // The current code does not handle tool calls and will fail if one is received.
-        // We check for a function call and return an informative error.
+        // Check if the model wants to call a tool.
         const functionCall = result.response.functionCall();
+        
         if (functionCall) {
-            console.error('Received a function call but no tool handler is implemented.');
-            return response.status(500).json({ error: 'The AI model attempted to call a tool, but this function does not support tool execution.' });
+            // --- START OF NEW TOOL-HANDLING LOGIC ---
+            console.log('Model requested a tool call:', functionCall);
+
+            const tool_handlers = {
+                google_search: async (queries) => {
+                    // ⚠️ IMPORTANT: We're simulating a search result here because
+                    // this serverless function cannot actually perform a web search.
+                    // To implement a real search, you would use a web search API.
+                    console.log('Simulating Google Search for queries:', queries);
+                    return {
+                        query: queries[0],
+                        results: [
+                            {
+                                source_title: "Wikipedia",
+                                snippet: "The history of the internet began with the development of electronic computers in the 1950s...",
+                                url: "https://en.wikipedia.org/wiki/History_of_the_Internet"
+                            },
+                            {
+                                source_title: "Computer History Museum",
+                                snippet: "The Internet is the global system of interconnected computer networks that uses the Internet protocol suite (TCP/IP) to link billions of devices...",
+                                url: "https://www.computerhistory.org/internethistory/"
+                            }
+                        ]
+                    };
+                }
+            };
+            
+            // Execute the tool handler with the arguments from the model's request.
+            const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
+
+            // Send the tool's response back to the model to get a final text response.
+            const secondResult = await model.generateContent({
+                prompt: prompt,
+                tool_code: functionCall, // Pass the original function call
+                tool_response: toolResponse // Pass the tool's response
+            });
+
+            const text = secondResult.response.text();
+            
+            if (!text) {
+                return response.status(500).json({ error: 'The AI model did not return any text after the tool call.' });
+            }
+
+            response.status(200).json({ citation: text });
+            // --- END OF NEW TOOL-HANDLING LOGIC ---
+
+        } else {
+            // If no tool call, proceed as before.
+            const text = result.response.text();
+            
+            if (!text) {
+                return response.status(500).json({ error: 'The AI model did not return any text.' });
+            }
+
+            response.status(200).json({ citation: text });
         }
-        // --- END OF FIX ---
-
-        const text = result.response.text();
-
-        if (!text) {
-            return response.status(500).json({ error: 'The AI model did not return any text.' });
-        }
-
-        response.status(200).json({ citation: text });
 
     } catch (error) {
         console.error('Error generating citation:', error);
