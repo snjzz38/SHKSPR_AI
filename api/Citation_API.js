@@ -83,10 +83,13 @@ export default async function handler(request, response) {
             }
         };
 
-        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-        let result = await model.generateContent({ contents: chatHistory });
+        // Use model.startChat() for multi-turn conversations
+        const chat = model.startChat();
+        let result = await chat.sendMessage(prompt);
         
-        while (true) {
+        // Add a safety limit to prevent infinite loops
+        const maxTurns = 5;
+        for (let i = 0; i < maxTurns; i++) {
             const functionCalls = result.response.functionCalls();
             
             if (functionCalls && functionCalls.length > 0) {
@@ -97,16 +100,10 @@ export default async function handler(request, response) {
 
                 console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
 
-                chatHistory.push({
-                    role: 'model',
-                    parts: [{ functionCall: functionCall }]
-                });
-                chatHistory.push({
+                result = await chat.sendMessage({
                     role: 'tool',
                     parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }]
                 });
-
-                result = await model.generateContent({ contents: chatHistory });
 
             } else {
                 const blockReason = result?.response?.promptFeedback?.blockReason;
@@ -126,6 +123,9 @@ export default async function handler(request, response) {
                 return; // Exit the loop
             }
         }
+        
+        // If the loop finishes without a text response, it means the model is stuck
+        return response.status(500).json({ error: `The model is stuck in a tool-calling loop after ${maxTurns} turns. Try again with a different prompt.` });
         // --- END OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
 
     } catch (error) {
