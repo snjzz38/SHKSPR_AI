@@ -60,78 +60,75 @@ export default async function handler(request, response) {
             return response.status(400).json({ error: 'Prompt is required in the request body.' });
         }
 
-        const result = await model.generateContent(prompt);
-        
-        const functionCall = result.response.functionCall();
-        
-        if (functionCall) {
-            // --- START OF FIXED TOOL-HANDLING LOGIC ---
-            console.log('Model requested a tool call:', functionCall);
+        // --- START OF NEW MULTI-TURN TOOL-HANDLING LOGIC ---
+        const tool_handlers = {
+            google_search: async (queries) => {
+                console.log('Simulating Google Search for queries:', queries);
+                // In a real application, you would make a real API call here.
+                return {
+                    query: queries[0],
+                    results: [
+                        {
+                            source_title: "Wikipedia",
+                            snippet: "The history of the internet began with the development of electronic computers in the 1950s...",
+                            url: "https://en.wikipedia.org/wiki/History_of_the_Internet"
+                        },
+                        {
+                            source_title: "Computer History Museum",
+                            snippet: "The Internet is the global system of interconnected computer networks that uses the Internet protocol suite (TCP/IP) to link billions of devices...",
+                            url: "https://www.computerhistory.org/internethistory/"
+                        }
+                    ]
+                };
+            }
+        };
 
-            const tool_handlers = {
-                google_search: async (queries) => {
-                    console.log('Simulating Google Search for queries:', queries);
-                    return {
-                        query: queries[0],
-                        results: [
-                            {
-                                source_title: "Wikipedia",
-                                snippet: "The history of the internet began with the development of electronic computers in the 1950s...",
-                                url: "https://en.wikipedia.org/wiki/History_of_the_Internet"
-                            },
-                            {
-                                source_title: "Computer History Museum",
-                                snippet: "The Internet is the global system of interconnected computer networks that uses the Internet protocol suite (TCP/IP) to link billions of devices...",
-                                url: "https://www.computerhistory.org/internethistory/"
-                            }
-                        ]
-                    };
+        const chat = model.startChat();
+        let currentPrompt = prompt;
+
+        while (true) {
+            const result = await chat.sendMessage(currentPrompt);
+            const functionCalls = result.response.functionCalls();
+            
+            if (functionCalls && functionCalls.length > 0) {
+                console.log('Model requested a tool call:', functionCalls[0]);
+
+                const functionCall = functionCalls[0];
+                const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
+
+                console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
+                
+                // Add the tool response to the chat history. The model will use this in the next turn.
+                chat.history.push({
+                    role: 'tool',
+                    parts: [{
+                        functionResponse: {
+                            name: functionCall.name,
+                            response: toolResponse
+                        }
+                    }]
+                });
+                // Clear the currentPrompt since we are continuing the conversation
+                currentPrompt = null;
+            } else {
+                const blockReason = result?.response?.promptFeedback?.blockReason;
+                if (blockReason) {
+                    console.error('The model\'s response was blocked:', blockReason);
+                    return response.status(500).json({ error: `The AI model's response was blocked for safety reasons: ${blockReason}` });
                 }
-            };
-            
-            const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
 
-            // Construct the conversation history to send back to the model.
-            const chatHistory = [
-                { role: "user", parts: [{ text: prompt }] },
-                { role: "model", parts: [{ functionCall: functionCall }] },
-                { role: "tool", parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }] }
-            ];
+                const text = result?.response?.text();
+                
+                if (!text) {
+                    return response.status(500).json({ error: 'The AI model did not return any text, and no safety block was reported. Check the logs for the full response.' });
+                }
 
-            // Send the full conversation history to the model to get the final text response.
-            const secondResult = await model.generateContent({ contents: chatHistory });
-
-            // Log the second result for debugging
-            console.log('Second result from model:', JSON.stringify(secondResult, null, 2));
-
-            // --- BEGIN NEW ERROR CHECKING ---
-            const blockReason = secondResult?.response?.promptFeedback?.blockReason;
-            if (blockReason) {
-                console.error('The model\'s response was blocked:', blockReason);
-                return response.status(500).json({ error: `The AI model's response was blocked for safety reasons: ${blockReason}` });
+                console.log('Final text response:', text);
+                response.status(200).json({ citation: text });
+                return; // Exit the loop
             }
-
-            // Safely get the text from the response
-            const text = secondResult?.response?.text();
-            
-            if (!text) {
-                return response.status(500).json({ error: 'The AI model did not return any text after the tool call, and no safety block was reported. Check the logs for the full response.' });
-            }
-            // --- END NEW ERROR CHECKING ---
-
-            response.status(200).json({ citation: text });
-            // --- END OF FIXED TOOL-HANDLING LOGIC ---
-
-        } else {
-            // If no tool call, proceed as before.
-            const text = result.response.text();
-            
-            if (!text) {
-                return response.status(500).json({ error: 'The AI model did not return any text.' });
-            }
-
-            response.status(200).json({ citation: text });
         }
+        // --- END OF NEW MULTI-TURN TOOL-HANDLING LOGIC ---
 
     } catch (error) {
         console.error('Error generating citation:', error);
