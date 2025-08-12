@@ -60,7 +60,7 @@ export default async function handler(request, response) {
             return response.status(400).json({ error: 'Prompt is required in the request body.' });
         }
 
-        // --- START OF NEW MULTI-TURN TOOL-HANDLING LOGIC ---
+        // --- START OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
         const tool_handlers = {
             google_search: async (queries) => {
                 console.log('Simulating Google Search for queries:', queries);
@@ -83,11 +83,10 @@ export default async function handler(request, response) {
             }
         };
 
-        const chat = model.startChat();
-        let currentPrompt = prompt;
-
+        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+        let result = await model.generateContent({ contents: chatHistory });
+        
         while (true) {
-            const result = await chat.sendMessage(currentPrompt);
             const functionCalls = result.response.functionCalls();
             
             if (functionCalls && functionCalls.length > 0) {
@@ -97,19 +96,18 @@ export default async function handler(request, response) {
                 const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
 
                 console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
-                
-                // Add the tool response to the chat history. The model will use this in the next turn.
-                chat.history.push({
-                    role: 'tool',
-                    parts: [{
-                        functionResponse: {
-                            name: functionCall.name,
-                            response: toolResponse
-                        }
-                    }]
+
+                chatHistory.push({
+                    role: 'model',
+                    parts: [{ functionCall: functionCall }]
                 });
-                // Clear the currentPrompt since we are continuing the conversation
-                currentPrompt = null;
+                chatHistory.push({
+                    role: 'tool',
+                    parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }]
+                });
+
+                result = await model.generateContent({ contents: chatHistory });
+
             } else {
                 const blockReason = result?.response?.promptFeedback?.blockReason;
                 if (blockReason) {
@@ -128,7 +126,7 @@ export default async function handler(request, response) {
                 return; // Exit the loop
             }
         }
-        // --- END OF NEW MULTI-TURN TOOL-HANDLING LOGIC ---
+        // --- END OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
 
     } catch (error) {
         console.error('Error generating citation:', error);
