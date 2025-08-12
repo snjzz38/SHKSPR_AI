@@ -63,23 +63,44 @@ export default async function handler(request, response) {
         // --- START OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
         const tool_handlers = {
             google_search: async (queries) => {
-                console.log('Simulating Google Search for queries:', queries);
-                // In a real application, you would make a real API call here.
-                return {
-                    query: queries[0],
-                    results: [
-                        {
-                            source_title: "Wikipedia",
-                            snippet: "The history of the internet began with the development of electronic computers in the 1950s...",
-                            url: "https://en.wikipedia.org/wiki/History_of_the_Internet"
-                        },
-                        {
-                            source_title: "Computer History Museum",
-                            snippet: "The Internet is the global system of interconnected computer networks that uses the Internet protocol suite (TCP/IP) to link billions of devices...",
-                            url: "https://www.computerhistory.org/internethistory/"
-                        }
-                    ]
-                };
+                const searchApiKey = process.env.SEARCH_1; // Use the user-provided environment variable
+                const searchEngineId = "YOUR_SEARCH_ENGINE_ID"; // ⚠️ Replace with your actual Search Engine ID
+
+                if (!searchApiKey || searchEngineId === "YOUR_SEARCH_ENGINE_ID") {
+                    throw new Error('Search API key or Search Engine ID is not configured.');
+                }
+
+                const searchQuery = queries[0];
+                const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
+                
+                console.log('Performing Google Search for query:', searchQuery);
+
+                try {
+                    const apiResponse = await fetch(url);
+                    const data = await apiResponse.json();
+
+                    if (!apiResponse.ok) {
+                         throw new Error(data.error?.message || 'Google Custom Search API error');
+                    }
+
+                    // Format the real search results for the model
+                    const results = data.items.map(item => ({
+                        source_title: item.title,
+                        snippet: item.snippet,
+                        url: item.link
+                    }));
+
+                    return {
+                        query: searchQuery,
+                        results: results
+                    };
+                } catch (error) {
+                    console.error('Error in Google Custom Search API call:', error);
+                    return {
+                        query: searchQuery,
+                        error: `Failed to fetch search results: ${error.message}`
+                    };
+                }
             }
         };
 
