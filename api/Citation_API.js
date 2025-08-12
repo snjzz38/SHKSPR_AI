@@ -104,12 +104,20 @@ export default async function handler(request, response) {
             // Log the second result for debugging
             console.log('Second result from model:', JSON.stringify(secondResult, null, 2));
 
+            // --- BEGIN NEW ERROR CHECKING ---
+            const blockReason = secondResult?.response?.promptFeedback?.blockReason;
+            if (blockReason) {
+                console.error('The model\'s response was blocked:', blockReason);
+                return response.status(500).json({ error: `The AI model's response was blocked for safety reasons: ${blockReason}` });
+            }
+
             // Safely get the text from the response
             const text = secondResult?.response?.text();
             
             if (!text) {
-                return response.status(500).json({ error: 'The AI model did not return any text after the tool call, check the logs for details.' });
+                return response.status(500).json({ error: 'The AI model did not return any text after the tool call, and no safety block was reported. Check the logs for the full response.' });
             }
+            // --- END NEW ERROR CHECKING ---
 
             response.status(200).json({ citation: text });
             // --- END OF FIXED TOOL-HANDLING LOGIC ---
