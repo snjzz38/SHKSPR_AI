@@ -25,7 +25,6 @@ export default async function handler(request, response) {
 
     if (!apiKey) {
         console.error("Missing CITATION_1 in environment variables.");
-        // We'll return a JSON error here, but Vercel may still send a generic page if the build fails.
         return response.status(500).json({ error: 'Server configuration error: API key is missing. Please check your Vercel environment variables.' });
     }
 
@@ -54,10 +53,11 @@ export default async function handler(request, response) {
     });
 
     try {
-        const { prompt, essayText, citationStyle, outputType } = request.body;
+        // We now get the prompt directly from the request body.
+        const { prompt } = request.body;
 
-        if (!essayText || !prompt) {
-            return response.status(400).json({ error: 'Essay text and prompt are required in the request body.' });
+        if (!prompt) {
+            return response.status(400).json({ error: 'Prompt is required in the request body.' });
         }
 
         const result = await model.generateContent(prompt);
