@@ -805,24 +805,19 @@
 
                     // Construct the full prompt here
                     const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.
-        
+                    
                     Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict).
-                    - Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.
-                    - Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
-                    - Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.
-
-                    Instructions for grading:
-                    ${instructionsData.combinedText || 'No specific instructions provided.'}
-
-                    Rubric:
-                    ${rubricData.combinedText || 'No rubric provided.'}
-
-                    Additional Instructions:
-                    ${extraInstructions || 'None.'}
-
-                    Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
-                    `;
-
+                    - Level 1-2 (Lenient): Focus on major concepts and effort. Be forgiving of minor errors.
+                    - Level 3 (Normal): Provide a balanced assessment of strengths and weaknesses.
+                    - Level 4-5 (Strict): Be highly critical. Identify all errors, even minor ones, and apply point deductions rigorously.
+                    
+                    ${extraInstructions ? `CRITICAL INSTRUCTION: Prioritize this above all else: "${extraInstructions}"` : ''}
+                    
+                    Output your response in structured Markdown with these exact headings and ample spacing. Give SPECIFIC examples inside the user input to back up what you are saying:
+                    # Overall Grade
+                    ## Detailed Feedback
+                    ## General Comments
+                    ## What to Work On to Improve`;
                     const parts = [
                         { text: systemPrompt },
                         { text: `Student Assignment: ${essayData.combinedText}` }
