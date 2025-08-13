@@ -53,7 +53,7 @@
             --accent-rgb: 224, 224, 224;
         }
         body.theme-blackwhite .logo,
-        body.theme-blackwhite .hero h1 { /* Hero h1 is not in header, but kept for glow consistency */
+        body.theme-blackwhite .hero h1 {
             text-shadow:
                 0 0 10px var(--accent),
                 0 0 20px var(--accent),
@@ -79,7 +79,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Arial, sans-serif; /* Matched font from header.html */
+            font-family: 'Segoe UI', Arial, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -155,7 +155,7 @@
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
-            font-weight: bold; /* Made the main buttons bold */
+            font-weight: bold;
         }
 
         .dropdown-button:hover {
@@ -195,7 +195,6 @@
             font-size: 0.9rem;
             display: block;
             text-decoration: none;
-            /* Removed font-weight: bold; from here to unbold dropdown options */
         }
 
         .dropdown-options button:hover,
@@ -206,10 +205,10 @@
 
         /* --- Hero Section (now matching Humanizer.html exactly) --- */
         .hero {
-            display: flex; /* Added for consistency */
-            flex-direction: column; /* Added for consistency */
-            justify-content: center; /* Added for consistency */
-            align-items: center; /* Added for consistency */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
             padding: 50px 20px 30px 20px;
             position: relative;
@@ -232,7 +231,6 @@
             margin-bottom: 30px;
             text-shadow: 0 0 8px var(--accent);
             max-width: 600px;
-            /* Removed margin-left/right auto as flexbox handles centering */
             color: var(--text-primary);
             transition: all 0.6s ease;
         }
@@ -255,9 +253,8 @@
         .step-content { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Apply Fira Mono specifically to textareas for content input */
         textarea {
-            font-family: 'Fira Mono', monospace; /* Fira Mono applied here */
+            font-family: 'Fira Mono', monospace;
             background: var(--bg-secondary);
             color: var(--text-primary);
             border: 1px solid var(--accent);
@@ -346,7 +343,6 @@
 
 
         /* --- Messages & Indicators --- */
-        #loading-indicator svg, #loading-indicator span { color: var(--accent); }
         #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
         #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
 
@@ -416,16 +412,54 @@
             z-index: 10;
             margin-top: auto;
         }
+
+        /* --- New Loading Bar Styles --- */
+        .loading-bar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            z-index: 100;
+            background-color: rgba(var(--accent-rgb), 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+
+        .loading-bar-container.show {
+            opacity: 1;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 100%;
+            background-color: var(--accent);
+            border-radius: 0 3px 3px 0;
+            transform: translateX(-100%);
+            animation: indeterminate-loading 1.5s infinite ease-in-out;
+        }
+
+        @keyframes indeterminate-loading {
+            0% { transform: translateX(-100%) scaleX(0); }
+            50% { transform: translateX(0) scaleX(0.5); }
+            100% { transform: translateX(100%) scaleX(0); }
+        }
     </style>
 </head>
 <body class="theme-blackwhite transition-all">
     <!-- Particles container is needed for the JS to function correctly -->
     <div class="particles-container" id="particles"></div>
 
+    <!-- New loading bar container, positioned at the top of the viewport -->
+    <div id="loading-bar-container" class="loading-bar-container">
+        <div class="loading-bar"></div>
+    </div>
+
     <header class="main-header transition-all">
         <a href="../index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
-            <!-- Moved "Limit Exceeded?" button to the first position -->
+            <!-- Fixed link to the tutorial -->
             <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <div class="dropdown-container">
                 <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
@@ -511,7 +545,7 @@
             <div id="step-extra-instructions" class="step-content hidden">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
-                    <label class="title">4. Extra AI Instructions (Optional)</label>
+                    <label class="title">4. Extra AI Instructions</label>
                     <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
                 <textarea id="extra-instructions" placeholder="E.g., 'Pay close attention to originality.' or 'Focus only on grammar and spelling.'"></textarea>
@@ -539,13 +573,6 @@
             <!-- Action Buttons & Messages Area -->
             <div id="action-area" class="mt-6 space-y-4">
                 <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
-                <div id="loading-indicator" class="hidden flex items-center justify-center py-3">
-                    <svg class="animate-spin -ml-1 mr-3 h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span class="text-lg">Grading in Progress...</span>
-                </div>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                  <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
@@ -563,7 +590,6 @@
     </footer>
 
     <script>
-        // Set the workerSrc for PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
         // --- Theming and Particle System (Copied directly from header.html and adapted) ---
@@ -645,19 +671,6 @@
             animationId = requestAnimationFrame(window.animateParticles);
         }
 
-        // Define the models
-        const ALL_GEMINI_MODELS = [
-            'gemini-2.5-flash-lite',
-            'gemini-live-2.5-flash-preview',
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-2.0-flash-lite',
-            'gemini-2.0-flash-live-001',
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-8b',
-            'gemini-1.5-pro'
-        ];
-
         // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             // Theme initialization from header.html
@@ -670,13 +683,12 @@
             const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
             window.setTheme(savedTheme);
 
-            // Existing Grader DOM elements and functions
             const dom = {
                 steps: Array.from(document.querySelectorAll('.step-content')),
                 actionArea: document.getElementById('action-area'),
                 gradeButton: document.getElementById('grade-button'),
                 clearButton: document.getElementById('clear-button'),
-                loadingIndicator: document.getElementById('loading-indicator'),
+                loadingBarContainer: document.getElementById('loading-bar-container'),
                 errorMessageDiv: document.getElementById('error-message'),
                 successMessageDiv: document.getElementById('success-message'),
                 gradeResultDiv: document.getElementById('grade-result'),
@@ -695,7 +707,6 @@
 
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
-                // Show action area only on the last step
                 dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
                 currentStep = index;
             }
@@ -710,9 +721,7 @@
             }
 
             function toggleLoading(isLoading) {
-                dom.loadingIndicator.classList.toggle('hidden', !isLoading);
-                dom.gradeButton.classList.toggle('hidden', isLoading);
-                dom.clearButton.classList.toggle('hidden', isLoading);
+                dom.loadingBarContainer.classList.toggle('show', isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
             }
@@ -781,10 +790,6 @@
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
 
-                let availableModels = [...ALL_GEMINI_MODELS]; // Create a mutable copy for this attempt
-                let attemptCount = 0;
-                const MAX_ATTEMPTS = availableModels.length * 2; // Allow retrying models, but with a cap
-
                 try {
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
@@ -796,60 +801,59 @@
 
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
+                    const selectedModel = 'gemini-1.5-flash';
 
-                    let result = null;
-                    while (availableModels.length > 0 && attemptCount < MAX_ATTEMPTS) {
-                        attemptCount++;
-                        const randomIndex = Math.floor(Math.random() * availableModels.length);
-                        const selectedModel = availableModels[randomIndex];
+                    // Construct the full prompt here
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.
+        
+                    Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict).
+                    - Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.
+                    - Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
+                    - Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.
 
-                        console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
-                        dom.loadingIndicator.querySelector('span').textContent = `Grading in Progress (Model: ${selectedModel})...`;
+                    Instructions for grading:
+                    ${instructionsData.combinedText || 'No specific instructions provided.'}
 
-                        const payload = {
-                            instructionsData,
-                            rubricData,
-                            essayData,
-                            extraInstructions,
-                            strictness,
-                            model: selectedModel // Pass the selected model to the backend
-                        };
+                    Rubric:
+                    ${rubricData.combinedText || 'No rubric provided.'}
 
-                        try {
-                            const response = await fetch('/api/Grader_API', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
+                    Additional Instructions:
+                    ${extraInstructions || 'None.'}
 
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                const errorMessage = errorData.error || response.statusText;
-                                console.warn(`Model ${selectedModel} failed: ${errorMessage}. Retrying with another model.`);
-                                // Remove the failed model from available models for this attempt
-                                availableModels.splice(randomIndex, 1);
-                                // Implement exponential backoff
-                                await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5))); // Max 5 seconds delay
-                                continue; // Try next model
-                            }
+                    Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
+                    `;
 
-                            result = await response.json();
-                            if (!result.text) {
-                                throw new Error("Received an empty response from the server.");
-                            }
-                            break; // Success, exit loop
+                    const parts = [
+                        { text: systemPrompt },
+                        { text: `Student Assignment: ${essayData.combinedText}` }
+                    ];
+                    
+                    // Add images if they exist in the payload
+                    instructionsData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
+                    rubricData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
+                    essayData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
+                    
+                    // Construct the final payload to be sent to the backend proxy
+                    const payload = { 
+                        model: selectedModel,
+                        contents: [{ role: "user", parts: parts }] 
+                    };
 
-                        } catch (fetchError) {
-                            console.error(`Fetch error for model ${selectedModel}:`, fetchError);
-                            // If it's a network error or unhandled exception, remove model and retry
-                            availableModels.splice(randomIndex, 1);
-                            await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5)));
-                            continue;
-                        }
+                    const response = await fetch('/api/Grader_API', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        const errorMessage = errorData.error || response.statusText;
+                        throw new Error(`API Error: ${errorMessage}`);
                     }
 
-                    if (!result) {
-                        throw new Error("All model attempts failed or no successful response received.");
+                    const result = await response.json();
+                    if (!result.text) {
+                        throw new Error("Received an empty response from the server.");
                     }
 
                     dom.resultContentDiv.innerHTML = marked.parse(result.text);
@@ -862,7 +866,6 @@
                     displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
                 } finally {
                     toggleLoading(false);
-                    dom.loadingIndicator.querySelector('span').textContent = `Grading in Progress...`; // Reset text
                 }
             };
 
@@ -919,11 +922,8 @@
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
 
-            // Initial step display
             showStep(0);
         });
     </script>
-    <link rel="stylesheet" href="../Structure/header.css">
-    <script src="../Structure/header.js"></script>
 </body>
 </html>
