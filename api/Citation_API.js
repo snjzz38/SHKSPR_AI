@@ -54,10 +54,8 @@ exports.default = async function handler(request, response) {
     });
 
     try {
-        // Log the full request body to help with debugging
         console.log('Received request body:', request.body);
 
-        // Check if the body exists and has a prompt property
         const prompt = request.body && request.body.prompt;
         
         if (!prompt) {
@@ -65,105 +63,87 @@ exports.default = async function handler(request, response) {
             return response.status(400).json({ error: 'Prompt is required in the request body.' });
         }
 
-        // --- START OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
+        // --- TOOL-HANDLING LOGIC ---
         const tool_handlers = {
             google_search: async (queries) => {
-                const searchApiKey = process.env.SEARCH_1; // Use the user-provided environment variable
-                const searchEngineId = "e5f6f17d0ff2a4ac3"; // This has been replaced with your actual Search Engine ID
+                const searchApiKey = process.env.SEARCH_1;
+                const searchEngineId = "e5f6f17d0ff2a4ac3";
 
-                if (!searchApiKey || searchEngineId === "YOUR_SEARCH_ENGINE_ID") {
+                if (!searchApiKey || !searchEngineId) {
                     throw new Error('Search API key or Search Engine ID is not configured.');
                 }
                 
-                console.log('Using Search API Key:', searchApiKey ? '✅' : '❌');
-                console.log('Using Search Engine ID:', searchEngineId);
-
-
-                const searchQuery = queries[0];
-                const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
-                
-                console.log('Performing Google Search for query:', searchQuery);
+                console.log('Performing Google Search for query:', queries[0]);
 
                 try {
+                    const url = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(queries[0])}`;
                     const apiResponse = await fetch(url);
                     const data = await apiResponse.json();
 
                     if (!apiResponse.ok) {
-                         // We are now logging the exact error message from the API
                          console.error('Google Custom Search API error response:', data);
                          throw new Error(data.error?.message || 'Google Custom Search API error');
                     }
 
-                    // Format the real search results for the model
-                    const results = data.items.map(item => ({
+                    const results = data.items ? data.items.map(item => ({
                         source_title: item.title,
                         snippet: item.snippet,
                         url: item.link
-                    }));
+                    })) : [];
 
                     return {
-                        query: searchQuery,
+                        query: queries[0],
                         results: results
                     };
                 } catch (error) {
                     console.error('Error in Google Custom Search API call:', error);
                     return {
-                        query: searchQuery,
+                        query: queries[0],
                         error: `Failed to fetch search results: ${error.message}`
                     };
                 }
             }
         };
+        // --- END OF TOOL-HANDLING LOGIC ---
 
-        // Use model.startChat() for multi-turn conversations
-        const chat = model.startChat();
-        
-        // This is the fix! We wrap the user prompt in a "parts" object.
-        let result = await chat.sendMessage({ role: 'user', parts: [{ text: prompt }] });
-        
-        // Add a safety limit to prevent infinite loops
-        const maxTurns = 5;
-        for (let i = 0; i < maxTurns; i++) {
-            const functionCalls = result.response.functionCalls();
-            
-            if (functionCalls && functionCalls.length > 0) {
-                console.log('Model requested a tool call:', functionCalls[0]);
+        // NEW LOGIC: Use generateContent for a single request
+        let result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
 
-                const functionCall = functionCalls[0];
-                const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
+        // Check for function calls after the initial generation
+        const functionCalls = result.response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+            const functionCall = functionCalls[0];
+            console.log('Model requested a tool call:', functionCall);
 
-                console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
+            const toolResponse = await tool_handlers[functionCall.name](functionCall.args.queries);
+            console.log('Tool response:', JSON.stringify(toolResponse, null, 2));
 
-                result = await chat.sendMessage({
-                    role: 'tool',
-                    parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }]
-                });
-
-            } else {
-                const blockReason = result?.response?.promptFeedback?.blockReason;
-                if (blockReason) {
-                    console.error('The model\'s response was blocked:', blockReason);
-                    return response.status(500).json({ error: `The AI model's response was blocked for safety reasons: ${blockReason}` });
-                }
-
-                const text = result?.response?.text();
-                
-                if (!text) {
-                    return response.status(500).json({ error: 'The AI model did not return any text, and no safety block was reported. Check the logs for the full response.' });
-                }
-
-                console.log('Final text response:', text);
-                response.status(200).json({ citation: text });
-                return; // Exit the loop
-            }
+            // Generate content again, this time with the tool response
+            result = await model.generateContent({
+                contents: [
+                    { role: 'user', parts: [{ text: prompt }] },
+                    { role: 'tool', parts: [{ functionResponse: { name: functionCall.name, response: toolResponse } }] }
+                ]
+            });
         }
         
-        // If the loop finishes without a text response, it means the model is stuck
-        return response.status(500).json({ error: `The model is stuck in a tool-calling loop after ${maxTurns} turns. Try again with a different prompt.` });
-        // --- END OF FIXED MULTI-TURN TOOL-HANDLING LOGIC ---
+        const blockReason = result?.response?.promptFeedback?.blockReason;
+        if (blockReason) {
+            console.error('The model\'s response was blocked:', blockReason);
+            return response.status(500).json({ error: `The AI model's response was blocked for safety reasons: ${blockReason}` });
+        }
+
+        const text = result?.response?.text();
+        
+        if (!text) {
+            return response.status(500).json({ error: 'The AI model did not return any text, and no safety block was reported. Check the logs for the full response.' });
+        }
+
+        console.log('Final text response:', text);
+        response.status(200).json({ citation: text });
 
     } catch (error) {
         console.error('Error generating citation:', error);
         response.status(500).json({ error: 'Failed to generate citation due to a server error.', details: error.message });
     }
-}
+};
