@@ -56,8 +56,20 @@ exports.default = async function handler(request, response) {
     try {
         console.log('Received request body:', request.body);
 
-        const prompt = request.body && request.body.prompt;
-        
+        let prompt;
+        // Robustly parse the request body
+        if (typeof request.body === 'string') {
+            try {
+                const parsedBody = JSON.parse(request.body);
+                prompt = parsedBody.prompt;
+            } catch (e) {
+                console.error('Failed to parse request body as JSON:', e);
+                return response.status(400).json({ error: 'Invalid JSON in request body.' });
+            }
+        } else if (request.body && typeof request.body === 'object') {
+            prompt = request.body.prompt;
+        }
+
         if (!prompt) {
             console.error('Prompt is missing from the request body.');
             return response.status(400).json({ error: 'Prompt is required in the request body.' });
@@ -107,7 +119,13 @@ exports.default = async function handler(request, response) {
         // --- END OF TOOL-HANDLING LOGIC ---
 
         // NEW LOGIC: Use generateContent for a single request
-        let result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+        // Explicitly construct the content object to ensure the correct format
+        let result = await model.generateContent({ 
+            contents: [{ 
+                role: 'user', 
+                parts: [{ text: prompt }] 
+            }] 
+        });
 
         // Check for function calls after the initial generation
         const functionCalls = result.response.functionCalls();
