@@ -101,15 +101,12 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px 5%; /* Adjusted padding for better mobile view */
+        padding: 20px 10%;
         background-color: var(--bg-secondary);
         transition: background-color 0.6s, color 0.6s;
         position: relative;
         z-index: 10;
-        flex-wrap: wrap; /* NEW: Allow elements to wrap to the next line */
-        gap: 15px; /* NEW: Add spacing between wrapped items */
     }
-
     .logo {
         font-size: 2.5rem;
         font-weight: bold;
@@ -120,12 +117,16 @@
         transition: all 0.6s ease;
     }
 
+    /* Hover effect for the logo */
+    .logo:hover {
+      transform: translateY(-5px);
+      text-shadow: 0 5px 15px var(--accent);
+    }
+
     .theme-controls {
         display: flex;
         gap: 10px;
         align-items: center;
-        flex-wrap: wrap; /* NEW: Allow the control buttons to wrap */
-        justify-content: flex-end;
     }
 
     .dropdown-button {
@@ -140,9 +141,12 @@
         font-weight: bold;
     }
 
+    /* Hover effect for the dropdown buttons */
     .dropdown-button:hover {
-        background: var(--text-primary);
-        color: var(--bg-primary);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     }
 
     .dropdown-container {
@@ -185,31 +189,19 @@
         border-radius: 4px;
     }
 
-    /* NEW: Media Query for Mobile responsiveness */
-    @media (max-width: 768px) {
-        header.main-header {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .theme-controls {
-            justify-content: center;
-            width: 100%;
-        }
-    }
 </style>
 <div class="particles-container" id="particles"></div>
 <header class="main-header transition-all">
-  <a href="./index.html" class="logo">SHKSPR</a>
+  <a href="../index.html" class="logo">SHKSPR</a>
   <div class="theme-controls">
-    <a href="./Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
+    <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
     <div class="dropdown-container">
       <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
       <div class="dropdown-options">
-        <a href="./AI_Humanizer/Humanizer.html">AI Humanizer</a>
-        <a href="./AI_Grader/Grader.html">AI Grader</a>
-        <a href="https://shkspr-summarizer.tiiny.site">AI Summarizer</a>
-        <a href="./AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
+        <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
+        <a href="../AI_Grader/Grader.html">AI Grader</a>
+        <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
+        <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
       </div>
     </div>
     <div class="dropdown-container">
