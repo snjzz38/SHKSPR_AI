@@ -11,27 +11,27 @@
     <!-- Marked.js CDN for Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* --- Theme Variables (Copied directly from original Grader.html) --- */
+        /* --- Theme Variables (copied from header.html) --- */
         :root {
             --bg-primary: #000;
             --bg-secondary: #111;
             --text-primary: #fff;
             --accent: #fff;
             --card-bg: #222;
-            --accent-rgb: 255, 255, 255;
+            --link-hover: #ffffff;
         }
         body.theme-cyan {
-            --bg-primary: #000c0c;
-            --bg-secondary: #072a2c;
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
             --text-primary: #e0ffff;
             --accent: #00f6ff;
-            --card-bg: #041f21;
+            --card-bg: #072a2c;
             --accent-rgb: 0, 246, 255;
         }
         body.theme-purple {
             --bg-primary: #0d001a;
             --bg-secondary: #14002b;
-            --text-primary: #f3e8ff;
+            --text-primary: #ffe6ff;
             --accent: #cc66ff;
             --card-bg: #1d0036;
             --accent-rgb: 204, 102, 255;
@@ -44,16 +44,14 @@
             --card-bg: #003600;
             --accent-rgb: 102, 255, 102;
         }
-        /* Updated Black & White Theme with silvery glow */
         body.theme-blackwhite {
             --bg-primary: #000;
             --bg-secondary: #111;
             --text-primary: #fff;
-            --accent: #e0e0e0; /* Silvery white accent */
+            --accent: #e0e0e0;
             --card-bg: #222;
-            --accent-rgb: 224, 224, 224; /* RGB for silvery white */
+            --accent-rgb: 224, 224, 224;
         }
-        /* Glow intensity for Black & White theme - adjusted for silvery glow */
         body.theme-blackwhite .logo,
         body.theme-blackwhite .hero h1 {
             text-shadow:
@@ -64,11 +62,6 @@
                 0 0 50px var(--accent),
                 0 0 60px var(--accent);
         }
-        body.theme-blackwhite .hero p {
-            text-shadow: 0 0 8px var(--accent);
-        }
-
-        /* New Red Theme */
         body.theme-red {
             --bg-primary: #1a0000;
             --bg-secondary: #2b0000;
@@ -78,15 +71,16 @@
             --accent-rgb: 255, 51, 51;
         }
 
-        /* --- Global Styles (Copied directly from original Grader.html) --- */
+        /* --- Global Styles (copied from header.html) --- */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
         body {
-            font-family: 'Segoe UI', Arial, sans-serif; /* Changed font to Segoe UI */
-            background-color: var(--bg-primary);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             transition: background-color 0.6s, color 0.6s;
@@ -94,26 +88,45 @@
             flex-direction: column;
             overflow-x: hidden;
         }
-        .transition-all { transition: all 0.6s ease; }
 
-        /* --- Particle System Styles --- */
-        .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
-        .particle { position: absolute; border-radius: 50%; background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform; }
+        .transition-all {
+            transition: all 0.6s ease;
+        }
 
-        /* --- Header Styles --- */
+        /* --- Particles Container (copied from header.html) --- */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+            will-change: transform;
+        }
+
+        /* --- Header Specific Styles (copied from header.html) --- */
         header.main-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 10%; /* Matched index.html padding */
-            background-color: var(--bg-secondary); /* Matched index.html background */
-            box-shadow: none; /* Removed box-shadow for consistency with index.html */
+            padding: 20px 10%;
+            background-color: var(--bg-secondary);
             transition: background-color 0.6s, color 0.6s;
             position: relative;
             z-index: 10;
         }
+
         .logo {
-            font-size: 2.5rem; /* Matched index.html font size */
+            font-size: 2.5rem;
             font-weight: bold;
             color: var(--text-primary);
             text-shadow:
@@ -122,27 +135,42 @@
                 0 0 30px var(--accent),
                 0 0 40px var(--accent),
                 0 0 50px var(--accent),
-                0 0 60px var(--accent); /* Matched index.html text-shadow */
+                0 0 60px var(--accent);
             text-decoration: none;
             transition: all 0.6s ease;
         }
-        .theme-controls { display: flex; gap: 10px; align-items: center; }
+
+        .theme-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
         .dropdown-button {
             background: var(--card-bg);
             color: var(--text-primary);
-            border: 1px solid var(--text-primary); /* Matched index.html border */
+            border: 1px solid var(--text-primary);
             padding: 8px 15px;
             border-radius: 20px;
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.3s;
+            font-weight: bold;
         }
+
         .dropdown-button:hover {
-            background: var(--text-primary); /* Matched index.html hover background */
-            color: var(--bg-primary); /* Matched index.html hover color */
+            background: var(--text-primary);
+            color: var(--bg-primary);
         }
-        .dropdown-container { position: relative; }
-        .dropdown-container:hover .dropdown-options { display: block; }
+
+        .dropdown-container {
+            position: relative;
+        }
+
+        .dropdown-container:hover .dropdown-options {
+            display: block;
+        }
+
         .dropdown-options {
             display: none;
             position: absolute;
@@ -152,45 +180,57 @@
             border-radius: 8px;
             padding: 10px;
             min-width: 150px;
-            z-index: 10; /* Matched index.html z-index */
+            z-index: 10;
         }
-        .dropdown-options button, .dropdown-options a {
-            background: none; border: none; color: var(--text-primary);
-            padding: 8px; cursor: pointer; text-align: left; width: 100%;
-            font-size: 0.9rem; display: block; text-decoration: none;
-            border-radius: 0; /* Ensure no rounded corners from previous styles */
+
+        .dropdown-options button,
+        .dropdown-options a {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            font-size: 0.9rem;
+            display: block;
+            text-decoration: none;
         }
-        .dropdown-options button:hover, .dropdown-options a:hover {
+
+        .dropdown-options button:hover,
+        .dropdown-options a:hover {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 4px;
         }
 
-        /* --- Hero Section --- */
+        /* --- Hero Section (now matching Humanizer.html exactly) --- */
         .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
-            padding: 50px 20px 30px 20px; /* Matched index.html padding */
+            padding: 50px 20px 30px 20px;
             position: relative;
             z-index: 5;
         }
         .hero h1 {
-            font-size: 3.2rem; /* Matched index.html font size */
+            font-size: 3.2rem;
             color: var(--text-primary);
             text-shadow:
                 0 0 10px var(--accent),
                 0 0 20px var(--accent),
                 0 0 30px var(--accent),
                 0 0 40px var(--accent),
-                0 0 50px var(--accent); /* Matched index.html text-shadow */
-            margin-bottom: 20px; /* Matched index.html margin */
+                0 0 50px var(--accent);
+            margin-bottom: 20px;
             transition: all 0.6s ease;
         }
         .hero p {
-            font-size: 1.2rem; /* Matched index.html font size */
-            margin-bottom: 30px; /* Matched index.html margin */
+            font-size: 1.2rem;
+            margin-bottom: 30px;
             text-shadow: 0 0 8px var(--accent);
             max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
             color: var(--text-primary);
             transition: all 0.6s ease;
         }
@@ -213,11 +253,23 @@
         .step-content { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        textarea, input[type="text"], input[type="file"] {
+        textarea {
+            font-family: 'Fira Mono', monospace;
             background: var(--bg-secondary);
             color: var(--text-primary);
-            border: 1px solid var(--accent); /* Retained accent border for form inputs */
-            border-radius: 8px; /* Kept 8px for textareas/inputs */
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px;
+            width: 100%;
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input[type="text"], input[type="file"] {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
             padding: 12px;
             width: 100%;
         }
@@ -225,7 +277,7 @@
             outline: none;
             box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
         }
-        textarea { min-height: 120px; resize: vertical; }
+
 
         /* File input custom button */
         input[type="file"] { display: none; }
@@ -235,7 +287,7 @@
             color: var(--accent);
             border: 1px solid var(--accent);
             padding: 8px 16px;
-            border-radius: 20px; /* Reverted to rounded */
+            border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -267,11 +319,11 @@
             background: var(--accent);
             color: var(--bg-primary);
             padding: 10px 20px;
-            border-radius: 30px; /* Reverted to rounded */
+            border-radius: 30px;
             font-weight: bold;
             font-size: 1rem;
             transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); /* Use accent-rgb for dynamic shadow */
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
             border: none;
             cursor: pointer;
         }
@@ -286,22 +338,13 @@
             box-shadow: none !important;
             transform: none !important;
         }
-        .clear-button { background: #4a5568; color: #fff; border-radius: 30px; /* Reverted to rounded */ }
+        .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
 
 
         /* --- Messages & Indicators --- */
-        #loading-indicator svg, #loading-indicator span { color: var(--accent); }
         #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
         #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
-        .message {
-            padding: 1rem;
-            border-radius: 8px; /* Consistent border-radius */
-            margin-top: 1rem;
-            text-align: center;
-        }
-        .hidden { display: none; }
-
 
         /* --- Results & File List --- */
         #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
@@ -360,32 +403,75 @@
         }
         footer.main-footer {
             text-align: center;
-            padding: 20px; /* Matched index.html padding */
+            padding: 20px;
             font-size: 0.9rem;
             color: var(--text-primary);
             text-shadow: 0 0 5px var(--accent);
-            background-color: var(--bg-secondary); /* Matched index.html background */
+            background-color: var(--bg-secondary);
             position: relative;
             z-index: 10;
             margin-top: auto;
         }
+
+        /* --- New Loading Bar Styles --- */
+        .loading-bar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            z-index: 100;
+            background-color: rgba(var(--accent-rgb), 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+
+        .loading-bar-container.show {
+            opacity: 1;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 100%;
+            background-color: var(--accent);
+            border-radius: 0 3px 3px 0;
+            transform: translateX(-100%);
+            animation: indeterminate-loading 1.5s infinite ease-in-out;
+        }
+
+        @keyframes indeterminate-loading {
+            0% { transform: translateX(-100%) scaleX(0); }
+            50% { transform: translateX(0) scaleX(0.5); }
+            100% { transform: translateX(100%) scaleX(0); }
+        }
     </style>
 </head>
 <body class="theme-blackwhite transition-all">
+    <!-- Particles container is needed for the JS to function correctly -->
     <div class="particles-container" id="particles"></div>
+
+    <!-- New loading bar container, positioned at the top of the viewport -->
+    <div id="loading-bar-container" class="loading-bar-container">
+        <div class="loading-bar"></div>
+    </div>
 
     <header class="main-header transition-all">
         <a href="../index.html" class="logo">SHKSPR</a>
         <div class="theme-controls">
+            <!-- Fixed link to the tutorial -->
+            <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
             <div class="dropdown-container">
-                <button class="dropdown-button">🛠️ Tools</button>
+                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
                 <div class="dropdown-options">
                     <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
                     <a href="./Grader.html">AI Grader</a>
+                    <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
+                    <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
                 </div>
             </div>
             <div class="dropdown-container">
-                <button class="dropdown-button">🎨 Themes</button>
+                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
                 <div class="dropdown-options">
                     <button id="theme-blackwhite-btn">Black & White</button>
                     <button id="theme-cyan-btn">Cyan</button>
@@ -487,15 +573,8 @@
             <!-- Action Buttons & Messages Area -->
             <div id="action-area" class="mt-6 space-y-4">
                 <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
-                <div id="loading-indicator" class="hidden flex items-center justify-center py-3">
-                    <svg class="animate-spin -ml-1 mr-3 h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span class="text-lg">Grading in Progress...</span>
-                </div>
-                <div id="error-message" class="hidden p-4 rounded-lg relative text-center message" role="alert"></div>
-                <div id="success-message" class="hidden p-4 rounded-lg relative text-center message" role="alert"></div>
+                <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
+                <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                  <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
             </div>
 
@@ -511,32 +590,31 @@
     </footer>
 
     <script>
-        // Set the workerSrc for PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-        // --- Theming and Particle System ---
+        // --- Theming and Particle System (Copied directly from header.html and adapted) ---
         window.setTheme = function(theme) {
             document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
             localStorage.setItem('shkspr-theme', theme);
             window.initParticles();
         }
 
-        class Particle {
-            constructor(container, colors) { /* Added colors parameter */
+        window.Particle = class Particle {
+            constructor(container, colors) {
                 this.container = container;
                 this.element = document.createElement('div');
-                this.element.className = 'particle';
+                this.element.classList.add('particle');
                 this.container.appendChild(this.element);
-                this.size = Math.random() * 6 + 2; /* Matched index.html particle size */
-                this.color = colors[Math.floor(Math.random() * colors.length)]; /* Use colors array */
+                this.size = Math.random() * 6 + 2;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
                 this.x = Math.random() * window.innerWidth;
                 this.y = Math.random() * window.innerHeight;
-                this.vx = (Math.random() - 0.5) * 4; /* Matched index.html particle speed */
-                this.vy = (Math.random() - 0.5) * 4; /* Matched index.html particle speed */
-                this.opacity = Math.random() * 0.5 + 0.3; /* Matched index.html opacity */
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.opacity = Math.random() * 0.5 + 0.3;
                 this.element.style.width = `${this.size}px`;
                 this.element.style.height = `${this.size}px`;
-                this.element.style.backgroundColor = this.color; /* Set background color from chosen color */
+                this.element.style.backgroundColor = this.color;
                 this.element.style.opacity = this.opacity;
                 this.update();
             }
@@ -553,47 +631,64 @@
                 }
                 this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
             }
-            remove() { this.container.removeChild(this.element); }
+            remove() {
+                this.container.removeChild(this.element);
+            }
         }
 
         let particles = [];
         let animationId;
+
         window.initParticles = function() {
             const container = document.getElementById('particles');
             if (!container) return;
             particles.forEach(p => p.remove());
             particles = [];
-            if (animationId) cancelAnimationFrame(animationId);
-
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
             const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
             let colors = [accentColor];
             if (document.body.classList.contains('theme-blackwhite')) {
-                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; /* Silvery shades for particles */
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
             } else if (document.body.classList.contains('theme-cyan')) {
                 colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
             } else if (document.body.classList.contains('theme-purple')) {
                 colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
             } else if (document.body.classList.contains('theme-green')) {
                 colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-            } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
+            } else if (document.body.classList.contains('theme-red')) {
                 colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
             }
-            for (let i = 0; i < 60; i++) particles.push(new Particle(container, colors)); /* Matched index.html particle count */
-            animateParticles();
+            for (let i = 0; i < 60; i++) {
+                particles.push(new window.Particle(container, colors));
+            }
+            window.animateParticles();
         }
-        function animateParticles() {
+
+        window.animateParticles = function() {
             particles.forEach(p => p.update());
-            animationId = requestAnimationFrame(animateParticles);
+            animationId = requestAnimationFrame(window.animateParticles);
         }
 
         // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Theme initialization from header.html
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme);
+
             const dom = {
                 steps: Array.from(document.querySelectorAll('.step-content')),
                 actionArea: document.getElementById('action-area'),
                 gradeButton: document.getElementById('grade-button'),
                 clearButton: document.getElementById('clear-button'),
-                loadingIndicator: document.getElementById('loading-indicator'),
+                loadingBarContainer: document.getElementById('loading-bar-container'),
                 errorMessageDiv: document.getElementById('error-message'),
                 successMessageDiv: document.getElementById('success-message'),
                 gradeResultDiv: document.getElementById('grade-result'),
@@ -612,7 +707,6 @@
 
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
-                // Show action area only on the last step
                 dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
                 currentStep = index;
             }
@@ -625,11 +719,9 @@
                 element.classList.remove('hidden');
                 setTimeout(() => element.classList.add('hidden'), isError ? 8000 : 5000);
             }
-            
+
             function toggleLoading(isLoading) {
-                dom.loadingIndicator.classList.toggle('hidden', !isLoading);
-                dom.gradeButton.classList.toggle('hidden', isLoading);
-                dom.clearButton.classList.toggle('hidden', isLoading);
+                dom.loadingBarContainer.classList.toggle('show', isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
             }
@@ -691,61 +783,27 @@
                 if (errors.length > 0) throw new Error(errors.join('\n'));
                 return { combinedText, imageParts };
             }
-
-            // IMPORTANT: API_KEY placeholder for local testing.
-            const API_KEY = "your-api-key-here"; 
-
-            const ALL_GEMINI_MODELS = [
-                'gemini-2.5-flash-lite',
-                'gemini-live-2.5-flash-preview',
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-lite',
-                'gemini-2.0-flash-live-001',
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-8b',
-                'gemini-1.5-pro'
-            ];
-
-
-            const makeGeminiApiCall = async (contents, model, temperature = 0.7, topP = 0.9, maxOutputTokens = 2048, retryCount = 0) => {
+            
+            // Function to make a fetch call with exponential backoff
+            async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
                 try {
-                    const payload = {
-                        contents: contents,
-                        generationConfig: {
-                            temperature: temperature,
-                            topP: topP,
-                            maxOutputTokens: maxOutputTokens,
-                        },
-                    };
-
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`;
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        const errorMsg = data.error?.message || 'Unknown error';
-                        if (response.status === 429) { // Rate limit
-                            await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
-                            if (retryCount < 2) return makeGeminiApiCall(contents, model, temperature, topP, maxOutputTokens, retryCount + 1);
-                        }
-                        throw new Error(errorMsg);
+                    const response = await fetch(url, options);
+                    if (response.status === 429 && retries > 0) { // Too many requests
+                        console.warn(`Rate limit exceeded. Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
                     }
-                    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+                    return response;
                 } catch (error) {
-                    if (retryCount < 2) {
-                        await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
-                        return makeGeminiApiCall(contents, model, temperature, topP, maxOutputTokens, retryCount + 1);
+                    if (retries > 0) {
+                        console.warn(`Fetch failed. Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
                     }
-                    throw error; // Re-throw if retries fail
+                    throw error;
                 }
-            };
+            }
+
 
             window.gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
@@ -754,6 +812,23 @@
                 toggleLoading(true);
 
                 try {
+                    // *** API Key placeholder. Edit this line with your key. ***
+                    const apiKey = 'your-api-key-here'; 
+
+
+
+
+                    
+                    
+                    
+                    
+                    
+                    
+                    // Ignore if you are running locally
+                    if (apiKey === 'your-api-key-here') {
+                        throw new Error("Please enter your Gemini API key in the JavaScript code to proceed with local testing.");
+                    }
+
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
                     const essayData = await getProcessedSectionContent('essay', fileInputs[2].data);
@@ -764,51 +839,65 @@
 
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
+
+                    // Construct the full prompt here
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.
+        
+                    Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict).
+                    - Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.
+                    - Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
+                    - Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.
+
+                    Instructions for grading:
+                    ${instructionsData.combinedText || 'No specific instructions provided.'}
+
+                    Rubric:
+                    ${rubricData.combinedText || 'No rubric provided.'}
+
+                    Additional Instructions:
+                    ${extraInstructions || 'None.'}
+
+                    Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
+                    `;
+
+                    const parts = [
+                        { text: systemPrompt },
+                        { text: `Student Assignment: ${essayData.combinedText}` }
+                    ];
                     
-                    const promptParts = [{
-                        text: `Grade the following assignment based on the provided instructions and rubric. Strictness level: ${strictness}/5.
-                        Assignment Instructions: ${instructionsData.combinedText || 'No text instructions provided.'}
-                        Rubric: ${rubricData.combinedText || 'No text rubric provided.'}
-                        Student's Assignment: ${essayData.combinedText || 'No text assignment provided.'}
-                        Extra Instructions: ${extraInstructions || 'None.'}
-                        
-                        Provide a detailed grade, feedback, and suggestions for improvement. Format the output in Markdown.`
-                    }];
-
-                    // Add image parts to the prompt if they exist
-                    instructionsData.imageParts.forEach(img => promptParts.push({ inlineData: img.imageData }));
-                    rubricData.imageParts.forEach(img => promptParts.push({ inlineData: img.imageData }));
-                    essayData.imageParts.forEach(img => promptParts.push({ inlineData: img.imageData }));
-
-                    const geminiContents = [{
-                        role: 'user',
-                        parts: promptParts
-                    }];
-
-                    let gradeResultText = null;
-                    let availableModels = [...ALL_GEMINI_MODELS]; // Create a mutable copy
+                    // Add images if they exist in the payload
+                    instructionsData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
+                    rubricData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
+                    essayData.imageParts.forEach(img => parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } }));
                     
-                    while (availableModels.length > 0) {
-                        const randomIndex = Math.floor(Math.random() * availableModels.length);
-                        const currentModel = availableModels[randomIndex];
-                        availableModels.splice(randomIndex, 1); // Remove the chosen model
+                    // Construct the final payload for the Gemini API
+                    const payload = {
+                        contents: [{ role: "user", parts: parts }]
+                    };
 
-                        try {
-                            gradeResultText = await makeGeminiApiCall(geminiContents, currentModel);
-                            if (gradeResultText) {
-                                console.log(`Successfully graded with model: ${currentModel}`);
-                                break; // If successful, break the loop
-                            }
-                        } catch (modelError) {
-                            console.warn(`Model ${currentModel} failed: ${modelError.message}. Trying another random model.`);
-                        }
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetchWithBackoff(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        const errorMessage = errorData.error?.message || response.statusText;
+                        throw new Error(`API Error: ${errorMessage}`);
                     }
 
-                    if (!gradeResultText) {
-                        throw new Error("All available models failed to generate a grade.");
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (!text) {
+                        console.error("Gemini API returned unexpected structure:", JSON.stringify(result, null, 2));
+                        throw new Error("Received an invalid or empty response structure from the Gemini API.");
                     }
 
-                    dom.resultContentDiv.innerHTML = marked.parse(gradeResultText);
+                    dom.resultContentDiv.innerHTML = marked.parse(text);
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
@@ -855,7 +944,7 @@
                     toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
                 });
             });
-            
+
             dom.clearButton.addEventListener('click', () => {
                 document.querySelectorAll('textarea').forEach(ta => ta.value = '');
                 fileInputs.forEach(fi => {
@@ -874,15 +963,6 @@
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
 
-            // --- Init ---
-            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-            
-            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-            window.setTheme(savedTheme);
             showStep(0);
         });
     </script>
