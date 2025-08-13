@@ -1,6 +1,4 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-// This line tells your code to use the 'node-fetch' library.
-// For this to work, it must be listed as a dependency in your package.json.
 const fetch = require('node-fetch');
 
 // This is the Vercel serverless function entry point
@@ -119,7 +117,9 @@ exports.default = async function handler(request, response) {
 
         // Use model.startChat() for multi-turn conversations
         const chat = model.startChat();
-        let result = await chat.sendMessage(prompt);
+        
+        // This is the fix! We wrap the user prompt in a "parts" object.
+        let result = await chat.sendMessage({ role: 'user', parts: [{ text: prompt }] });
         
         // Add a safety limit to prevent infinite loops
         const maxTurns = 5;
