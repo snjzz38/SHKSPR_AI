@@ -767,26 +767,6 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 return { combinedText, imageParts };
             }
 
-            // Fetch with backoff
-            async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 429 && retries > 0) {
-                        console.warn(`Rate limit exceeded. Retrying in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
-                    }
-                    return response;
-                } catch (error) {
-                    if (retries > 0) {
-                        console.warn(`Fetch failed. Retrying in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
-                    }
-                    throw error;
-                }
-            }
-
             // --- NEW: Helpers for dynamic subject UI ---
             function populateSubjectOptions(gradeCategory) {
                 const select = dom.subjectSelect;
@@ -918,7 +898,7 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
             showStep(0);
         });
 
-        // --- Grade Essay ---
+        // --- Grade Essay (MODIFIED FOR LOCAL TESTING WITH RANDOM MODELS) ---
         async function gradeEssay() {
             const dom = {
                 errorMessageDiv: document.getElementById('error-message'),
@@ -936,19 +916,69 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 element.classList.remove('hidden');
                 setTimeout(() => element.classList.add('hidden'), isError ? 8000 : 5000);
             }
+
             function toggleLoading(isLoading) {
                 dom.loadingBarContainer.classList.toggle('show', isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
             }
 
-            // helper to read already-defined readers
-            async function getProcessedSectionContent(textareaId, inputId) {
+            // Helper to read file content
+            async function readFileContent(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
+                    if (file.type.startsWith('image/')) {
+                        reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
+                        reader.readAsDataURL(file);
+                    } else if (file.type === 'application/pdf') {
+                        reader.onload = async (e) => {
+                            try {
+                                const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+                                let fullText = '';
+                                for (let i = 1; i <= pdf.numPages; i++) {
+                                    const page = await pdf.getPage(i);
+                                    const textContent = await page.getTextContent();
+                                    fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                                }
+                                resolve({ type: 'text', content: fullText, filename: file.name });
+                            } catch (error) {
+                                reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
+                            }
+                        };
+                        reader.readAsArrayBuffer(file);
+                    } else { // Default to text
+                        reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
+                        reader.readAsText(file);
+                    }
+                });
+            }
+
+            async function getProcessedSectionContent(textareaId) {
                 const textarea = document.getElementById(textareaId);
-                const listEl = document.getElementById(inputId + '-list');
-                // Rebuild file list from DOM (the main instance maintains data; for safety, use the primary function in DOMContentLoaded in real app)
-                // Here, simply return textarea content since files already embedded in previous logic.
-                return { combinedText: textarea.value.trim(), imageParts: [] };
+                const fileInput = document.getElementById(textareaId + '-file');
+                let combinedText = textarea.value.trim();
+                const imageParts = [];
+                const errors = [];
+
+                const files = Array.from(fileInput.files);
+
+                for (const file of files) {
+                    try {
+                        const result = await readFileContent(file);
+                        if (result.type === 'text') {
+                            combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
+                        } else if (result.type === 'image') {
+                            imageParts.push({ inlineData: { mimeType: result.imageData.mimeType, data: result.imageData.data } });
+                        }
+                    } catch (error) {
+                        errors.push(error.message);
+                    }
+                }
+
+                if (errors.length > 0) throw new Error(errors.join('\n'));
+                return { combinedText, imageParts };
             }
 
             try {
@@ -957,7 +987,8 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
 
-                const apiKey = 'your-api-key-here';
+                // --- LOCAL TESTING SETUP ---
+                const apiKey = 'your-api-key-here'; 
                 
                 
                 
@@ -972,19 +1003,40 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 
                 
                 
-                //Ignore if youre running locally
+                
+                
+                
+                
+                // IGNORE!!!
                 if (apiKey === 'your-api-key-here') {
-                    throw new Error("Please enter your Gemini API key in the JavaScript code to proceed with local testing.");
+                    throw new Error("Please enter your Gemini API key in the script to enable local testing.");
                 }
 
-                // NOTE: We reuse the processed content from the main logic path where files are merged.
-                const instructionsData = await getProcessedSectionContent('instructions', 'instructions-file');
-                const rubricData = await getProcessedSectionContent('rubric', 'rubric-file');
-                const essayData = await getProcessedSectionContent('essay', 'essay-file');
+                // Define the list of models to choose from
+                const ALL_GEMINI_MODELS = [
+                    'gemini-2.5-flash-lite',
+                    'gemini-live-2.5-flash-preview',
+                    'gemini-2.5-flash',
+                    'gemini-2.0-flash',
+                    'gemini-2.0-flash-lite',
+                    'gemini-2.0-flash-live-001',
+                    'gemini-1.5-flash',
+                    'gemini-1.5-flash-8b',
+                ];
 
-                if (!instructionsData.combinedText) throw new Error("Please provide Assignment Instructions.");
-                if (!rubricData.combinedText) throw new Error("Please provide a Grading Rubric.");
-                if (!essayData.combinedText) throw new Error("Please provide the Student's Assignment.");
+                // Randomly select a model from the list
+                const randomIndex = Math.floor(Math.random() * ALL_GEMINI_MODELS.length);
+                const model = ALL_GEMINI_MODELS[randomIndex];
+                console.log(`Using randomly selected model for this request: ${model}`);
+                // --- END LOCAL TESTING SETUP ---
+
+                const instructionsData = await getProcessedSectionContent('instructions');
+                const rubricData = await getProcessedSectionContent('rubric');
+                const essayData = await getProcessedSectionContent('essay');
+
+                if (!instructionsData.combinedText && instructionsData.imageParts.length === 0) throw new Error("Please provide Assignment Instructions.");
+                if (!rubricData.combinedText && rubricData.imageParts.length === 0) throw new Error("Please provide a Grading Rubric.");
+                if (!essayData.combinedText && essayData.imageParts.length === 0) throw new Error("Please provide the Student's Assignment.");
 
                 const extraInstructions = document.getElementById('extra-instructions').value.trim();
                 const strictness = dom.strictnessMeter.value;
@@ -1011,16 +1063,22 @@ ${extraInstructions || 'None.'}
 
 Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
 `;
-
+                
                 const parts = [
                     { text: systemPrompt },
-                    { text: `Student Assignment: ${essayData.combinedText}` }
+                    { text: `--- START OF STUDENT ASSIGNMENT ---` },
+                    { text: essayData.combinedText },
+                    { text: `--- END OF STUDENT ASSIGNMENT ---` }
                 ];
+                
+                // Add image parts from all sections to the parts array
+                parts.push(...instructionsData.imageParts);
+                parts.push(...rubricData.imageParts);
+                parts.push(...essayData.imageParts);
 
                 const payload = { contents: [{ role: "user", parts: parts }] };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-                // basic backoff (inline)
                 async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
                     try {
                         const response = await fetch(url, options);
@@ -1045,7 +1103,7 @@ Please grade the following student assignment. Focus solely on the content provi
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({}));
                     const errorMessage = errorData.error?.message || response.statusText;
                     throw new Error(`API Error: ${errorMessage}`);
                 }
