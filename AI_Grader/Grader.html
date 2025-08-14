@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -950,7 +950,8 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                         };
 
                         try {
-                            const response = await fetch('/api/Grader_API', {
+                            // *** THIS IS THE CORRECTED LINE ***
+                            const response = await fetch('/api/grader', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
