@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -907,7 +907,7 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
             
-            // --- Grade Essay Function (MODIFIED) ---
+            // --- Grade Essay Function (REWRITTEN) ---
             window.gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
@@ -919,6 +919,7 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                 const MAX_ATTEMPTS = availableModels.length * 2;
 
                 try {
+                    // 1. Get all raw data from the form
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
                     const essayData = await getProcessedSectionContent('essay', fileInputs[2].data);
@@ -931,6 +932,40 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
                     const strictness = dom.strictnessMeter.value;
                     const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
 
+                    // 2. Build the System Prompt right here in the frontend
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.
+
+Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict).
+- Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.
+- Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
+- Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.
+
+Educational Context:
+- Grade Level: ${selectedGrade}
+
+Instructions for grading:
+${instructionsData.combinedText || 'No specific instructions provided.'}
+
+Rubric:
+${rubricData.combinedText || 'No rubric provided.'}
+
+Additional Instructions:
+${extraInstructions || 'None.'}
+
+Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
+`;
+                    // 3. Construct the final 'contents' object for the Gemini API
+                    // Note: Image handling would require adding image parts to this array.
+                    const parts = [
+                        { text: systemPrompt },
+                        { text: `--- START OF STUDENT ASSIGNMENT ---` },
+                        { text: essayData.combinedText },
+                        { text: `--- END OF STUDENT ASSIGNMENT ---` }
+                    ];
+                    const contents = [{ role: "user", parts: parts }];
+
+
+                    // 4. Loop through models to find one that works
                     let result = null;
                     while (availableModels.length > 0 && attemptCount < MAX_ATTEMPTS) {
                         attemptCount++;
@@ -939,18 +974,13 @@ Align feedback with IB descriptors: knowledge & understanding, application/analy
 
                         console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
 
+                        // 5. Create the simplified payload for our proxy API
                         const payload = {
-                            instructionsData,
-                            rubricData,
-                            essayData,
-                            extraInstructions,
-                            strictness,
-                            selectedGrade,
-                            model: selectedModel
+                            model: selectedModel,
+                            contents: contents // Send the fully constructed contents
                         };
 
                         try {
-                            // *** THIS IS THE CORRECTED LINE ***
                             const response = await fetch('/api/grader', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
