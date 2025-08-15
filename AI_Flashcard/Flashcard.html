@@ -1024,7 +1024,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 200);
 
         try {
-            const response = await fetch('/api/flashcard', { /* ... */ });                method: 'POST',
+            const response = await fetch('/api/Flashcard_API', { // Call your Vercel serverless function
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     inputText: text,
