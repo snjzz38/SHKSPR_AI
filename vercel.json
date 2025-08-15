@@ -2,19 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/Grader_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Humanizer_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Flashcard_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Citation_API.js",
+      "src": "api/**/*.js",
       "use": "@vercel/node"
     },
     {
@@ -24,28 +12,16 @@
   ],
   "rewrites": [
     {
-      "source": "/api/humanizer",
-      "destination": "/api/Humanizer_API.js"
-    },
-    {
-      "source": "/api/grader",
-      "destination": "/api/Grader_API.js"
-    },
-    {
-      "source": "/api/flashcard",
-      "destination": "/api/Flashcard_API.js"
-    },
-    {
-      "source": "/api/citation",
-      "destination": "/api/Citation_API.js"
+      "source": "/api/(.*)",
+      "destination": "/api/$1.js"
     },
     {
       "source": "/",
       "destination": "/index.html"
     },
     {
-      "source": "/citation",
-      "destination": "/Citation.html"
+      "source": "/((?!api/|.*\\.).*)",
+      "destination": "/$1.html"
     }
   ]
 }
