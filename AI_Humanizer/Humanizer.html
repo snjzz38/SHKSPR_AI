@@ -4,461 +4,339 @@
     <meta charset="UTF-8">
     <title>Humanize Any Text: GPT-100</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        /* --- Theme Variables --- */
-        :root {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #fff;
-            --card-bg: #222;
-            --link-hover: #ffffff;
-        }
-        body.theme-cyan {
-            --bg-primary: #000;
-            --bg-secondary: #0b0b0b;
-            --text-primary: #e0ffff;
-            --accent: #00f6ff;
-            --card-bg: #072a2c;
-            --accent-rgb: 0, 246, 255;
-        }
-        body.theme-purple {
-            --bg-primary: #0d001a;
-            --bg-secondary: #14002b;
-            --text-primary: #ffe6ff;
-            --accent: #cc66ff;
-            --card-bg: #1d0036;
-            --accent-rgb: 204, 102, 255;
-        }
-        body.theme-green {
-            --bg-primary: #001a00;
-            --bg-secondary: #002b00;
-            --text-primary: #e6ffe6;
-            --accent: #66ff66;
-            --card-bg: #003600;
-            --accent-rgb: 102, 255, 102;
-        }
-        /* Updated Black & White Theme with silvery glow */
-        body.theme-blackwhite {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #e0e0e0; /* Silvery white accent */
-            --card-bg: #222;
-            --accent-rgb: 224, 224, 224;
-        }
-        /* Glow intensity for Black & White theme - adjusted for silvery glow */
-        body.theme-blackwhite .logo,
-        body.theme-blackwhite .hero h1 {
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
-        }
-        body.theme-blackwhite .hero p {
-            text-shadow: 0 0 8px var(--accent);
-        }
+<style>
+    /* --- Theme Variables --- */
+    :root {
+        --bg-primary: #000;
+        --bg-secondary: #111;
+        --text-primary: #fff;
+        --accent: #e0e0e0;
+        --card-bg: #222;
+        --accent-rgb: 224, 224, 224;
+    }
+    body.theme-cyan {
+        --bg-primary: #000;
+        --bg-secondary: #0b0b0b;
+        --text-primary: #e0ffff;
+        --accent: #00f6ff;
+        --card-bg: #072a2c;
+        --accent-rgb: 0, 246, 255;
+    }
+    body.theme-purple {
+        --bg-primary: #0d001a;
+        --bg-secondary: #14002b;
+        --text-primary: #ffe6ff;
+        --accent: #cc66ff;
+        --card-bg: #1d0036;
+        --accent-rgb: 204, 102, 255;
+    }
+    body.theme-green {
+        --bg-primary: #001a00;
+        --bg-secondary: #0b2b0b;
+        --text-primary: #e6ffe6;
+        --accent: #66ff66;
+        --card-bg: #1d361d;
+        --accent-rgb: 102, 255, 102;
+    }
+    body.theme-red {
+        --bg-primary: #1a0000;
+        --bg-secondary: #2b0000;
+        --text-primary: #ffcccc;
+        --accent: #ff6666;
+        --card-bg: #360000;
+        --accent-rgb: 255, 102, 102;
+    }
 
-        /* New Red Theme */
-        body.theme-red {
-            --bg-primary: #1a0000;
-            --bg-secondary: #2b0000;
-            --text-primary: #ffe6e6;
-            --accent: #ff3333;
-            --card-bg: #360000;
-            --accent-rgb: 255, 51, 51;
-        }
+    /* --- Global Styles --- */
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        transition: background-color 0.6s, color 0.6s;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+    }
+    .transition-all {
+        transition: all 0.6s ease;
+    }
 
-        /* --- Global Styles --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            /* Changed font-family to Segoe UI to match header.html */
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            transition: background-color 0.6s, color 0.6s;
-            overflow-x: hidden;
-            /* Added flex properties from header.html body for consistent particle behavior */
-            display: flex;
-            flex-direction: column;
-        }
-        .transition-all {
-            transition: all 0.6s ease;
-        }
-        .particles-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-        }
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            background: var(--accent);
-            opacity: 0.7;
-            pointer-events: none;
-            will-change: transform;
-        }
-        header.main-header { /* Added main-header class for consistency */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 10%;
-            background-color: var(--bg-secondary);
-            transition: background-color 0.6s, color 0.6s;
-            position: relative;
-            z-index: 10;
-        }
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
-            text-decoration: none;
-            transition: all 0.6s ease;
-        }
-        .theme-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            position: relative;
-        }
-        /* Common styling for dropdown buttons */
-        .dropdown-button {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--text-primary);
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-            font-weight: bold; /* Made the main buttons bold */
-        }
-        .dropdown-button:hover {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-        }
+    /* --- Dropdown Styles (New Section) --- */
+ .dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-toggle {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--text-primary);
+    cursor: pointer;
+    font-weight: bold; /* Added this line to make the button bold */
+}
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    background-color: var(--card-bg);
+    border: 1px solid var(--text-primary);
+    border-radius: 8px;
+    padding: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+}
+.dropdown-menu.active {
+    display: flex;
+}
+.dropdown-menu a, .dropdown-menu button {
+    font-weight: bold !important;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+.dropdown-menu a:hover, .dropdown-menu button:hover {
+    background-color: var(--bg-secondary);
+}
+    /* --- Hero Section Styles --- */
+    .hero {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 50px 20px 30px 20px;
+        position: relative;
+        z-index: 5;
+    }
+    .hero h1 {
+        font-size: 3.2rem;
+        color: var(--text-primary);
+        text-shadow: 0 0 10px var(--accent);
+        margin-bottom: 20px;
+        transition: all 0.6s ease;
+    }
+    .hero p {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+        text-shadow: 0 0 8px var(--accent);
+        max-width: 600px;
+        color: var(--text-primary);
+        transition: all 0.6s ease;
+    }
 
-        /* Common styling for dropdown containers */
-        .dropdown-container {
-            position: relative;
-            /* No padding-bottom here, as the menu will be directly adjacent */
-        }
-        .dropdown-container:hover .dropdown-options {
-            display: block;
-        }
+    /* --- Main Content Container Styles --- */
+    .container {
+        max-width: 1600px;
+        margin: 24px auto;
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        padding: 24px;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        min-height: 500px;
+    }
+    h1 {
+        text-align: center;
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+    }
+    .disclaimer {
+        text-align: center;
+        color: #aaa;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+    .controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    select, button {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--text-primary);
+        font-size: 0.95rem;
+        background: var(--card-bg);
+        color: var(--text-primary);
+    }
+    button {
+        background: var(--accent);
+        color: var(--bg-primary);
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s, box-shadow 0.3s;
 
-        /* Common styling for dropdown options */
-        .dropdown-options {
-            display: none;
-            position: absolute;
-            top: 100%; /* Position directly below the button */
-            right: 0;
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 10px; /* Keep internal padding for buttons */
-            min-width: 150px;
-            box-shadow: none !important; /* Force removal of any box-shadow */
-            z-index: 10;
-            border: none; /* Explicitly remove border on the container */
-        }
-        .dropdown-container:hover .dropdown-options,
-        .dropdown-options:hover {
-            display: block;
-        }
-        .dropdown-options button,
-        .dropdown-options a { /* Apply to links as well */
-            background: none;
-            border: none; /* Ensure no border on individual options */
-            color: var(--text-primary);
-            padding: 8px;
-            cursor: pointer;
-            text-align: left;
-            width: 100%;
-            font-size: 0.9rem;
-            display: block;
-            text-decoration: none; /* Remove underline for links */
-            /* Removed font-weight: bold; from here to unbold dropdown options */
-            box-shadow: none; /* Explicitly remove box-shadow from buttons */
-        }
-        .dropdown-options button:hover,
-        .dropdown-options a:hover { /* Apply to links as well */
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            box-shadow: none; /* Ensure no box-shadow on hover */
-            color: var(--text-primary); /* Keep text color consistent on hover */
-        }
+    }
+    button:hover {
+        background: var(--text-primary);
+        color: var(--bg-primary);
 
-        .hero {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 50px 20px 30px 20px;
-            position: relative;
-            z-index: 5;
-        }
-        .hero h1 {
-            font-size: 3.2rem;
-            color: var(--text-primary);
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent);
-            margin-bottom: 20px;
-            transition: all 0.6s ease;
-        }
-        .hero p {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            text-shadow: 0 0 8px var(--accent);
-            max-width: 600px;
-            color: var(--text-primary);
-            transition: all 0.6s ease;
-        }
+    }
+    button:disabled {
+        background: #666;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+    .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .toggle input {
+        width: 40px;
+        height: 20px;
+        appearance: none;
+        background: #666;
+        border: 1px solid #000;
+        border-radius: 20px;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .toggle input::before {
+        content: '';
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        border: 1px solid #000;
+        border-radius: 50%;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+        transition: transform 0.3s;
+    }
+    .toggle input:checked {
+        background: var(--accent);
+    }
+    .toggle input:checked::before {
+        transform: translateX(20px);
+    }
+    .areas {
+        display: flex;
+        gap: 16px;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    @media (min-width: 768px) {
+        .areas { flex-direction: row; }
+    }
+    .area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .area-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .area-header label {
+        font-weight: 600;
+        color: var(--accent);
+    }
+    .area-header button {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--text-primary);
+        padding: 4px 10px;
+        font-size: 0.85rem;
+        box-shadow: none;
+    }
+    .area-header button:hover {
+        background: var(--text-primary);
+        color: var(--bg-primary);
+        box-shadow: 0 0 8px var(--accent);
+    }
+    textarea {
+        width: 100%;
+        height: 100%;
+        min-height: 250px;
+        padding: 12px;
+        border: 1px solid var(--text-primary);
+        border-radius: 8px;
+        background: var(--bg-secondary);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 0.9rem;
+        resize: vertical;
+        color: var(--text-primary);
+    }
+    textarea:focus {
+        border-color: var(--accent);
+        outline: none;
+        box-shadow: 0 0 0 2px var(--accent);
+    }
+    .word-count {
+        font-size: 0.85rem;
+        color: #aaa;
+        text-align: right;
+        margin-top: 4px;
+    }
+    .progress {
+        width: 100%;
+        height: 4px;
+        background: #444;
+        border-radius: 4px;
+        margin: 16px 0;
+        overflow: hidden;
+        display: none;
+    }
+    .progress-bar {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 44px;
+        width: 0;
+        transition: width 0.4s ease-out;
+    }
+    .status {
+        font-size: 0.85rem;
+        color: #aaa;
+        margin-top: 8px;
+        text-align: center;
+        height: 1em;
+    }
+    footer.main-footer {
+        text-align: center;
+        padding: 20px;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        text-shadow: 0 0 5px var(--accent);
+        background-color: var(--bg-secondary);
+        transition: background-color 0.6s, color 0.6s;
+        position: relative;
+        z-index: 10;
+        margin-top: 40px;
+    }
 
-        .container {
-            max-width: 1600px; /* Increased width */
-            margin: 24px auto;
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-            padding: 24px;
-            position: relative;
-            z-index: 5;
-            display: flex;
-            flex-direction: column;
-            min-height: 500px;
-        }
-        h1 {
-            text-align: center;
-            font-size: 1.6rem;
-            margin-bottom: 8px;
-        }
-        .disclaimer {
-            text-align: center;
-            color: #aaa;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-        .controls {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        select, button {
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid var(--text-primary);
-            font-size: 0.95rem;
-            background: var(--card-bg);
-            color: var(--text-primary);
-        }
-        button {
-            background: var(--accent);
-            color: var(--bg-primary);
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.3s;
-            box-shadow: 0 0 8px rgba(0, 246, 255, 0.3);
-        }
-        button:hover {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-            box-shadow: 0 0 15px var(--accent);
-        }
-        button:disabled {
-            background: #666;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .toggle input {
-            width: 40px;
-            height: 20px;
-            appearance: none;
-            background: #666;
-            border: 1px solid #000;
-            border-radius: 20px;
-            position: relative;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .toggle input::before {
-            content: '';
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border: 1px solid #000;
-            border-radius: 50%;
-            position: absolute;
-            top: 1px;
-            left: 1px;
-            transition: transform 0.3s;
-        }
-        .toggle input:checked {
-            background: var(--accent);
-        }
-        .toggle input:checked::before {
-            transform: translateX(20px);
-        }
-        .areas {
-            display: flex;
-            gap: 16px;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-        @media (min-width: 768px) {
-            .areas { flex-direction: row; }
-        }
-        .area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .area-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .area-header label {
-            font-weight: 600;
-            color: var(--accent);
-        }
-        .area-header button {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--text-primary);
-            padding: 4px 10px;
-            font-size: 0.85rem;
-            box-shadow: none;
-        }
-        .area-header button:hover {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-            box-shadow: 0 0 8px var(--accent);
-        }
-        textarea {
-            width: 100%;
-            height: 100%;
-            min-height: 250px;
-            padding: 12px;
-            border: 1px solid var(--text-primary);
-            border-radius: 8px;
-            background: var(--bg-secondary);
-            /* Changed font-family to Segoe UI to match header.html */
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-size: 0.9rem;
-            resize: vertical;
-            color: var(--text-primary);
-        }
-        textarea:focus {
-            border-color: var(--accent);
-            outline: none;
-            box-shadow: 0 0 0 2px var(--accent);
-        }
-        .word-count {
-            font-size: 0.85rem;
-            color: #aaa;
-            text-align: right;
-            margin-top: 4px;
-        }
-        .progress {
-            width: 100%;
-            height: 4px;
-            background: #444;
-            border-radius: 4px;
-            margin: 16px 0;
-            overflow: hidden;
-            display: none;
-        }
-        .progress-bar {
-            height: 100%;
-            background: var(--accent);
-            border-radius: 44px;
-            width: 0;
-            transition: width 0.4s ease-out;
-        }
-        .status {
-            font-size: 0.85rem;
-            color: #aaa;
-            margin-top: 8px;
-            text-align: center;
-            height: 1em;
-        }
-        footer.main-footer { /* Added main-footer class for consistency */
-            text-align: center;
-            padding: 20px;
-            font-size: 0.9rem;
-            color: var(--text-primary);
-            text-shadow: 0 0 5px var(--accent);
-            background-color: var(--bg-secondary);
-            transition: background-color 0.6s, color 0.6s;
-            position: relative;
-            z-index: 10;
-            margin-top: 40px;
-        }
-    </style>
+    
+</style>
+
 </head>
 <body class="theme-blackwhite transition-all">
+    <div id="particles"></div>
   <!-- Particles container is needed for the JS to function correctly -->
-  <div class="particles-container" id="particles"></div>
+  <div id="header-container"></div>
 
-  <header class="main-header transition-all">
-    <a href="../index.html" class="logo">SHKSPR</a>
-    <div class="theme-controls">
-      <!-- Moved "Limit Exceeded?" button to the first position -->
-      <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
-      <div class="dropdown-container">
-        <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
-        <div class="dropdown-options">
-          <a href="./Humanizer.html">AI Humanizer</a>
-          <a href="../AI_Grader/Grader.html">AI Grader</a>
-          <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
-          <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
-        </div>
-      </div>
-      <div class="dropdown-container">
-        <button class="dropdown-button" id="theme-button">🎨 Themes</button>
-        <div class="dropdown-options">
-          <button id="theme-blackwhite-btn">Black & White</button>
-          <button id="theme-cyan-btn">Cyan</button>
-          <button id="theme-purple-btn">Purple</button>
-          <button id="theme-green-btn">Green</button>
-          <button id="theme-red-btn">Red</button>
-        </div>
-      </div>
-    </div>
-  </header>
     <section class="hero">
         <h1>AI HUMANIZER</h1>
         <p class="disclaimer"><b>Humanize any AI-generated text.</b> <br>
@@ -1113,10 +991,50 @@
             }, 2000);
         }
     };
+async function loadHeader() {
+      try {
+        const response = await fetch('../Structure/header.html');
+        if (!response.ok) throw new Error('Failed to load header');
+        const text = await response.text();
+        
+        const container = document.getElementById('header-container');
+        container.innerHTML = text;
 
+        // Extract the script content and append it to the document body to ensure it runs
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const scriptElement = doc.querySelector('script');
+        if (scriptElement) {
+            const newScript = document.createElement('script');
+            newScript.textContent = scriptElement.textContent;
+            document.body.appendChild(newScript);
+        }
+
+        // The script from header.html should have now executed and the functions
+        // are available on the window object. We can now initialize everything.
+        if (window.setTheme && window.initParticles) {
+            // Set the initial theme from local storage
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme);
+
+            // Add click event listeners to theme buttons
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+            // Start the particle animation
+            window.initParticles(document.body);
+        }
+
+      } catch (error) {
+        console.error('Error loading header:', error);
+        document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
+      }
+    }
     document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', loadHeader);
 </script>
-    <link rel="stylesheet" href="../Structure/header.css">
-    <script src="../Structure/header.js"></script>
 </body>
 </html>
