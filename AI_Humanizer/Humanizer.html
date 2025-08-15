@@ -7,44 +7,24 @@
 <style>
     /* --- Theme Variables --- */
     :root {
-        --bg-primary: #000;
-        --bg-secondary: #111;
-        --text-primary: #fff;
-        --accent: #e0e0e0;
-        --card-bg: #222;
-        --accent-rgb: 224, 224, 224;
+        --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+        --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
     }
     body.theme-cyan {
-        --bg-primary: #000;
-        --bg-secondary: #0b0b0b;
-        --text-primary: #e0ffff;
-        --accent: #00f6ff;
-        --card-bg: #072a2c;
-        --accent-rgb: 0, 246, 255;
+        --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
+        --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
     }
     body.theme-purple {
-        --bg-primary: #0d001a;
-        --bg-secondary: #14002b;
-        --text-primary: #ffe6ff;
-        --accent: #cc66ff;
-        --card-bg: #1d0036;
-        --accent-rgb: 204, 102, 255;
+        --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
+        --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
     }
     body.theme-green {
-        --bg-primary: #001a00;
-        --bg-secondary: #0b2b0b;
-        --text-primary: #e6ffe6;
-        --accent: #66ff66;
-        --card-bg: #1d361d;
-        --accent-rgb: 102, 255, 102;
+        --bg-primary: #001a00; --bg-secondary: #0b2b0b; --text-primary: #e6ffe6;
+        --accent: #66ff66; --card-bg: #1d361d; --accent-rgb: 102, 255, 102;
     }
     body.theme-red {
-        --bg-primary: #1a0000;
-        --bg-secondary: #2b0000;
-        --text-primary: #ffcccc;
-        --accent: #ff6666;
-        --card-bg: #360000;
-        --accent-rgb: 255, 102, 102;
+        --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffcccc;
+        --accent: #ff6666; --card-bg: #360000; --accent-rgb: 255, 102, 102;
     }
 
     /* --- Global Styles --- */
@@ -60,65 +40,16 @@
         margin: 0;
         padding: 0;
     }
-    .transition-all {
-        transition: all 0.6s ease;
+
+    /* --- Key Layout & Animation Rule --- */
+    .main-content {
+        flex-grow: 1; /* Makes the content area expand to fill space */
     }
 
-    /* --- Dropdown Styles (New Section) --- */
- .dropdown {
-    position: relative;
-    display: inline-block;
-}
-.dropdown-toggle {
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    background: var(--card-bg);
-    color: var(--text-primary);
-    border: 1px solid var(--text-primary);
-    cursor: pointer;
-    font-weight: bold; /* Added this line to make the button bold */
-}
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 100;
-    background-color: var(--card-bg);
-    border: 1px solid var(--text-primary);
-    border-radius: 8px;
-    padding: 8px;
-    display: none;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 150px;
-}
-.dropdown-menu.active {
-    display: flex;
-}
-.dropdown-menu a, .dropdown-menu button {
-    font-weight: bold !important;
-    color: var(--text-primary);
-    background: transparent;
-    border: none;
-    text-align: left;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.2s;
-}
-.dropdown-menu a:hover, .dropdown-menu button:hover {
-    background-color: var(--bg-secondary);
-}
     /* --- Hero Section Styles --- */
     .hero {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
         text-align: center;
-        padding: 50px 20px 30px 20px;
+        padding: 20px 20px 30px 20px;
         position: relative;
         z-index: 5;
     }
@@ -136,11 +67,14 @@
         max-width: 600px;
         color: var(--text-primary);
         transition: all 0.6s ease;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     /* --- Main Content Container Styles --- */
     .container {
         max-width: 1600px;
+        width: 95%;
         margin: 24px auto;
         background: var(--card-bg);
         border-radius: 12px;
@@ -151,11 +85,6 @@
         display: flex;
         flex-direction: column;
         min-height: 500px;
-    }
-    h1 {
-        text-align: center;
-        font-size: 1.6rem;
-        margin-bottom: 8px;
     }
     .disclaimer {
         text-align: center;
@@ -185,12 +114,10 @@
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.2s, box-shadow 0.3s;
-
     }
     button:hover {
         background: var(--text-primary);
         color: var(--bg-primary);
-
     }
     button:disabled {
         background: #666;
@@ -320,23 +247,20 @@
         padding: 20px;
         font-size: 0.9rem;
         color: var(--text-primary);
-        text-shadow: 0 0 5px var(--accent);
         background-color: var(--bg-secondary);
-        transition: background-color 0.6s, color 0.6s;
         position: relative;
         z-index: 10;
-        margin-top: 40px;
     }
-
-    
 </style>
 
 </head>
-<body class="theme-blackwhite transition-all">
-    <div id="particles"></div>
-  <!-- Particles container is needed for the JS to function correctly -->
+<!-- Removed 'transition-all' from the body class -->
+<body class="theme-blackwhite">
+  <!-- Container where header (and animation CSS) will be injected -->
   <div id="header-container"></div>
-
+  
+  <!-- Added 'animate-on-load' class to trigger the animation -->
+  <main class="main-content animate-on-load">
     <section class="hero">
         <h1>AI HUMANIZER</h1>
         <p class="disclaimer"><b>Humanize any AI-generated text.</b> <br>
@@ -379,102 +303,21 @@
         <div class="progress"><div class="progress-bar"></div></div>
         <div class="status" id="status"></div>
     </div>
-    <footer class="main-footer transition-all">
-        <p>&copy; 2025 Shkspr. All rights reserved.</p>
-    </footer>
+  </main>
+
+  <footer class="main-footer">
+      <p>&copy; 2025 Shkspr. All rights reserved.</p>
+  </footer>
+
 <script>
-    // --- Global functions for theming and particles (moved to global scope) ---
-    // These functions are attached to window to ensure global accessibility.
-    window.setTheme = function(theme) {
-      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
-      localStorage.setItem('shkspr-theme', theme);
-      window.initParticles();
-    }
+    // --- YOUR ENTIRE ORIGINAL JAVASCRIPT LOGIC IS PRESERVED BELOW ---
 
-    window.Particle = class Particle {
-      constructor(container, colors) {
-        this.container = container;
-        this.element = document.createElement('div');
-        this.element.classList.add('particle');
-        this.container.appendChild(this.element);
-        this.size = Math.random() * 6 + 2;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.x = Math.random() * window.innerWidth;
-        this.y = Math.random() * window.innerHeight;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
-        this.opacity = Math.random() * 0.5 + 0.3;
-        this.element.style.width = `${this.size}px`;
-        this.element.style.height = `${this.size}px`;
-        this.element.style.backgroundColor = this.color;
-        this.element.style.opacity = this.opacity;
-        this.update();
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-          this.vx *= -1;
-          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
-        }
-        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-          this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
-        }
-        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-      }
-      // Removed checkCollision method entirely for particles to phase through each other
-      remove() {
-        this.container.removeChild(this.element);
-      }
-    }
-    let particles = [];
-    let animationId;
-    window.initParticles = function() {
-      const container = document.getElementById('particles');
-      if (!container) return; // Ensure container exists
-      particles.forEach(p => p.remove());
-      particles = [];
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-      let colors = [accentColor];
-      if (document.body.classList.contains('theme-blackwhite')) {
-        colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; /* Silvery shades for particles */
-      } else if (document.body.classList.contains('theme-cyan')) {
-        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
-      } else if (document.body.classList.contains('theme-purple')) {
-        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
-      } else if (document.body.classList.contains('theme-green')) {
-        colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-      } else if (document.body.classList.contains('theme-red')) { /* New Red Theme particles */
-        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
-      }
-      const particleCount = 60;
-      for (let i = 0; i < particleCount; i++) {
-        particles.push(new window.Particle(container, colors));
-      }
-      window.animateParticles();
-    }
-    window.animateParticles = function() {
-      particles.forEach(particle => particle.update());
-      // Removed collision check loop:
-      // for (let i = 0; i < particles.length; i++) {
-      //   for (let j = i + 1; j < particles.length; j++) {
-      //     particles[i].checkCollision(particles[j]);
-      //   }
-      // }
-      animationId = requestAnimationFrame(window.animateParticles);
-    }
-    // End of global functions for theming and particles
-
-    // --- Helper function to escape regex special characters ---
+    // Note: The global theme and particle functions are now loaded via header.html
+    
     function escapeRegExp(string) {
         return string.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
     }
 
-    // --- Helper function to escape HTML for prompt safety ---
     function escapeHtml(unsafe) {
         return unsafe
             .replace(/&/g, "&amp;")
@@ -485,19 +328,11 @@
             .replace(/`/g, "\\`");
     }
 
-    // --- Main script content ---
     const MODELS_TO_TRY = [
-        'llama-3.1-8b-instant',
-        'llama3-8b-8192',
-        'gemma2-9b-it',
-        'mistral-saba-24b',
-        'llama3-70b-8192',
-        'meta-llama/llama-4-maverick-17b-128e-instruct',
-        'meta-llama/llama-4-scout-17b-16e-instruct',
-        'meta-llama/llama-guard-4-12b',
-        'llama-guard-3-8b',
-        'meta-llama/llama-prompt-guard-2-22m',
-        'meta-llama/llama-prompt-guard-2-86m'
+        'llama-3.1-8b-instant', 'llama3-8b-8192', 'gemma2-9b-it', 'mistral-saba-24b',
+        'llama3-70b-8192', 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        'meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-guard-4-12b',
+        'llama-guard-3-8b', 'meta-llama/llama-prompt-guard-2-22m', 'meta-llama/llama-prompt-guard-2-86m'
     ];
     const FORBIDDEN_WORDS_COMPREHENSIVE = [
         'exacerbating', 'unequivocal', 'mitigate', 'transcends', 'stark', 'dire', 'exert', 'fortress', 'induce',
@@ -546,6 +381,7 @@
         'necessitate', 'ecstatic', 'redeem', 'utilize', 'alterations'
     ];
     const $ = id => document.getElementById(id);
+
     const init = () => {
         const processButton = $('process');
         if (!processButton) {
@@ -597,17 +433,6 @@
             });
         }
         processButton.addEventListener('click', processText);
-
-        // Add event listeners for theme buttons
-        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-        // Initialize theme and particles on page load
-        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-        window.setTheme(savedTheme);
     };
 
     const isNonsense = (text) => {
@@ -685,49 +510,48 @@
     };
 
    const apiCall = async (prompt, modelIndex = 0, customTemperature = 1.9, retryCount = 0) => {
-  if (modelIndex >= MODELS_TO_TRY.length) {
-    throw new Error('All available models failed to process the request.');
-  }
-  const currentModel = MODELS_TO_TRY[modelIndex];
-  try {
-    // Changed the fetch URL to point to the new, simpler API endpoint
-    const response = await fetch('/api/humanizer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: currentModel,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: customTemperature,
-        top_p: 0.98,
-        max_tokens: 2048,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      const errorMsg = data.error || 'Unknown error';
-      if (errorMsg.includes('maximum context length')) {
-        return apiCall(prompt, modelIndex + 1, customTemperature, 0);
-      } else if (response.status === 429) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        return apiCall(prompt, modelIndex + 1, customTemperature, 0);
-      } else if (response.status >= 500 || response.status === 404 || response.status === 403) {
+      if (modelIndex >= MODELS_TO_TRY.length) {
+        throw new Error('All available models failed to process the request.');
+      }
+      const currentModel = MODELS_TO_TRY[modelIndex];
+      try {
+        const response = await fetch('/api/humanizer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: currentModel,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: customTemperature,
+            top_p: 0.98,
+            max_tokens: 2048,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          const errorMsg = data.error || 'Unknown error';
+          if (errorMsg.includes('maximum context length')) {
+            return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+          } else if (response.status === 429) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+          } else if (response.status >= 500 || response.status === 404 || response.status === 403) {
+            if (retryCount < 2) {
+              await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
+              return apiCall(prompt, modelIndex, customTemperature, retryCount + 1);
+            }
+            return apiCall(prompt, modelIndex + 1, customTemperature, 0);
+          }
+          throw new Error(errorMsg);
+        }
+        return data.choices?.[0]?.message?.content.trim() || null;
+      } catch (error) {
         if (retryCount < 2) {
           await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
           return apiCall(prompt, modelIndex, customTemperature, retryCount + 1);
         }
         return apiCall(prompt, modelIndex + 1, customTemperature, 0);
       }
-      throw new Error(errorMsg);
-    }
-    return data.choices?.[0]?.message?.content.trim() || null;
-  } catch (error) {
-    if (retryCount < 2) {
-      await new Promise(resolve => setTimeout(resolve, 1500 * (retryCount + 1)));
-      return apiCall(prompt, modelIndex, customTemperature, retryCount + 1);
-    }
-    return apiCall(prompt, modelIndex + 1, customTemperature, 0);
-  }
-};
+    };
 
     const analyzeSectionForPatterns = (section) => {
         const issues = {
@@ -777,7 +601,6 @@
         }
         return issues;
     };
-
 
     const buildComprehensivePrompt = (section, tone, isPersonal, pastParaphrases, sectionAnalysis) => {
         const escapedSection = escapeHtml(section);
