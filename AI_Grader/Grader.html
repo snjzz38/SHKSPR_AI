@@ -13,29 +13,67 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* --- Theme Variables --- */
+        /* --- Theme Variables (copied from header.html) --- */
         :root {
-            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
-            --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #fff;
+            --card-bg: #222;
+            --link-hover: #ffffff;
         }
         body.theme-cyan {
-            --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
-            --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
+            --bg-primary: #000;
+            --bg-secondary: #0b0b0b;
+            --text-primary: #e0ffff;
+            --accent: #00f6ff;
+            --card-bg: #072a2c;
+            --accent-rgb: 0, 246, 255;
         }
         body.theme-purple {
-            --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
-            --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
+            --bg-primary: #0d001a;
+            --bg-secondary: #14002b;
+            --text-primary: #ffe6ff;
+            --accent: #cc66ff;
+            --card-bg: #1d0036;
+            --accent-rgb: 204, 102, 255;
         }
         body.theme-green {
-            --bg-primary: #001a00; --bg-secondary: #0b2b0b; --text-primary: #e6ffe6;
-            --accent: #66ff66; --card-bg: #1d361d; --accent-rgb: 102, 255, 102;
+            --bg-primary: #001a00;
+            --bg-secondary: #002b00;
+            --text-primary: #e6ffe6;
+            --accent: #66ff66;
+            --card-bg: #003600;
+            --accent-rgb: 102, 255, 102;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000;
+            --bg-secondary: #111;
+            --text-primary: #fff;
+            --accent: #e0e0e0;
+            --card-bg: #222;
+            --accent-rgb: 224, 224, 224;
+        }
+        body.theme-blackwhite .logo,
+        body.theme-blackwhite .hero h1 {
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
         }
         body.theme-red {
-            --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffcccc;
-            --accent: #ff6666; --card-bg: #360000; --accent-rgb: 255, 102, 102;
+            --bg-primary: #1a0000;
+            --bg-secondary: #2b0000;
+            --text-primary: #ffe6e6;
+            --accent: #ff3333;
+            --card-bg: #360000;
+            --accent-rgb: 255, 51, 51;
         }
 
-        /* --- Global Styles --- */
+        /* --- Global Styles (copied from header.html) --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -47,8 +85,9 @@
             flex-direction: column;
             overflow-x: hidden;
         }
+        .transition-all { transition: all 0.6s ease; }
 
-        /* --- Particles Container --- */
+        /* --- Particles Container (copied from header.html) --- */
         .particles-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1; overflow: hidden;
@@ -57,128 +96,127 @@
             position: absolute; border-radius: 50%;
             background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform;
         }
-        
-        /* --- Page Load Animation (Exact Match to Humanizer/Header) --- */
-        @keyframes slideInUp {
-          from {
-            transform: translateY(20px);
-            opacity: 1;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+
+        /* --- Header Specific Styles (copied from header.html) --- */
+        header.main-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 10%; background-color: var(--bg-secondary);
+            transition: background-color 0.6s, color 0.6s; position: relative; z-index: 10;
         }
-        .animate-on-load {
-          animation: slideInUp 0.8s ease-out forwards;
+        .logo {
+            font-size: 2.5rem; font-weight: bold; color: var(--text-primary);
+            text-shadow:
+                0 0 10px var(--accent),
+                0 0 20px var(--accent),
+                0 0 30px var(--accent),
+                0 0 40px var(--accent),
+                0 0 50px var(--accent),
+                0 0 60px var(--accent);
+            text-decoration: none; transition: all 0.6s ease;
         }
-        
-        /* --- Key Layout Rule --- */
-        .main-content {
-            flex-grow: 1;
+        .theme-controls { display: flex; gap: 10px; align-items: center; }
+        .dropdown-button {
+            background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--text-primary);
+            padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+            transition: all 0.3s; font-weight: bold;
+        }
+        .dropdown-button:hover { background: var(--text-primary); color: var(--bg-primary); }
+        .dropdown-container { position: relative; }
+        .dropdown-container:hover .dropdown-options { display: block; }
+        .dropdown-options {
+            display: none; position: absolute; top: 100%; right: 0; background-color: var(--card-bg);
+            border-radius: 8px; padding: 10px; min-width: 150px; z-index: 10;
+        }
+        .dropdown-options button, .dropdown-options a {
+            background: none; border: none; color: var(--text-primary); padding: 8px; cursor: pointer;
+            text-align: left; width: 100%; font-size: 0.9rem; display: block; text-decoration: none;
+        }
+        .dropdown-options button:hover, .dropdown-options a:hover {
+            background: rgba(255, 255, 255, 0.1); border-radius: 4px;
         }
 
-        /* --- Hero Section Styles --- */
+        /* --- Hero Section --- */
         .hero {
-            text-align: center;
-            padding: 20px 20px 30px 20px;
-            position: relative;
-            z-index: 5;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5;
         }
         .hero h1 {
             font-size: 3.2rem; color: var(--text-primary);
-            text-shadow: 0 0 10px var(--accent);
+            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent), 0 0 40px var(--accent), 0 0 50px var(--accent);
             margin-bottom: 20px; transition: all 0.6s ease;
         }
         .hero p {
-            font-size: 1.2rem; margin-bottom: 30px;
-            text-shadow: 0 0 8px var(--accent); max-width: 600px;
-            color: var(--text-primary); transition: all 0.6s ease;
-            margin-left: auto; margin-right: auto;
+            font-size: 1.2rem; margin-bottom: 30px; text-shadow: 0 0 8px var(--accent);
+            max-width: 600px; color: var(--text-primary); transition: all 0.6s ease;
         }
 
         /* --- Grader Container Styles --- */
         .grader-container {
-            max-width: 1000px; width: 95%; margin: 24px auto; background: var(--card-bg);
-            border-radius: 12px; box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); padding: 24px;
-            position: relative; z-index: 5; color: var(--text-primary);
+            max-width: 1000px; width: 95%; margin: 0 auto 2rem auto; background: var(--card-bg);
+            border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0, 0.5); padding: 1.5rem; position: relative; z-index: 5; color: var(--text-primary);
         }
 
         /* --- Form & Input Styles --- */
-        textarea, input[type="text"], .rubric-select {
-            font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-secondary); color: var(--text-primary);
-            border: 1px solid var(--text-primary); border-radius: 12px; padding: 12px; width: 100%;
-        }
-        textarea { min-height: 120px; resize: vertical; }
-        textarea:focus, input[type="text"]:focus, .rubric-select:focus {
-            border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
-        }
+        .step-content { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .grade-level-btn {
-            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary);
-            padding: 12px; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; text-align: center;
+        textarea {
+            font-family: 'Fira Mono', monospace; background: var(--bg-secondary); color: var(--text-primary);
+            border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%;
+            min-height: 120px; resize: vertical;
         }
-        .grade-level-btn.selected {
+        input[type="text"], input[type="file"] {
+            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 12px; width: 100%;
+        }
+        textarea:focus, input[type="text"]:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
+
+        /* Grade Level & Rubric buttons */
+        .grade-level-btn, .rubric-btn {
+            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary);
+            padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center;
+        }
+        .grade-level-btn.selected, .rubric-btn.selected {
             background: var(--accent); color: var(--bg-primary); border-color: var(--accent);
             box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); font-weight: bold;
         }
-        .grade-level-btn:hover:not(.selected) { background: var(--text-primary); color: var(--bg-primary); opacity: 0.9; }
+        .grade-level-btn:hover, .rubric-btn:hover { opacity: 0.8; }
 
+        /* File input custom button */
         input[type="file"] { display: none; }
         .file-input-label {
-            display: inline-block; background: transparent; color: var(--accent);
-            border: 1px solid var(--accent); padding: 10px 20px; border-radius: 12px; font-weight: 600;
-            cursor: pointer; transition: all 0.3s; text-align: center;
+            display: inline-block; background: var(--bg-secondary); color: var(--accent);
+            border: 1px solid var(--accent); padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center;
         }
         .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
 
+        /* Strictness slider */
         input[type="range"] {
-            -webkit-appearance: none; appearance: none; width: 100%; height: 8px; background: var(--bg-secondary);
-            border-radius: 5px; outline: none; transition: opacity .2s; border: 1px solid var(--text-primary);
+            -webkit-appearance: none; appearance: none; width: 100%; height: 10px; background: var(--bg-secondary);
+            border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s;
         }
+        input[type="range"]:hover { opacity: 1; }
         input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%;
-            background: var(--accent); cursor: pointer; box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.7);
+            -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%;
+            background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
         }
-        
-        .toggle {
-            display: flex; align-items: center; gap: 12px;
+        input[type="range"]::-moz-range-thumb {
+            width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
         }
-        .toggle input {
-            width: 40px; height: 20px; appearance: none; -webkit-appearance: none;
-            background: #4a5568; border-radius: 20px; position: relative;
-            cursor: pointer; transition: background-color 0.3s ease; flex-shrink: 0;
-        }
-        .toggle input::before {
-            content: ''; width: 16px; height: 16px; background: #fff;
-            border-radius: 50%; position: absolute; top: 2px; left: 2px;
-            transition: transform 0.3s ease;
-        }
-        .toggle input:checked { background: var(--accent); }
-        .toggle input:checked::before { transform: translateX(20px); }
 
-        /* --- Buttons (UPDATED with more rounding) --- */
-        .action-button, button#grade-button, .clear-button {
-            background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 12px;
-            font-weight: 600; font-size: 1rem; transition: all 0.3s ease; border: none; cursor: pointer;
+        /* --- Buttons --- */
+        .nav-button, button#grade-button, .clear-button {
+            background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem;
+            transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer;
         }
-        .action-button:hover, button#grade-button:hover {
-            background: var(--text-primary); color: var(--bg-primary); box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.6);
-            transform: translateY(-2px);
+        .nav-button:hover, button#grade-button:hover, .clear-button:hover {
+            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px);
         }
-        .action-button:disabled, button#grade-button:disabled, .clear-button:disabled {
+        .nav-button:disabled, button#grade-button:disabled {
             background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important;
         }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
-        
-        .outline-button {
-            background: transparent !important; color: var(--text-primary) !important; 
-            border: 1px solid var(--text-primary) !important;
-        }
-        .outline-button:hover {
-            background: var(--text-primary) !important; color: var(--bg-primary) !important;
-        }
 
         /* --- Messages & Indicators --- */
         #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
@@ -197,140 +235,182 @@
         .file-list.expanded { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
         .file-list-item {
             background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
-            padding: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 0.5rem; font-size: 0.9rem;
+            padding: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem;
         }
         .file-list-item button {
-            background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer;
+            background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem;
         }
         .file-list-item button:hover { color: #ff4d4d; }
 
-        /* --- Layout & Stepper --- */
+        /* --- Layout & Spacing Adjustments --- */
         .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .step-header .title { text-align: center; font-size: 1.25rem; font-weight: 600; }
-        .description-text { line-height: 1.5; font-size: 0.875rem; color: #ccc; }
-        .action-area { display: none; }
+        .step-header .btn-container { flex: 1 0 0; }
+        .step-header .title { flex: 2 1 auto; text-align: center; font-size: 1.25rem; font-weight: 600; margin: 0 1rem; }
+        .description-text { min-height: 80px; line-height: 1.5; font-size: 0.875rem; color: #ccc; }
+        .action-area { display: none; /* Hidden by default, shown on last step */ }
 
         footer.main-footer {
             text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
-            background-color: var(--bg-secondary); position: relative; z-index: 10;
+            text-shadow: 0 0 5px var(--accent); background-color: var(--bg-secondary);
+            position: relative; z-index: 10; margin-top: auto;
         }
 
-        /* --- Loading Bar Styles --- */
+        /* --- New Loading Bar Styles --- */
         .loading-bar-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 4px; z-index: 1000;
-            background-color: transparent; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 6px; z-index: 100;
+            background-color: rgba(var(--accent-rgb), 0.2); opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none;
         }
         .loading-bar-container.show { opacity: 1; }
         .loading-bar {
-            width: 100%; height: 100%; background: var(--accent);
-            box-shadow: 0 0 10px var(--accent), 0 0 5px var(--accent);
-            transform-origin: left; animation: indeterminate-loading 2s infinite ease-in-out;
+            width: 100%; height: 100%; background-color: var(--accent); border-radius: 0 3px 3px 0;
+            transform: translateX(-100%); animation: indeterminate-loading 1.5s infinite ease-in-out;
         }
         @keyframes indeterminate-loading {
-            0% { transform: translateX(-100%) scaleX(0.1); }
-            50% { transform: translateX(0) scaleX(0.6); }
-            100% { transform: translateX(100%) scaleX(0.1); }
+            0% { transform: translateX(-100%) scaleX(0); }
+            50% { transform: translateX(0) scaleX(0.5); }
+            100% { transform: translateX(100%) scaleX(0); }
         }
 
+        /* New styles for the selects */
         .rubric-select {
-            appearance: none;
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M215.39%2099.61a8%208%200%200%201%200%2011.31l-80%2080a8%208%200%200%201-11.31%200l-80-80a8%208%200%200%201%2011.31-11.31L128%20172.69l74.08-74.08a8%208%200%200%201%2011.31%200Z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem;
+            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 12px; width: 100%; cursor: pointer; appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%20164.2c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9L146.2%2063.2l-107.4%20101c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9c-9.1-10.4-8.1-26.6%202.3-35.7L130.4%2022.4c4.4-5.1%2010.4-7.9%2016.7-7.9s12.3%202.8%2016.7%207.9l118.8%20111.9c9.2%209.1%209.2%2024.1%200%2033.2z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px;
         }
+        .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
     </style>
 </head>
-<body class="theme-blackwhite">
-    <div id="header-container"></div>
+<body class="theme-blackwhite transition-all">
+    <!-- Particles container -->
+    <div class="particles-container" id="particles"></div>
+
+    <!-- Loading bar -->
     <div id="loading-bar-container" class="loading-bar-container">
         <div class="loading-bar"></div>
     </div>
 
-    <main class="main-content animate-on-load">
-        <section class="hero">
-            <h1>AI Assignment Grader</h1>
-            <p>Leverage generative AI to automate assignment evaluation based on your specific instructions and rubric.</p>
-        </section>
+    <header class="main-header transition-all">
+        <a href="../index.html" class="logo">SHKSPR</a>
+        <div class="theme-controls">
+            <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
+                <div class="dropdown-options">
+                    <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
+                    <a href="./Grader.html">AI Grader</a>
+                    <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
+                    <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
+                </div>
+            </div>
+            <div class="dropdown-container">
+                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
+                <div class="dropdown-options">
+                    <button id="theme-blackwhite-btn">Black & White</button>
+                    <button id="theme-cyan-btn">Cyan</button>
+                    <button id="theme-purple-btn">Purple</button>
+                    <button id="theme-green-btn">Green</button>
+                    <button id="theme-red-btn">Red</button>
+                </div>
+            </div>
+        </div>
+    </header>
 
-        <div class="grader-container">
-            <div id="step-1" class="step-content">
+    <section class="hero">
+        <h1>AI Assignment Grader</h1>
+        <p>Leverage generative AI to automate assignment evaluation based on your specific instructions and rubric.</p>
+    </section>
+
+    <div class="grader-container">
+        <main>
+            <!-- Step 1: Assignment Instructions -->
+            <div id="step-instructions" class="step-content">
                 <div class="step-header">
-                    <button type="button" class="action-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button>
-                    <h2 class="title">1. Assignment Instructions</h2>
-                    <button type="button" class="action-button" onclick="nextStep()">Next</button>
+                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button></div>
+                    <label class="title">1. Assignment Instructions</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
                 <textarea id="instructions" placeholder="E.g., 'Write a 500-word persuasive essay on renewable energy, with three supporting arguments.'"></textarea>
-                <div class="flex items-center justify-between mt-4 space-x-4">
+                <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="instructions-file" class="file-input-label flex-grow">Upload Files</label>
-                    <button type="button" class="toggle-file-list-button action-button outline-button">Show Files</button>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
                 <input type="file" id="instructions-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
                 <ul id="instructions-file-list" class="file-list"></ul>
-                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted.</p>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted. If instructions are an image, upload it directly.</p>
             </div>
 
-            <div id="step-2" class="step-content hidden">
+            <!-- Step 2: Grading Rubric -->
+            <div id="step-rubric" class="step-content hidden">
                 <div class="step-header">
-                    <button type="button" class="action-button" onclick="prevStep()">Back</button>
-                    <h2 class="title">2. Grading Rubric</h2>
-                    <button type="button" class="action-button" onclick="nextStep()">Next</button>
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">2. Grading Rubric</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
                 <textarea id="rubric" placeholder="E.g., 'Content: 40%. Organization: 30%. Language: 20%. Originality: 10%.'"></textarea>
-                <div class="flex items-center justify-between mt-4 space-x-4">
+                <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="rubric-file" class="file-input-label flex-grow">Upload Files</label>
-                     <button type="button" class="toggle-file-list-button action-button outline-button">Show Files</button>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
                 <input type="file" id="rubric-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
                 <ul id="rubric-file-list" class="file-list"></ul>
-                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. If your rubric is an image, upload it directly as a JPG/PNG file.</p>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>Note:</strong> For PDFs, only text is extracted. If your rubric is an image, upload it directly as a JPG/PNG file.</p>
             </div>
 
-            <div id="step-3" class="step-content hidden">
-                 <div class="step-header">
-                    <button type="button" class="action-button" onclick="prevStep()">Back</button>
-                    <h2 class="title">3. Student's Assignment</h2>
-                    <button type="button" class="action-button" onclick="nextStep()">Next</button>
+            <!-- Step 3: Assignment Text -->
+            <div id="step-essay" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">3. Student's Assignment</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
                 <textarea id="essay" placeholder="Paste the student's assignment text here..."></textarea>
-                 <div class="flex items-center justify-between mt-4 space-x-4">
+                <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="essay-file" class="file-input-label flex-grow">Upload Files</label>
-                    <button type="button" class="toggle-file-list-button action-button outline-button">Show Files</button>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
                 <input type="file" id="essay-file" accept=".txt,.md,.doc,.docx,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
                 <ul id="essay-file-list" class="file-list"></ul>
-                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx cannot be read.</strong> Please convert to PDF, TXT, or copy-paste.</p>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx files cannot be read by the browser.</strong> Please convert to PDF, TXT, or copy-paste the text.</p>
             </div>
 
-            <div id="step-4" class="step-content hidden">
+            <!-- Step 4: Extra AI Instructions (Modified with dynamic subject dropdown) -->
+            <div id="step-extra-instructions" class="step-content hidden">
                 <div class="step-header">
-                    <button type="button" class="action-button" onclick="prevStep()">Back</button>
-                    <h2 class="title">4. AI Instructions</h2>
-                    <button type="button" class="action-button" onclick="nextStep()">Next</button>
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">4. Extra AI Instructions</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
+
+                <!-- Grade Level Section -->
                 <div class="mb-6">
                     <label class="block text-lg font-semibold mb-2">Grade</label>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         <button class="grade-level-btn" data-grade="Elementary">Elementary</button>
-                        <button class="grade-level-btn" data-grade="Middle School">Middle</button>
+                        <button class="grade-level-btn" data-grade="Middle School">Middle School</button>
                         <button class="grade-level-btn" data-grade="High School">High School</button>
                         <button class="grade-level-btn" data-grade="AP Courses">AP Courses</button>
                         <button class="grade-level-btn" data-grade="Higher Ed">Higher Ed</button>
                         <button class="grade-level-btn" data-grade="IB">IB</button>
                     </div>
                 </div>
+
+                <!-- NEW: Subject Quick-Add (shown for AP / Higher Ed / IB) -->
                 <div id="subject-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
-                    <label for="subject-select" class="block text-lg font-semibold mb-2">Subject</label>
-                    <p class="text-sm text-gray-400 mb-4">Pick a subject to add targeted guidance to the prompt below.</p>
+                    <label for="subject-select" class="block text-lg font-semibold mb-2">Subject (based on selected Grade)</label>
+                    <p class="text-sm text-gray-400 mb-4">Pick a subject to add targeted guidance to the prompt below. Subjects change automatically for AP, Higher Ed, and IB.</p>
                     <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <select id="subject-select" class="flex-grow rubric-select">
                             <option value="none" disabled selected>Select a subject...</option>
                         </select>
-                        <button id="add-subject-to-prompt-btn" class="action-button">Add</button>
+                        <button id="add-subject-to-prompt-btn" class="nav-button !rounded-full !px-6 !py-3">Add to Prompt</button>
                     </div>
                 </div>
+
+                <!-- Rubric Quick-Add (kept; appears for AP / Higher Ed / IB) -->
                 <div id="rubric-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
                     <label for="rubric-select" class="block text-lg font-semibold mb-2">Rubric Quick-Add</label>
-                     <p class="text-sm text-gray-400 mb-4">Choose a pre-defined rubric to add to the prompt.</p>
+                    <p class="text-sm text-gray-400 mb-4">Choose a pre-defined rubric to add its details to the extra instructions prompt below.</p>
                     <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <select id="rubric-select" class="flex-grow rubric-select">
                             <option value="none" disabled selected>Select a rubric...</option>
@@ -341,27 +421,20 @@
                             <option value="Harvard Biology Lab Report">Harvard Biology Lab Report</option>
                             <option value="Custom">Custom</option>
                         </select>
-                        <button id="add-rubric-to-prompt-btn" class="action-button">Add</button>
+                        <button id="add-rubric-to-prompt-btn" class="nav-button !rounded-full !px-6 !py-3">Add to Prompt</button>
                     </div>
                 </div>
-                <div class="mb-6">
-                    <label class="block text-lg font-semibold mb-2">Feedback Style</label>
-                    <div class="toggle flex items-center bg-[var(--bg-secondary)] p-3 rounded-lg">
-                        <span class="text-gray-400 text-sm">Purely Evaluative</span>
-                        <input type="checkbox" id="constructive-feedback-toggle" checked>
-                        <span class="font-semibold text-sm" style="color: var(--accent);">Constructive & Actionable</span>
-                    </div>
-                    <p class="description-text mt-2">Toggle to switch between a direct evaluation and feedback that includes actionable advice for improvement.</p>
-                </div>
+
                 <textarea id="extra-instructions" placeholder="E.g., 'Pay close attention to originality.' or 'Focus only on grammar and spelling.'"></textarea>
-                <p class="description-text mt-2">Provide any final, specific instructions for the AI. This step is optional.</p>
+                <p class="description-text mt-2">Provide any final, specific instructions for the AI on how to approach the grading. This step is optional.</p>
             </div>
 
-            <div id="step-5" class="step-content hidden">
+            <!-- Step 5: Set Strictness & Grade -->
+            <div id="step-strictness" class="step-content hidden">
                 <div class="step-header">
-                    <button type="button" class="action-button" onclick="prevStep()">Back</button>
-                    <h2 class="title">5. Set Strictness</h2>
-                    <button type="button" class="action-button opacity-0 pointer-events-none">Next</button>
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">5. Set Strictness & Grade</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button opacity-0 pointer-events-none">Next</button></div>
                 </div>
                 <div class="mt-4">
                     <label for="strictness-meter" class="block text-lg font-semibold mb-2 text-center">
@@ -374,6 +447,7 @@
                 </div>
             </div>
 
+            <!-- Action Buttons & Messages Area -->
             <div id="action-area" class="mt-6 space-y-4">
                 <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
@@ -385,25 +459,23 @@
                 <h2 class="text-2xl font-bold mb-4 text-center">Grading Results</h2>
                 <div id="result-content" class="prose max-w-none leading-relaxed"></div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
-    <footer class="main-footer">
+    <footer class="main-footer transition-all">
         &copy; 2025 Shkspr. All rights reserved.
     </footer>
 
     <script>
-        // --- All JavaScript remains unchanged below ---
-        // (The logic for particles, themes, file reading, and grading is correct)
-
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
+        // --- Theming and Particle System ---
         window.setTheme = function(theme) {
-            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme;
+            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
             localStorage.setItem('shkspr-theme', theme);
-            if (window.initParticles) window.initParticles();
+            window.initParticles();
         }
-        
+
         window.Particle = class Particle {
             constructor(container, colors) {
                 this.container = container;
@@ -421,43 +493,61 @@
                 this.element.style.height = `${this.size}px`;
                 this.element.style.backgroundColor = this.color;
                 this.element.style.opacity = this.opacity;
+                this.update();
             }
             update() {
-                this.x += this.vx; this.y += this.vy;
-                if (this.x <= 0 || this.x >= window.innerWidth - this.size) { this.vx *= -1; this.x = this.x <= 0 ? 0 : window.innerWidth - this.size; }
-                if (this.y <= 0 || this.y >= window.innerHeight - this.size) { this.vy *= -1; this.y = this.y <= 0 ? 0 : window.innerHeight - this.size; }
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                    this.vx *= -1;
+                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                }
+                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                    this.vy *= -1;
+                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                }
                 this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
             }
-            remove() { if (this.element.parentNode) this.container.removeChild(this.element); }
+            remove() { this.container.removeChild(this.element); }
         }
 
         let particles = [];
         let animationId;
+
         window.initParticles = function() {
             const container = document.getElementById('particles');
             if (!container) return;
             particles.forEach(p => p.remove());
             particles = [];
             if (animationId) cancelAnimationFrame(animationId);
+
             const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
             let colors = [accentColor];
-             if (document.body.classList.contains('theme-blackwhite')) { colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090']; } 
-             else if (document.body.classList.contains('theme-cyan')) { colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff']; } 
-             else if (document.body.classList.contains('theme-purple')) { colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff']; } 
-             else if (document.body.classList.contains('theme-green')) { colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33']; } 
-             else if (document.body.classList.contains('theme-red')) { colors = [accentColor, '#ff6666', '#cc0000', '#990000']; }
-            for (let i = 0; i < 50; i++) particles.push(new window.Particle(container, colors));
-            animateParticles();
+            if (document.body.classList.contains('theme-blackwhite')) {
+                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+            } else if (document.body.classList.contains('theme-cyan')) {
+                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+            } else if (document.body.classList.contains('theme-purple')) {
+                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+            } else if (document.body.classList.contains('theme-green')) {
+                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+            } else if (document.body.classList.contains('theme-red')) {
+                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+            }
+            for (let i = 0; i < 60; i++) particles.push(new window.Particle(container, colors));
+            window.animateParticles();
         }
+
         window.animateParticles = function() {
             particles.forEach(p => p.update());
             animationId = requestAnimationFrame(window.animateParticles);
         }
-
+        
         async function readFileContent(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
                 if (file.type.startsWith('image/')) {
                     reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
                     reader.readAsDataURL(file);
@@ -472,35 +562,67 @@
                                 fullText += textContent.items.map(item => item.str).join(' ') + '\n';
                             }
                             resolve({ type: 'text', content: fullText, filename: file.name });
-                        } catch (error) { reject(new Error(`PDF '${file.name}' might be image-based or corrupted.`)); }
+                        } catch (error) {
+                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
+                        }
                     };
                     reader.readAsArrayBuffer(file);
-                } else if (file.type.startsWith('text/') || file.type.endsWith('markdown')) {
+                } else if (file.type.startsWith('text/')) {
                     reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
                     reader.readAsText(file);
                 } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                    reject(new Error(`Word docs like '${file.name}' cannot be read by the browser.`));
-                } else { reject(new Error(`Unsupported file type: ${file.name}.`)); }
+                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
+                } else {
+                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
+                }
             });
         }
 
         async function getProcessedSectionContent(textareaId, files) {
             const textarea = document.getElementById(textareaId);
             let combinedText = textarea.value.trim();
+            const imageParts = [];
             const errors = [];
+
             for (const file of files) {
                 try {
                     const result = await readFileContent(file);
                     if (result.type === 'text') {
                         combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
+                    } else if (result.type === 'image') {
+                        imageParts.push({ ...result.imageData, filename: result.filename });
                     }
-                } catch (error) { errors.push(error.message); }
+                } catch (error) {
+                    errors.push(error.message);
+                }
             }
+
             if (errors.length > 0) throw new Error(errors.join('\n'));
-            return { combinedText };
+            return { combinedText, imageParts };
         }
 
+
+        // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
+            // Theme initialization
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme);
+
+            const ALL_GEMINI_MODELS = [
+              'gemini-2.5-flash-lite',
+              'gemini-live-2.5-flash-preview',
+              'gemini-2.5-flash',
+              'gemini-2.0-flash',
+              'gemini-2.0-flash-lite',
+              'gemini-1.5-flash',
+              'gemini-1.5-flash-8b',
+            ];
+
             const dom = {
                 steps: Array.from(document.querySelectorAll('.step-content')),
                 actionArea: document.getElementById('action-area'),
@@ -518,6 +640,7 @@
                 rubricSelect: document.getElementById('rubric-select'),
                 addRubricBtn: document.getElementById('add-rubric-to-prompt-btn'),
                 extraInstructions: document.getElementById('extra-instructions'),
+                // NEW:
                 subjectQuickAddArea: document.getElementById('subject-quick-add'),
                 subjectSelect: document.getElementById('subject-select'),
                 addSubjectBtn: document.getElementById('add-subject-to-prompt-btn'),
@@ -528,74 +651,181 @@
                 { id: 'rubric-file', list: 'rubric-file-list', data: [] },
                 { id: 'essay-file', list: 'essay-file-list', data: [] },
             ];
-            
+
             const rubricTexts = {
-                'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
-                'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`,
-                'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`,
-                'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`,
-                'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n`
+                'IB Internal Assessment': `
+- Criterion A: The topic and research question are well-focused and feasible.
+- Criterion B: The methodology is appropriate and ethical considerations are addressed.
+- Criterion C: The quality of the analysis and evaluation of the findings is high.
+- Criterion D: The conclusion is justified by the evidence presented.
+- Criterion E: The communication is clear, well-structured, and includes appropriate citations.
+`,
+                'AP English Argument': `
+The AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.
+`,
+                'AP Calculus': `
+- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).
+- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).
+- Check for correct mathematical notation and justification of steps.
+- Ensure the final answer is simplified and correct.
+- Award partial credit for correct setup or minor algebraic errors.
+`,
+                'Higher Ed General Essay': `
+- Clarity and Coherence: The essay has a clear thesis and logical flow.
+- Argumentation: The arguments are well-supported with credible evidence.
+- Research: The student has used and cited a sufficient number of relevant sources.
+- Style and Tone: The writing is formal, academic, and free of grammatical errors.
+- Originality: The essay demonstrates critical thinking and original insight.
+`,
+                'Harvard Biology Lab Report': `
+- Introduction: Clearly states the purpose, background, and hypothesis.
+- Methods: Provides a detailed, replicable description of the experimental procedure.
+- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.
+- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.
+- Conclusion: Summarizes key findings and states whether the hypothesis was supported.
+`
             };
-            const AP_SUBJECTS = ["AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP English Language", "AP English Literature", "AP Environmental Science","AP European History", "AP Human Geography", "AP Macroeconomics","AP Microeconomics", "AP Physics 1/2/C", "AP Psychology", "AP Statistics", "AP US Government", "AP US History","AP World History"];
-            const HIGHER_ED_SUBJECTS = ["Mathematics","Statistics", "Physics", "Chemistry","Biology","Computer Science","Data Science","Economics","Finance","Business","Psychology","Sociology","Political Science","History","Philosophy","English","Engineering","Law","Nursing","Medicine"];
-            const IB_SUBJECTS = ["IB English A", "IB Language B", "IB Global Politics","IB History","IB Economics","IB Psychology","IB Business Management", "IB Biology","IB Chemistry","IB Physics","IB Computer Science", "IB Mathematics", "IB Visual Arts", "IB TOK", "IB Extended Essay"];
 
+            // --- NEW: Subject lists ---
+            const AP_SUBJECTS = [
+                "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry",
+                "AP Chinese Language & Culture","AP Comparative Government & Politics",
+                "AP Computer Science A","AP Computer Science Principles",
+                "AP Drawing","AP 2-D Art and Design","AP 3-D Art and Design",
+                "AP English Language & Composition","AP English Literature & Composition",
+                "AP Environmental Science","AP European History","AP French Language & Culture",
+                "AP German Language & Culture","AP Human Geography","AP Italian Language & Culture",
+                "AP Japanese Language & Culture","AP Latin","AP Macroeconomics","AP Microeconomics",
+                "AP Music Theory","AP Physics 1","AP Physics 2","AP Physics C: Electricity & Magnetism",
+                "AP Physics C: Mechanics","AP Precalculus","AP Psychology","AP Research","AP Seminar",
+                "AP Spanish Language & Culture","AP Spanish Literature & Culture","AP Statistics",
+                "AP United States Government & Politics","AP United States History","AP World History: Modern"
+            ];
+
+            const HIGHER_ED_SUBJECTS = [
+                "Mathematics (Calculus)","Mathematics (Linear Algebra)","Mathematics (Probability & Statistics)","Statistics",
+                "Physics (Mechanics)","Physics (Electricity & Magnetism)","Physics (Thermodynamics)","Physics (Quantum/Modern)",
+                "Chemistry (General)","Chemistry (Organic)","Biology (General)","Biology (Genetics)",
+                "Computer Science (Programming)","Computer Science (Data Structures)","Computer Science (Algorithms)","Computer Science (Databases)",
+                "Data Science","Machine Learning","Economics (Micro)","Economics (Macro)","Finance","Accounting",
+                "Business Administration","Marketing","Operations Management","Management/Organizational Behavior",
+                "Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition",
+                "Communication Studies","Civil Engineering","Mechanical Engineering","Electrical Engineering","Chemical Engineering",
+                "Biomedical Engineering","Environmental Engineering","Law/Legal Studies","Nursing","Medicine (Premed)","Anthropology","Geography","Art History"
+            ];
+
+            const IB_SUBJECTS = [
+                "IB English A: Literature (SL/HL)","IB English A: Language & Literature (SL/HL)",
+                "IB Language B: Spanish (SL/HL)","IB Language B: French (SL/HL)","IB Language B: Mandarin (SL/HL)",
+                "IB Global Politics (SL/HL)","IB History (SL/HL)","IB Economics (SL/HL)","IB Psychology (SL/HL)",
+                "IB Business Management (SL/HL)","IB Geography (SL/HL)","IB Philosophy (SL/HL)",
+                "IB Biology (SL/HL)","IB Chemistry (SL/HL)","IB Physics (SL/HL)","IB Computer Science (SL/HL)",
+                "IB Environmental Systems and Societies (SL)","IB Mathematics: Analysis & Approaches (SL/HL)",
+                "IB Mathematics: Applications & Interpretation (SL/HL)","IB Visual Arts (SL/HL)","IB Music (SL/HL)",
+                "IB Theatre (SL/HL)","IB Film (SL/HL)","IB Theory of Knowledge (TOK)","IB Extended Essay (EE)"
+            ];
+
+            // --- NEW: Subject prompt templates ---
             const SUBJECT_TEMPLATES = {
-                AP: (subject) => `--- Start of Subject Guidance (AP) ---\nSubject: ${subject}\nUse AP scoring practices and, where applicable, FRQ-style criteria. Emphasize:\n- Content accuracy and correct application of ${subject.replace(/^AP\\s*/,'')} concepts.\n- Clear reasoning/justification, proper notation/terminology.\n- Evidence quality, organization, and clarity.\nApply point deductions for conceptual errors; allow partial credit for correct setup.\n--- End of Subject Guidance ---`,
-                "Higher Ed": (subject) => `--- Start of Subject Guidance (Higher Ed) ---\nSubject: ${subject}\nEvaluate on:\n- Conceptual correctness and methodological rigor for ${subject}.\n- Clarity, structure, and academic tone.\n- Use of credible sources (if relevant) and proper citation.\n- Depth of analysis, originality, and correctness of calculations/derivations (when applicable).\n--- End of Subject Guidance ---`,
-                IB: (subject) => `--- Start of Subject Guidance (IB) ---\nSubject: ${subject}\nAlign feedback with IB descriptors: knowledge & understanding, application/analysis, synthesis/evaluation, and communication.\n- Reference subject-specific criteria where applicable (SL/HL).\n- Highlight academic honesty and proper citation.\n- Comment on global/contextual understanding if relevant.\n--- End of Subject Guidance ---`
+                AP: (subject) => `--- Start of Subject Guidance (AP) ---
+Subject: ${subject}
+Use AP scoring practices and, where applicable, FRQ-style criteria. Emphasize:
+- Content accuracy and correct application of ${subject.replace(/^AP\\s*/,'')} concepts.
+- Clear reasoning/justification, proper notation/terminology.
+- Evidence quality, organization, and clarity.
+Apply point deductions for conceptual errors; allow partial credit for correct setup.
+--- End of Subject Guidance ---`,
+
+                "Higher Ed": (subject) => `--- Start of Subject Guidance (Higher Ed) ---
+Subject: ${subject}
+Evaluate on:
+- Conceptual correctness and methodological rigor for ${subject}.
+- Clarity, structure, and academic tone.
+- Use of credible sources (if relevant) and proper citation.
+- Depth of analysis, originality, and correctness of calculations/derivations (when applicable).
+--- End of Subject Guidance ---`,
+
+                IB: (subject) => `--- Start of Subject Guidance (IB) ---
+Subject: ${subject}
+Align feedback with IB descriptors: knowledge & understanding, application/analysis, synthesis/evaluation, and communication.
+- Reference subject-specific criteria where applicable (SL/HL).
+- Highlight academic honesty and proper citation.
+- Comment on global/contextual understanding if relevant.
+--- End of Subject Guidance ---`
             };
 
-            let currentStep = 1; 
-            const totalSteps = dom.steps.length;
-            window.showStep = (stepNumber) => {
-                if (stepNumber < 1 || stepNumber > totalSteps) return;
-                dom.steps.forEach(step => step.classList.add('hidden'));
-                document.getElementById(`step-${stepNumber}`).classList.remove('hidden');
-                dom.actionArea.style.display = (stepNumber === totalSteps) ? 'block' : 'none';
-                currentStep = stepNumber;
-            };
-            window.nextStep = () => { if (currentStep < totalSteps) showStep(currentStep + 1); };
-            window.prevStep = () => { if (currentStep > 1) showStep(currentStep - 1); };
+            let currentStep = 0;
+            let selectedGrade = 'None';
+
+            function showStep(index) {
+                dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
+                dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
+                currentStep = index;
+            }
+
+            window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
+            window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
+
             function displayMessage(element, message, isError = false) {
                 element.innerHTML = message;
                 element.classList.remove('hidden');
                 setTimeout(() => element.classList.add('hidden'), isError ? 8000 : 5000);
             }
+
             function toggleLoading(isLoading) {
                 dom.loadingBarContainer.classList.toggle('show', isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
             }
+
+            // --- NEW: Helpers for dynamic subject UI ---
             function populateSubjectOptions(gradeCategory) {
                 const select = dom.subjectSelect;
                 select.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
+
                 let list = [];
                 if (gradeCategory === 'AP Courses') list = AP_SUBJECTS;
                 else if (gradeCategory === 'Higher Ed') list = HIGHER_ED_SUBJECTS;
                 else if (gradeCategory === 'IB') list = IB_SUBJECTS;
-                list.forEach(s => { const opt = document.createElement('option'); opt.value = s; opt.textContent = s; select.appendChild(opt); });
-                dom.addSubjectBtn.disabled = true;
+
+                list.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    select.appendChild(opt);
+                });
+
+                dom.addSubjectBtn.disabled = true; // disabled until a subject is chosen
             }
+
             function refreshSubjectAreas() {
                 const showSubject = ['AP Courses', 'Higher Ed', 'IB'].includes(selectedGrade);
                 dom.subjectQuickAddArea.classList.toggle('hidden', !showSubject);
                 dom.rubricQuickAddArea.classList.toggle('hidden', !showSubject);
+
                 if (showSubject) populateSubjectOptions(selectedGrade);
             }
-            dom.subjectSelect.addEventListener('change', () => { dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none'); });
+
+            dom.subjectSelect.addEventListener('change', () => {
+                dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none');
+            });
+
             dom.addSubjectBtn.addEventListener('click', () => {
                 const subject = dom.subjectSelect.value;
                 if (!subject || subject === 'none') return;
-                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) :
-                             selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) :
-                             selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
+
+                const tmpl =
+                    selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) :
+                    selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) :
+                    selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
+
                 if (tmpl) {
                     dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
-                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance.`);
+                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
                 }
             });
-            let selectedGrade = 'None';
+
+            // Grade level selection
             dom.gradeLevelButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
@@ -604,6 +834,8 @@
                     refreshSubjectAreas();
                 });
             });
+
+            // Keep existing rubric quick-add behavior
             dom.addRubricBtn.addEventListener('click', () => {
                 const selectedValue = dom.rubricSelect.value;
                 if (selectedValue !== 'none' && selectedValue !== 'Custom') {
@@ -614,6 +846,8 @@
                     }
                 }
             });
+
+            // File list UI
             function updateFileList(fileInput) {
                 const listEl = document.getElementById(fileInput.list);
                 listEl.innerHTML = '';
@@ -623,12 +857,15 @@
                     item.innerHTML = `<span>${file.name}</span><button data-index="${index}">&times;</button>`;
                     listEl.appendChild(item);
                 });
-                listEl.classList.toggle('expanded', fileInput.data.length > 0);
+                if (fileInput.data.length > 0) listEl.classList.add('expanded');
+                else listEl.classList.remove('expanded');
             }
+
             fileInputs.forEach(fi => {
                 const inputEl = document.getElementById(fi.id);
                 const listEl = document.getElementById(fi.list);
                 const toggleBtn = inputEl.closest('.step-content').querySelector('.toggle-file-list-button');
+
                 inputEl.addEventListener('change', (e) => {
                     fi.data.push(...Array.from(e.target.files));
                     updateFileList(fi);
@@ -645,6 +882,8 @@
                     toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
                 });
             });
+
+            // Clear button
             dom.clearButton.addEventListener('click', () => {
                 document.querySelectorAll('textarea').forEach(ta => ta.value = '');
                 fileInputs.forEach(fi => { fi.data = []; updateFileList(fi); });
@@ -656,57 +895,129 @@
                 dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
                 dom.rubricQuickAddArea.classList.add('hidden');
                 dom.subjectQuickAddArea.classList.add('hidden');
-                document.getElementById('constructive-feedback-toggle').checked = true;
+                dom.rubricSelect.value = 'none';
+                dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
                 selectedGrade = 'None';
-                showStep(1);
+                showStep(0);
             });
-            dom.strictnessMeter.addEventListener('input', (e) => { dom.strictnessValueDisplay.textContent = e.target.value; });
+
+            // Strictness display
+            dom.strictnessMeter.addEventListener('input', (e) => {
+                dom.strictnessValueDisplay.textContent = e.target.value;
+            });
             
+            // --- Grade Essay Function (REWRITTEN) ---
             window.gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
+
+                let availableModels = [...ALL_GEMINI_MODELS];
+                let attemptCount = 0;
+                const MAX_ATTEMPTS = availableModels.length * 2;
+
                 try {
+                    // 1. Get all raw data from the form
                     const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
                     const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
                     const essayData = await getProcessedSectionContent('essay', fileInputs[2].data);
-                    if (!instructionsData.combinedText) throw new Error("Please provide Assignment Instructions.");
-                    if (!rubricData.combinedText) throw new Error("Please provide a Grading Rubric.");
-                    if (!essayData.combinedText) throw new Error("Please provide the Student's Assignment.");
-                    const extraInstructions = dom.extraInstructions.value.trim();
-                    const strictness = dom.strictnessMeter.value;
-                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'Not specified';
-                    const provideConstructiveFeedback = document.getElementById('constructive-feedback-toggle').checked;
-                    const feedbackInstruction = provideConstructiveFeedback 
-                        ? "Your feedback should be constructive and actionable, offering specific suggestions for how the student can improve."
-                        : "Your feedback should be purely evaluative, focusing on what was done correctly or incorrectly based on the rubric.";
 
-                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment.\nGrading Strictness: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\nGrade Level: ${selectedGrade}.\nFeedback Style: ${feedbackInstruction}\nAssignment Instructions: ${instructionsData.combinedText}\nGrading Rubric: ${rubricData.combinedText}\nAdditional AI Instructions: ${extraInstructions || 'None.'}\nPlease grade the following student assignment. Provide a detailed evaluation based on the rubric, offer feedback, and conclude with a final grade or score. Structure your response clearly in Markdown.`;
-                    
-                    const contents = [{ role: "user", parts: [
+                    if ((!instructionsData.combinedText && instructionsData.imageParts.length === 0)) throw new Error("Please provide Assignment Instructions.");
+                    if ((!rubricData.combinedText && rubricData.imageParts.length === 0)) throw new Error("Please provide a Grading Rubric.");
+                    if ((!essayData.combinedText && essayData.imageParts.length === 0)) throw new Error("Please provide the Student's Assignment.");
+
+                    const extraInstructions = document.getElementById('extra-instructions').value.trim();
+                    const strictness = dom.strictnessMeter.value;
+                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
+
+                    // 2. Build the System Prompt right here in the frontend
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.
+
+Grading Strictness Level: ${strictness} (1=Very Lenient, 3=Normal, 5=Very Strict).
+- Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.
+- Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
+- Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.
+
+Educational Context:
+- Grade Level: ${selectedGrade}
+
+Instructions for grading:
+${instructionsData.combinedText || 'No specific instructions provided.'}
+
+Rubric:
+${rubricData.combinedText || 'No rubric provided.'}
+
+Additional Instructions:
+${extraInstructions || 'None.'}
+
+Please grade the following student assignment. Focus solely on the content provided within this prompt and do not use any external knowledge.
+`;
+                    // 3. Construct the final 'contents' object for the Gemini API
+                    // Note: Image handling would require adding image parts to this array.
+                    const parts = [
                         { text: systemPrompt },
-                        { text: `--- STUDENT ASSIGNMENT START ---` },
+                        { text: `--- START OF STUDENT ASSIGNMENT ---` },
                         { text: essayData.combinedText },
-                        { text: `--- STUDENT ASSIGNMENT END ---` }
-                    ]}];
-                    
-                    const response = await fetch('/api/grader', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: 'gemini-1.5-flash', contents: contents })
-                    });
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`API Error: ${response.status} ${errorText}`);
+                        { text: `--- END OF STUDENT ASSIGNMENT ---` }
+                    ];
+                    const contents = [{ role: "user", parts: parts }];
+
+
+                    // 4. Loop through models to find one that works
+                    let result = null;
+                    while (availableModels.length > 0 && attemptCount < MAX_ATTEMPTS) {
+                        attemptCount++;
+                        const randomIndex = Math.floor(Math.random() * availableModels.length);
+                        const selectedModel = availableModels[randomIndex];
+
+                        console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
+
+                        // 5. Create the simplified payload for our proxy API
+                        const payload = {
+                            model: selectedModel,
+                            contents: contents // Send the fully constructed contents
+                        };
+
+                        try {
+                            const response = await fetch('/api/grader', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({}));
+                                const errorMessage = errorData.error || response.statusText;
+                                console.warn(`Model ${selectedModel} failed: ${errorMessage}. Retrying with another model.`);
+                                availableModels.splice(randomIndex, 1);
+                                await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5)));
+                                continue;
+                            }
+
+                            result = await response.json();
+                            if (!result.text) {
+                                throw new Error("Received an empty response from the server.");
+                            }
+                            break; // Success
+
+                        } catch (fetchError) {
+                            console.error(`Fetch error for model ${selectedModel}:`, fetchError);
+                            availableModels.splice(randomIndex, 1);
+                            await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5)));
+                            continue;
+                        }
                     }
-                    const result = await response.json();
-                    if (!result.text) throw new Error("Received an empty response from the server.");
+
+                    if (!result) {
+                        throw new Error("All model attempts failed. The service may be temporarily unavailable. Please try again later.");
+                    }
 
                     dom.resultContentDiv.innerHTML = marked.parse(result.text);
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
+
                 } catch (error) {
                     console.error("Grading Error:", error);
                     displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
@@ -714,41 +1025,10 @@
                     toggleLoading(false);
                 }
             };
-            showStep(1); 
+
+
+            showStep(0);
         });
-
-        async function loadHeader() {
-          try {
-            const response = await fetch('../Structure/header.html');
-            if (!response.ok) throw new Error('Failed to load header');
-            const text = await response.text();
-            
-            document.getElementById('header-container').innerHTML = text;
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const scriptElement = doc.querySelector('script');
-            if (scriptElement) {
-                const newScript = document.createElement('script');
-                newScript.textContent = scriptElement.textContent;
-                document.body.appendChild(newScript);
-            }
-
-            if (window.setTheme && window.initParticles) {
-                const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                window.setTheme(savedTheme);
-                document.getElementById('theme-blackwhite-btn')?.addEventListener('click', () => window.setTheme('theme-blackwhite'));
-                document.getElementById('theme-cyan-btn')?.addEventListener('click', () => window.setTheme('theme-cyan'));
-                document.getElementById('theme-purple-btn')?.addEventListener('click', () => window.setTheme('theme-purple'));
-                document.getElementById('theme-green-btn')?.addEventListener('click', () => window.setTheme('theme-green'));
-                document.getElementById('theme-red-btn')?.addEventListener('click', () => window.setTheme('theme-red'));
-                window.initParticles();
-            }
-          } catch (error) {
-            console.error('Error loading header:', error);
-            document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center;">Error loading header.</p>';
-          }
-        }
-        document.addEventListener('DOMContentLoaded', loadHeader);    
     </script>
 </body>
 </html>
