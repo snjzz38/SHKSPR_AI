@@ -471,7 +471,7 @@
                         console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
                         const payload = { model: selectedModel, contents: contents };
                         try {
-                            const response = await fetch('/api/grader', {
+                            const response = await fetch('/api/Grader_API', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(payload)
