@@ -1,38 +1,13 @@
-<style>
-    /* --- Theme Variables --- */
-    :root {
-        --bg-primary: #000;
-        --bg-secondary: #111;
-        --text-primary: #fff;
-        --accent: #fff;
-        --card-bg: #222;
-        --link-hover: #ffffff;
-        --accent-rgb: 255, 255, 255;
-    }
-    body.theme-cyan {
-        --bg-primary: #000;
-        --bg-secondary: #0b0b0b;
-        --text-primary: #e0ffff;
-        --accent: #00f6ff;
-        --card-bg: #072a2c;
-        --accent-rgb: 0, 246, 255;
-    }
-    body.theme-purple {
-        --bg-primary: #0d001a;
-        --bg-secondary: #14002b;
-        --text-primary: #ffe6ff;
-        --accent: #cc66ff;
-        --card-bg: #1d0036;
-        --accent-rgb: 204, 102, 255;
-    }
-    body.theme-green {
-        --bg-primary: #001a00;
-        --bg-secondary: #002b00;
-        --text-primary: #e6ffe6;
-        --accent: #66ff66;
-        --card-bg: #003600;
-        --accent-rgb: 102, 255, 102;
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHKSPR - AI Study Suite</title>
+  
+  <style>
+    /* --- Main Page Styles --- */
+    /* Theme definitions are primarily in header.html, these are fallbacks */
     body.theme-blackwhite {
       --bg-primary: #000;
       --bg-secondary: #111;
@@ -41,23 +16,40 @@
       --card-bg: #222;
       --accent-rgb: 224, 224, 224;
     }
+    body.theme-cyan {
+      --bg-primary: #000;
+      --bg-secondary: #0b0b0b;
+      --text-primary: #e0ffff;
+      --accent: #00f6ff;
+      --card-bg: #072a2c;
+      --accent-rgb: 0, 246, 255;
+    }
+    body.theme-purple {
+      --bg-primary: #0d001a;
+      --bg-secondary: #14002b;
+      --text-primary: #ffe6ff;
+      --accent: #cc66ff;
+      --card-bg: #1d0036;
+      --accent-rgb: 204, 102, 255;
+    }
+    body.theme-green {
+      --bg-primary: #001a00;
+      --bg-secondary: #002b00;
+      --text-primary: #e6ffe6;
+      --accent: #66ff66;
+      --card-bg: #003600;
+      --accent-rgb: 102, 255, 102;
+    }
     body.theme-red {
-        --bg-primary: #1a0000;
-        --bg-secondary: #2b0000;
-        --text-primary: #ffe6e6;
-        --accent: #ff3333;
-        --card-bg: #360000;
-        --accent-rgb: 255, 51, 51;
+      --bg-primary: #1a0000;
+      --bg-secondary: #2b0000;
+      --text-primary: #ffe6e6;
+      --accent: #ff3333;
+      --card-bg: #360000;
+      --accent-rgb: 255, 51, 51;
     }
-
-    /* --- Global Styles --- */
-    * {
-        font-weight: bold;
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
+    
+    /* General body styles are defined in header.html, this is a fallback */
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       font-weight: bold;
@@ -71,249 +63,136 @@
       margin: 0;
     }
 
-    /* --- Particles Container --- */
-    .particles-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-        overflow: hidden;
+    /* Styles for the hero section and CTA buttons */
+    .hero {
+      flex-grow: 1; /* This makes the hero section fill the available space */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px 10%;
+      position: relative;
+      z-index: 1;
     }
 
-    .particle {
-        position: absolute;
-        border-radius: 50%;
-        background: var(--accent);
-        opacity: 0.7;
-        pointer-events: none;
-        will-change: transform;
-    }
-    
-    /* --- NEW: Reusable Animation Section (UPDATED) --- */
-    /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
-/* --- Reusable Animation Section --- */
-
-/* 1. Define the Keyframe Animation for the slide ONLY */
-@keyframes slideInUp {
-  from {
-    /* No 'opacity' is set, so the content remains fully visible. */
-    /* Start 20px below the final position. */
-    transform: translateY(50px);
-  }
-  to {
-    /* End in the final, default position. */
-    transform: translateY(0);
-  }
-}
-
-/* 2. Create a Reusable Animation Class to apply the animation */
-.animate-on-load {
-  /* This applies the slide using the exact timing from the old transition. */
-  animation: slideInUp 0.6s ease forwards;
-}
-    /* --- END of Animation Section --- */
-
-
-    /* --- Header Specific Styles --- */
-    header.main-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 10%;
-        background-color: var(--bg-secondary);
-        transition: background-color 0.6s, color 0.6s;
-        position: relative;
-        z-index: 10;
-    }
-    .logo {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: var(--text-primary);
-        text-shadow: 0 0 10px var(--accent);
-        text-decoration: none;
-        transition: all 0.6s ease;
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: bold;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px var(--accent);
     }
 
-    .logo:hover {
+    .hero p {
+      font-size: 1.2rem;
+      max-width: 600px;
+      margin-bottom: 30px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .cta-button {
+      padding: 15px 30px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--text-primary);
+      background-color: var(--card-bg);
+      border: 2px solid var(--accent);
+      border-radius: 50px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .cta-button:hover {
       transform: translateY(-5px);
-      text-shadow: 0 5px 15px var(--accent);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent);
+      background-color: var(--accent);
+      color: var(--bg-secondary);
     }
 
-    .theme-controls {
-        display: flex;
-        gap: 10px;
-        align-items: center;
+    footer.main-footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      background-color: var(--bg-secondary);
+      transition: background-color 0.6s, color 0.6s;
+      position: relative;
+      z-index: 10;
+      margin-top: auto;
     }
+  </style>
+</head>
+<!-- The `transition-all` class is no longer needed here -->
+<body class="theme-blackwhite">
 
-    .dropdown-button {
-        background: var(--card-bg);
-        color: var(--text-primary);
-        border: 1px solid var(--text-primary);
-        padding: 8px 15px;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        transition: all 0.3s;
-        font-weight: bold;
-    }
+  <!-- Container where header (including animation definitions) will be injected -->
+  <div id="header-container"></div>
 
-    .dropdown-button:hover {
-      background: var(--text-primary);
-      color: var(--bg-primary);
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    }
-
-    .dropdown-container {
-        position: relative;
-    }
-
-    .dropdown-container:hover .dropdown-options {
-        display: block;
-    }
-
-    .dropdown-options {
-        display: none;
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background-color: var(--card-bg);
-        border-radius: 8px;
-        padding: 10px;
-        min-width: 150px;
-        z-index: 10;
-    }
-
-    .dropdown-options button,
-    .dropdown-options a {
-        background: none;
-        border: none;
-        color: var(--text-primary);
-        padding: 8px;
-        cursor: pointer;
-        text-align: left;
-        width: 100%;
-        font-size: 0.9rem;
-        display: block;
-        text-decoration: none;
-    }
-
-    .dropdown-options button:hover,
-    .dropdown-options a:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-    }
-</style>
-
-<div class="particles-container" id="particles"></div>
-<header class="main-header">
-  <a href="../index.html" class="logo">SHKSPR</a>
-  <div class="theme-controls">
-    <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
-    <div class="dropdown-container">
-      <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
-      <div class="dropdown-options">
-        <a href="../AI_Humanizer/Humanizer.html">AI Humanizer</a>
-        <a href="../AI_Grader/Grader.html">AI Grader</a>
-        <a href="../AI_Summarizer/Summarizer.html">AI Summarizer</a>
-        <a href="../AI_Flashcard/Flashcard.html">AI Flashcard Generator</a>
-      </div>
+  <!-- Added 'animate-on-load' class to call the animation from the header -->
+  <section class="hero animate-on-load">
+    <h1>Welcome to SHKSPR</h1>
+    <p>Your ultimate AI-powered study companion. Humanize text, grade essays, and more.</p>
+    <div class="cta-buttons">
+      <a href="./AI_Humanizer/Humanizer.html" class="cta-button">Humanize Text</a>
+      <a href="./AI_Grader/Grader.html" class="cta-button">Grade Essay</a>
+      <a href="./AI_Summarizer/Summarizer.html" class="cta-button">Summarize Text</a>
+      <a href="./AI_Flashcard/Flashcard.html" class="cta-button">Generate Flashcards</a>
     </div>
-    <div class="dropdown-container">
-      <button class="dropdown-button" id="theme-button">🎨 Themes</button>
-      <div class="dropdown-options">
-        <button id="theme-blackwhite-btn">Black & White</button>
-        <button id="theme-cyan-btn">Cyan</button>
-        <button id="theme-purple-btn">Purple</button>
-        <button id="theme-green-btn">Green</button>
-        <button id="theme-red-btn">Red</button>
-      </div>
-    </div>
-  </div>
-</header>
+  </section>
 
-<script>
-    window.setTheme = function(theme) {
-      document.body.className = theme; 
-      localStorage.setItem('shkspr-theme', theme);
-      if (window.initParticles) {
-        window.initParticles();
-      }
-    }
+  <footer class="main-footer">
+    <p>&copy; 2025 Shkspr. All rights reserved.</p>
+  </footer>
 
-    window.Particle = class Particle {
-      constructor(container, colors) {
-        this.container = container;
-        this.element = document.createElement('div');
-        this.element.classList.add('particle');
-        this.container.appendChild(this.element);
-        this.size = Math.random() * 6 + 2;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.x = Math.random() * window.innerWidth;
-        this.y = Math.random() * window.innerHeight;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
-        this.opacity = Math.random() * 0.5 + 0.3;
-        this.element.style.width = `${this.size}px`;
-        this.element.style.height = `${this.size}px`;
-        this.element.style.backgroundColor = this.color;
-        this.element.style.opacity = this.opacity;
-        this.update();
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-          this.vx *= -1;
-          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+  <script>
+    async function loadHeader() {
+      try {
+        const response = await fetch('./Structure/header.html');
+        if (!response.ok) throw new Error('Failed to load header');
+        const text = await response.text();
+        
+        const container = document.getElementById('header-container');
+        container.innerHTML = text;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const scriptElement = doc.querySelector('script');
+        if (scriptElement) {
+            const newScript = document.createElement('script');
+            newScript.textContent = scriptElement.textContent;
+            document.body.appendChild(newScript);
         }
-        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-          this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+
+        if (window.setTheme && window.initParticles) {
+            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+            window.setTheme(savedTheme);
+
+            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+            window.initParticles();
         }
-        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-      }
-      remove() {
-        if (this.container && this.element.parentNode === this.container) {
-            this.container.removeChild(this.element);
-        }
+
+      } catch (error) {
+        console.error('Error loading header:', error);
+        document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
       }
     }
 
-    let particles = [];
-    let animationId;
+    document.addEventListener('DOMContentLoaded', loadHeader);
+  </script>
 
-    window.initParticles = function() {
-      const container = document.getElementById('particles');
-      if (!container) return;
-      particles.forEach(p => p.remove());
-      particles = [];
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-      let colors = [accentColor];
-      if (document.body.classList.contains('theme-blackwhite')) {
-        colors = [accentColor, '#c0c0c0', '#909090'];
-      } else if (document.body.classList.contains('theme-cyan')) {
-        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
-      } else if (document.body.classList.contains('theme-purple')) {
-        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
-      } else if (document.body.classList.contains('theme-green')) {
-        colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-      } else if (document.body.classList.contains('theme-red')) {
-        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
-      }
-      for (let i = 0; i < 60; i++) {
-        particles.push(new window.Particle(container, colors));
-      }
-      window.animateParticles();
-    }
-
-    window.animateParticles = function() {
-      particles.forEach(p => p.update());
-      animationId = requestAnimationFrame(window.animateParticles);
-    }
-</script>
+</body>
+</html>
