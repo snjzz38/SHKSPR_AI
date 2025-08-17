@@ -34,16 +34,12 @@
         --accent-rgb: 102, 255, 102;
     }
     body.theme-blackwhite {
-        --bg-primary: #000;
-        --bg-secondary: #111;
-        --text-primary: #fff;
-        --accent: #ffffff;
-        --card-bg: #222;
-        --accent-rgb: 255, 255, 255;
-    }
-    body.theme-blackwhite .logo,
-    body.theme-blackwhite .hero h1 {
-        text-shadow: 0 0 10px var(--accent);
+      --bg-primary: #000;
+      --bg-secondary: #111;
+      --text-primary: #fff;
+      --accent: #e0e0e0;
+      --card-bg: #222;
+      --accent-rgb: 224, 224, 224;
     }
     body.theme-red {
         --bg-primary: #1a0000;
@@ -62,18 +58,15 @@
     }
 
     body {
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        min-height: 100vh;
-        transition: background-color 0.6s, color 0.6s;
-        display: flex;
-        flex-direction: column;
-        overflow-x: hidden;
-    }
-
-    .transition-all {
-        transition: all 0.6s ease;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      transition: background-color 0.6s, color 0.6s;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      margin: 0;
     }
 
     /* --- Particles Container --- */
@@ -95,6 +88,31 @@
         pointer-events: none;
         will-change: transform;
     }
+    
+    /* --- NEW: Reusable Animation Section (UPDATED) --- */
+    /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
+/* --- Reusable Animation Section --- */
+
+/* 1. Define the Keyframe Animation for the slide ONLY */
+@keyframes slideInUp {
+  from {
+    /* No 'opacity' is set, so the content remains fully visible. */
+    /* Start 20px below the final position. */
+    transform: translateY(50px);
+  }
+  to {
+    /* End in the final, default position. */
+    transform: translateY(0);
+  }
+}
+
+/* 2. Create a Reusable Animation Class to apply the animation */
+.animate-on-load {
+  /* This applies the slide using the exact timing from the old transition. */
+  animation: slideInUp 0.6s ease forwards;
+}
+    /* --- END of Animation Section --- */
+
 
     /* --- Header Specific Styles --- */
     header.main-header {
@@ -111,13 +129,11 @@
         font-size: 2.5rem;
         font-weight: bold;
         color: var(--text-primary);
-        text-shadow:
-            0 0 10px var(--accent);
+        text-shadow: 0 0 10px var(--accent);
         text-decoration: none;
         transition: all 0.6s ease;
     }
 
-    /* Hover effect for the logo */
     .logo:hover {
       transform: translateY(-5px);
       text-shadow: 0 5px 15px var(--accent);
@@ -141,7 +157,6 @@
         font-weight: bold;
     }
 
-    /* Hover effect for the dropdown buttons */
     .dropdown-button:hover {
       background: var(--text-primary);
       color: var(--bg-primary);
@@ -188,10 +203,10 @@
         background: rgba(255, 255, 255, 0.1);
         border-radius: 4px;
     }
-
 </style>
+
 <div class="particles-container" id="particles"></div>
-<header class="main-header transition-all">
+<header class="main-header">
   <a href="../index.html" class="logo">SHKSPR</a>
   <div class="theme-controls">
     <a href="../Limit_Exceeded_Tutorial/Limit_Exceeded_Tutorial.html" class="dropdown-button">Limit Exceeded?</a>
@@ -216,11 +231,14 @@
     </div>
   </div>
 </header>
+
 <script>
     window.setTheme = function(theme) {
-      document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
+      document.body.className = theme; 
       localStorage.setItem('shkspr-theme', theme);
-      window.initParticles();
+      if (window.initParticles) {
+        window.initParticles();
+      }
     }
 
     window.Particle = class Particle {
@@ -256,7 +274,9 @@
         this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
       }
       remove() {
-        this.container.removeChild(this.element);
+        if (this.container && this.element.parentNode === this.container) {
+            this.container.removeChild(this.element);
+        }
       }
     }
 
@@ -274,7 +294,7 @@
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
-        colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
+        colors = [accentColor, '#c0c0c0', '#909090'];
       } else if (document.body.classList.contains('theme-cyan')) {
         colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
       } else if (document.body.classList.contains('theme-purple')) {
@@ -294,15 +314,4 @@
       particles.forEach(p => p.update());
       animationId = requestAnimationFrame(window.animateParticles);
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-        document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-        document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-        document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-        document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-        const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-        window.setTheme(savedTheme);
-    });
 </script>
