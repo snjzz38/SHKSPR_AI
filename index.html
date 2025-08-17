@@ -7,6 +7,7 @@
   
   <style>
     /* --- Main Page Styles --- */
+    /* Theme definitions are primarily in header.html, these are fallbacks */
     body.theme-blackwhite {
       --bg-primary: #000;
       --bg-secondary: #111;
@@ -47,6 +48,8 @@
       --card-bg: #360000;
       --accent-rgb: 255, 51, 51;
     }
+    
+    /* General body styles are defined in header.html, this is a fallback */
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: var(--bg-primary);
@@ -61,34 +64,29 @@
 
     /* Styles for the hero section and CTA buttons */
     .hero {
-      flex-grow: 1;
+      flex-grow: 1; /* This makes the hero section fill the available space */
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      /* REVISED: Use relative padding for mobile responsiveness */
-      padding: 20px 5%;
+      padding: 20px 10%;
       position: relative;
       z-index: 1;
     }
 
     .hero h1 {
-      /* REVISED: Use fluid font size with min() for better responsiveness */
-      font-size: min(3.5rem, 8vw);
+      font-size: 3.5rem;
       font-weight: bold;
       color: var(--text-primary);
       margin-bottom: 10px;
       text-shadow: 0 0 10px var(--accent);
-      transition: all 0.6s ease;
     }
 
     .hero p {
-      /* REVISED: Use fluid font size */
-      font-size: min(1.2rem, 4vw);
+      font-size: 1.2rem;
       max-width: 600px;
       margin-bottom: 30px;
-      transition: all 0.6s ease;
     }
 
     .cta-buttons {
@@ -97,7 +95,6 @@
       justify-content: center;
       gap: 15px;
       margin-top: 20px;
-      /* REVISED: Ensure buttons wrap nicely on small screens */
     }
 
     .cta-button {
@@ -111,8 +108,6 @@
       text-decoration: none;
       transition: all 0.3s ease;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      /* ADDED: Flexible width for mobile */
-      flex-grow: 1;
     }
 
     .cta-button:hover {
@@ -133,36 +128,16 @@
       z-index: 10;
       margin-top: auto;
     }
-
-    /* ADDED: Media query for small screens */
-    @media (max-width: 600px) {
-        .cta-buttons {
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .cta-button {
-            width: 80%; /* Make buttons fill a good portion of the screen */
-            text-align: center;
-        }
-
-        .hero h1 {
-          font-size: 2.5rem; /* Smaller font on mobile */
-        }
-
-        .hero p {
-          font-size: 1rem; /* Smaller font on mobile */
-        }
-    }
   </style>
 </head>
-<body class="theme-blackwhite transition-all">
+<!-- The `transition-all` class is no longer needed here -->
+<body class="theme-blackwhite">
 
-  <!-- Container where header will be injected -->
+  <!-- Container where header (including animation definitions) will be injected -->
   <div id="header-container"></div>
 
-  <section class="hero">
+  <!-- Added 'animate-on-load' class to call the animation from the header -->
+  <section class="hero animate-on-load">
     <h1>Welcome to SHKSPR</h1>
     <p>Your ultimate AI-powered study companion. Humanize text, grade essays, and more.</p>
     <div class="cta-buttons">
@@ -173,7 +148,7 @@
     </div>
   </section>
 
-  <footer class="main-footer transition-all">
+  <footer class="main-footer">
     <p>&copy; 2025 Shkspr. All rights reserved.</p>
   </footer>
 
@@ -187,7 +162,6 @@
         const container = document.getElementById('header-container');
         container.innerHTML = text;
 
-        // Extract the script content and append it to the document body to ensure it runs
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
         const scriptElement = doc.querySelector('script');
@@ -197,21 +171,16 @@
             document.body.appendChild(newScript);
         }
 
-        // The script from header.html should have now executed and the functions
-        // are available on the window object. We can now initialize everything.
         if (window.setTheme && window.initParticles) {
-            // Set the initial theme from local storage
             const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
             window.setTheme(savedTheme);
 
-            // Add click event listeners to theme buttons
             document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
             document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
             document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
             document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
             document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
 
-            // Start the particle animation
             window.initParticles();
         }
 
@@ -221,7 +190,6 @@
       }
     }
 
-    // Load header on page load
     document.addEventListener('DOMContentLoaded', loadHeader);
   </script>
 
