@@ -45,6 +45,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
+            font-weight: bold;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -150,7 +151,8 @@
         /* --- Styles specific to the Grader page --- */
         .hero {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5;
+            text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5; 
+            
         }
         .hero h1 {
             font-size: 3.2rem; color: var(--text-primary);
@@ -282,6 +284,7 @@
 <body>
     <!-- Container where header will be injected -->
     <div id="header-container"></div>
+    <main class="main-content animate-on-load">
 
     <!-- Loading bar -->
     <div id="loading-bar-container" class="loading-bar-container">
@@ -294,7 +297,7 @@
     </section>
 
     <div class="grader-container">
-        <main>
+        <div>
             <!-- Step 1: Assignment Instructions -->
             <div id="step-instructions" class="step-content">
                 <div class="step-header">
@@ -431,9 +434,9 @@
                 <h2 class="text-2xl font-bold mb-4 text-center">Grading Results</h2>
                 <div id="result-content" class="prose max-w-none leading-relaxed"></div>
             </div>
-        </main>
+        </div>
     </div>
-
+</main>
     <footer class="main-footer">
         &copy; 2025 Shkspr. All rights reserved.
     </footer>
@@ -499,25 +502,21 @@
             return { combinedText, imageParts };
         }
 
+
+
         async function loadHeader() {
-          try {
+        try {
             const response = await fetch('../Structure/header.html');
             if (!response.ok) throw new Error('Failed to load header');
             const text = await response.text();
             
+            // This line is the key: it injects EVERYTHING from header.html, including the styles.
             const container = document.getElementById('header-container');
+            container.innerHTML = text;
+
+            // Extract the script content and append it to the document body to ensure it runs
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
-            
-            // Inject the header's HTML content
-            const headerElement = doc.querySelector('header.main-header');
-            if (headerElement) container.appendChild(headerElement);
-            
-            // Inject the particles container at the top of the body
-            const particlesElement = doc.querySelector('.particles-container');
-            if (particlesElement) document.body.insertBefore(particlesElement, document.body.firstChild);
-
-            // Extract the script from header.html and run it
             const scriptElement = doc.querySelector('script');
             if (scriptElement) {
                 const newScript = document.createElement('script');
@@ -525,23 +524,28 @@
                 document.body.appendChild(newScript);
             }
 
-            // Now that the script is loaded, initialize its functions
+            // The script from header.html should have now executed and the functions
+            // are available on the window object. We can now initialize everything.
             if (window.setTheme && window.initParticles) {
+                // Set the initial theme from local storage
                 const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                window.setTheme(savedTheme); // This sets the class and updates particles
+                window.setTheme(savedTheme);
 
-                // Attach event listeners to the newly added buttons
+                // Add click event listeners to theme buttons
                 document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
                 document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
                 document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
                 document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
                 document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+                // Start the particle animation
+                window.initParticles(document.body);
             }
 
-          } catch (error) {
+        } catch (error) {
             console.error('Error loading header:', error);
-            document.getElementById('header-container').innerHTML = '<p style="color:red; text-align: center; padding: 1rem;">Error loading header.</p>';
-          }
+            document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
+        }
         }
 
         // --- Grader Application Logic ---
@@ -816,5 +820,6 @@
 
         document.addEventListener('DOMContentLoaded', loadHeader);
     </script>
+    
 </body>
 </html>
