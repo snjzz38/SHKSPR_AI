@@ -147,10 +147,17 @@
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
             .generate-button, .clear-button, .nav-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
-            .action-buttons, .input-navigation-buttons, .flashcard-navigation { flex-direction: column; }
+            .action-buttons, .input-navigation-buttons, .flashcard-navigation { flex-direction: column;}
             .flashcard { height: 200px; }
             .flashcard-front, .flashcard-back { font-size: 1rem; }
         }
+
+    .flashcard-navigation {
+            display: flex;
+            justify-content: center;
+            gap: 20px; /* FIX: Increased gap for better button spacing */
+            margin-top: 10px;    
+    }
     </style>
     <script>
         // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
@@ -216,7 +223,7 @@
 
         <div id="flashcardDisplayArea" class="flashcard-display-area">
             <div id="flashcardWrapper" class="flashcard-wrapper"></div>
-            <div id="flashcardNavigation" class="flashcard-navigation">
+            <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
                 <button id="prevButton" class="nav-button" disabled>Previous</button>
                 <button id="nextButton" class="nav-button" disabled>Next</button>
             </div>
