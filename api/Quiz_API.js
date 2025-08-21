@@ -67,8 +67,9 @@ module.exports = async (req, res) => {
         }
         
         if (responseData.candidates && responseData.candidates[0]?.content?.parts?.[0]?.text) {
-            // FIX: Use the correct variable name 'responseData' instead of 'result'
+            // FIX: Use the correct variable name 'responseData'
             const jsonString = responseData.candidates[0].content.parts[0].text;
+            // FIX: Use the correct variable name 'quizQuestions'
             const quizQuestions = JSON.parse(jsonString);
             
             res.status(200).json({ quizQuestions: quizQuestions });
