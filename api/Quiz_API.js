@@ -1,11 +1,12 @@
 // Located at: /api/Quiz_API.js
+
 module.exports = async (req, res) => {
     // Set CORS headers to allow requests from your Vercel domain and localhost
-    res.setHeader('Access-Control-Allow-Origin', '*'); // For development; consider restricting to your domain in production
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Handle the browser's preflight OPTIONS request
+    // Handle preflight OPTIONS request
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
@@ -16,10 +17,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // The client sends the specific model to use and the pre-built 'contents' payload
         const { model, contents } = req.body;
-
-        // Securely retrieve the secret API key from your Vercel environment variables
         const apiKey = process.env.QUIZ_1;
 
         if (!apiKey) {
@@ -28,13 +26,11 @@ module.exports = async (req, res) => {
         }
         
         if (!model || !contents) {
-            return res.status(400).json({ error: 'Bad Request: Missing "model" or "contents" in the request body.' });
+            return res.status(400).json({ error: 'Bad Request: Missing "model" or "contents" in request body.' });
         }
 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-        // The final payload sent to the Google API.
-        // The server adds the required generationConfig to the client's 'contents'.
         const payload = {
             contents: contents,
             generationConfig: {
@@ -45,7 +41,7 @@ module.exports = async (req, res) => {
                         type: "OBJECT",
                         properties: {
                             "question": { "type": "STRING" },
-                            "answer": { "type": "STRING" }, // Answer is now always a string (can be stringified JSON)
+                            "answer": { "type": "STRING" },
                             "type": { "type": "STRING" },
                             "options": { "type": "ARRAY", "items": { "type": "STRING" } }
                         },
@@ -71,6 +67,7 @@ module.exports = async (req, res) => {
         }
         
         if (responseData.candidates && responseData.candidates[0]?.content?.parts?.[0]?.text) {
+            // FIX: Use the correct variable name 'responseData' instead of 'result'
             const jsonString = responseData.candidates[0].content.parts[0].text;
             const quizQuestions = JSON.parse(jsonString);
             
