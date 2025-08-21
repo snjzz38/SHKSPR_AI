@@ -11,7 +11,6 @@
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
-            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
             --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
@@ -32,7 +31,6 @@
         body.theme-red {
             --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
             --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
-            --destructive-bg: #991b1b; --destructive-text: #fca5a5;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -61,7 +59,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -104,27 +102,15 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button, .start-quiz-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        
-        .exit-quiz-button {
-            background-color: var(--destructive-bg); color: var(--destructive-text);
-            width: 100%; margin-top: 1rem;
-            border: none; padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
-        }
-        .exit-quiz-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6);
-        }
-
+        .exit-quiz-button { background-color: #7f1d1d; color: #fecaca; }
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         .quiz-question {
             background-color: var(--card-bg);
@@ -408,8 +394,8 @@ function initializeQuizApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/quiz', {
-                    method: 'POST',
+                const response = await fetch('/api/Quiz_API', {
+                    method: 'POST', 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
                 });
@@ -467,7 +453,7 @@ function initializeQuizApp() {
                 }
             });
             
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
@@ -505,12 +491,9 @@ function initializeQuizApp() {
             const answerContainer = document.createElement('div');
             answerContainer.className = 'quiz-answer hidden';
             let answerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    answerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            if (typeof q.answer === 'object' && q.answer.primary_answer) {
+                answerText = q.answer.primary_answer;
+            }
             answerContainer.innerHTML = `<p><strong>Answer:</strong> ${answerText}</p>`;
             
             const toggleButton = document.createElement('button');
@@ -610,7 +593,7 @@ function initializeQuizApp() {
         if (!userAnswer) return false;
         const userAnswerLower = userAnswer.toLowerCase();
         try {
-            const answerObj = JSON.parse(correctAnswer);
+            const answerObj = (typeof correctAnswer === 'string') ? JSON.parse(correctAnswer) : correctAnswer;
             
             const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
             const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
@@ -630,9 +613,7 @@ function initializeQuizApp() {
             if (q.type === 'short_answer') {
                 if (gradeShortAnswer(userAnswers[i], q.answer)) score++;
             } else {
-                if (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase()) {
-                    score++;
-                }
+                if (userAnswers[i] === q.answer) score++;
             }
         });
 
@@ -642,16 +623,13 @@ function initializeQuizApp() {
         resultsDiv.innerHTML = `<h2>Quiz Complete!</h2><p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem;">You scored ${score} out of ${quizData.length}</p>`;
         
         quizData.forEach((q, i) => {
-            const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
+            const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : userAnswers[i] === q.answer;
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
             let correctAnswerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    correctAnswerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            if (typeof q.answer === 'object' && q.answer.primary_answer) {
+                 correctAnswerText = q.answer.primary_answer;
+            }
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
                 <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
