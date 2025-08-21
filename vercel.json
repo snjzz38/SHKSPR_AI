@@ -1,5 +1,19 @@
 {
   "version": 2,
+  "functions": {
+    "api/Grader_API.js": {
+      "maxDuration": 30
+    },
+    "api/Humanizer_API.js": {
+      "maxDuration": 30
+    },
+    "api/Flashcard_API.js": {
+      "maxDuration": 30
+    },
+    "api/Quiz_API.js": {
+      "maxDuration": 30
+    }
+  },
   "builds": [
     {
       "src": "api/Grader_API.js",
@@ -14,6 +28,10 @@
       "use": "@vercel/node"
     },
     {
+      "src": "api/Quiz_API.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "/**",
       "use": "@vercel/static"
     }
@@ -24,12 +42,16 @@
       "destination": "/api/Humanizer_API.js"
     },
     {
-      "source": "/api/Grader_API",
+      "source": "/api/grader",
       "destination": "/api/Grader_API.js"
     },
     {
-      "source": "/api/Flashcard_API",
+      "source": "/api/flashcard",
       "destination": "/api/Flashcard_API.js"
+    },
+    {
+      "source": "/api/quiz",
+      "destination": "/api/Quiz_API.js"
     },
     {
       "source": "/",
