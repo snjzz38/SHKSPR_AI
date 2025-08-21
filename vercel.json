@@ -14,28 +14,6 @@
       "maxDuration": 30
     }
   },
-  "builds": [
-    {
-      "src": "api/Grader_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Humanizer_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Flashcard_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/Quiz_API.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "/**",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/humanizer",
