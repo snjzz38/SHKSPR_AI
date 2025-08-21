@@ -59,7 +59,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -394,9 +394,8 @@ function initializeQuizApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                // FIX: Call the correct API endpoint
                 const response = await fetch('/api/Quiz_API', {
-                    method: 'POST',
+                    method: 'POST', 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
                 });
@@ -454,7 +453,7 @@ function initializeQuizApp() {
                 }
             });
             
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
@@ -492,12 +491,9 @@ function initializeQuizApp() {
             const answerContainer = document.createElement('div');
             answerContainer.className = 'quiz-answer hidden';
             let answerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    answerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            if (typeof q.answer === 'object' && q.answer.primary_answer) {
+                answerText = q.answer.primary_answer;
+            }
             answerContainer.innerHTML = `<p><strong>Answer:</strong> ${answerText}</p>`;
             
             const toggleButton = document.createElement('button');
@@ -597,7 +593,7 @@ function initializeQuizApp() {
         if (!userAnswer) return false;
         const userAnswerLower = userAnswer.toLowerCase();
         try {
-            const answerObj = JSON.parse(correctAnswer);
+            const answerObj = (typeof correctAnswer === 'string') ? JSON.parse(correctAnswer) : correctAnswer;
             
             const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
             const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
@@ -631,12 +627,9 @@ function initializeQuizApp() {
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
             let correctAnswerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    correctAnswerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            if (typeof q.answer === 'object' && q.answer.primary_answer) {
+                 correctAnswerText = q.answer.primary_answer;
+            }
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
                 <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
