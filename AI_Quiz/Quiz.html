@@ -104,23 +104,20 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button, .start-quiz-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
         .exit-quiz-button {
-            background-color: var(--destructive-bg); color: var(--destructive-text);
-            width: 100%; margin-top: 1rem; border: none; padding: 12px 25px;
-            border-radius: 25px; font-size: 1.1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
+            background-color: var(--destructive-bg);
+            color: var(--destructive-text);
             box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
         }
         .exit-quiz-button:hover {
-            transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6);
         }
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
@@ -434,8 +431,8 @@ function initializeQuizApp() {
     const generateQuiz = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
-        if ((!text || text.length < 0) && uploadedFilesData.length === 0) {
-            showMessage('Please provide at least 50 characters of text or upload a file.', 'error');
+        if (!text && uploadedFilesData.length === 0) {
+            showMessage('Please enter text or upload a file.', 'error');
             return;
         }
         quizData = [];
@@ -452,7 +449,7 @@ function initializeQuizApp() {
 
         try {
             let promptParts = [];
-            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise. If the provided material is too short or unsuitable for generating a meaningful quiz, return a single question object explaining the issue.";
+            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise.";
             
             promptParts.push({ text: basePrompt });
             if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
