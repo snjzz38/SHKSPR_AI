@@ -1,5 +1,4 @@
 // Located at: /api/Quiz_API.js
-
 module.exports = async (req, res) => {
     // Set CORS headers to allow requests from your Vercel domain and localhost
     res.setHeader('Access-Control-Allow-Origin', '*'); // For development; consider restricting to your domain in production
