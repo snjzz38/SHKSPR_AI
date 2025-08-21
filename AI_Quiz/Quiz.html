@@ -395,7 +395,7 @@ function initializeQuizApp() {
             console.log(`Attempting API call with model: ${model}`);
             try {
                 // FIX: Call the correct API endpoint
-                const response = await fetch('/api/quiz', {
+                const response = await fetch('/api/Quiz_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
