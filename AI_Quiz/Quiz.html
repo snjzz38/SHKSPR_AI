@@ -114,7 +114,25 @@
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
         
         .exit-quiz-button {
-            /* This class is now only used for JS selection. Styling is handled by the main button rule. */
+            background-color: var(--destructive-bg);
+            color: var(--destructive-text);
+            width: 100%; /* This makes the button span the full width */
+            margin-top: 1rem; /* Adds space between it and the buttons above */
+            box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
+            /* Inherit base button styles for consistency */
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .exit-quiz-button:hover {
+            transform: translateY(-2px);
+            /* Make the glow more intense on hover */
+            box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6);
         }
 
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
