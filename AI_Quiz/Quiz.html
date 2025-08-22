@@ -11,7 +11,6 @@
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
-            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
             --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
@@ -32,7 +31,6 @@
         body.theme-red {
             --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
             --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
-            --destructive-bg: #991b1b; --destructive-text: #fca5a5;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -112,29 +110,7 @@
         .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
         .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        
-        .exit-quiz-button {
-            background-color: var(--destructive-bg);
-            color: var(--destructive-text);
-            width: 100%; /* This makes the button span the full width */
-            margin-top: 1rem; /* Adds space between it and the buttons above */
-            box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
-            /* Inherit base button styles for consistency */
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .exit-quiz-button:hover {
-            transform: translateY(-2px);
-            /* Make the glow more intense on hover */
-            box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6);
-        }
-
+        #exitButton { width: 100%; margin-top: 1rem; } /* FIX: New ID for layout */
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         .quiz-question {
             background-color: var(--card-bg);
@@ -192,7 +168,7 @@
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, #exitButton { width: 100%; font-size: 1rem; padding: 10px 20px; }
             .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
@@ -446,8 +422,8 @@ function initializeQuizApp() {
     const generateQuiz = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
-        if (!text && uploadedFilesData.length === 0) {
-            showMessage('Please enter text or upload a file.', 'error');
+        if ((!text || text.length < 50) && uploadedFilesData.length === 0) {
+            showMessage('Please provide at least 50 characters of text or upload a file.', 'error');
             return;
         }
         quizData = [];
@@ -464,7 +440,7 @@ function initializeQuizApp() {
 
         try {
             let promptParts = [];
-            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise.";
+            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise. If the provided material is too short or unsuitable for generating a meaningful quiz, return a single question object explaining the issue.";
             
             promptParts.push({ text: basePrompt });
             if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
@@ -607,7 +583,8 @@ function initializeQuizApp() {
         }
         
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'exit-quiz-button';
+        exitBtn.className = 'nav-button'; // Use the standard nav-button class for color
+        exitBtn.id = 'exitButton'; // Use an ID for specific layout styles
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
@@ -671,7 +648,8 @@ function initializeQuizApp() {
         });
 
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'exit-quiz-button mt-4 mx-auto';
+        exitBtn.className = 'nav-button mt-4 mx-auto'; // Use standard nav-button for color
+        exitBtn.id = 'exitButton'; // Use ID for layout
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
         resultsDiv.appendChild(exitBtn);
