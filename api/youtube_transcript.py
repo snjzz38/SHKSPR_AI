@@ -20,7 +20,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             # --- Using the SOCKS4 proxy from your screenshot ---
             # The format for SOCKS proxies is "socks4://IP_ADDRESS:PORT"
-            proxy_url = "socks4://1.52.17.239:80"
+            proxy_url = "socks4://108.162.192.185:80"
 
             # The GenericProxyConfig needs both http and https URLs for SOCKS to work with the requests library
             proxy_config = GenericProxyConfig(
