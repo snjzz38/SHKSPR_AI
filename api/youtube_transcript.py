@@ -6,8 +6,8 @@ import json
 import requests
 import random
 
-# The API URL from your screenshot to get a list of SOCKS4 proxies
-PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text&protocol=socks4"
+# --- NEW: API URL to get HTTP proxies instead of SOCKS4 ---
+PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text&protocol=http&ssl=yes"
 
 class handler(BaseHTTPRequestHandler):
 
@@ -26,36 +26,36 @@ class handler(BaseHTTPRequestHandler):
         last_error = None
 
         try:
-            # Fetch a fresh list of proxies
-            proxy_response = requests.get(PROXY_API_URL, timeout=10)
+            # Fetch a fresh list of HTTPS proxies, with a 5-second timeout
+            proxy_response = requests.get(PROXY_API_URL, timeout=5)
             proxy_response.raise_for_status()
             proxies = proxy_response.text.strip().split('\n')
-            random.shuffle(proxies) # Shuffle to try different proxies each time
+            random.shuffle(proxies)
 
-            # Try proxies one by one
-            for proxy_str in proxies[:10]: # Try up to 10 proxies from the list
+            # Try up to 5 proxies to fail faster
+            for proxy_str in proxies[:5]:
                 try:
-                    # The format from the API is like "socks4://1.2.3.4:5678"
-                    proxy_url = proxy_str.strip()
+                    # The format from the API is like "http://1.2.3.4:5678"
+                    # We need to change it to "https://" for the config
+                    proxy_url = "https://" + proxy_str.strip().split('://')[1]
                     
                     print(f"Attempting to use proxy: {proxy_url}")
 
+                    # --- NEW: Use https_url for HTTP proxies ---
                     proxy_config = GenericProxyConfig(
-                        http_url=proxy_url,
                         https_url=proxy_url,
                     )
 
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
                     transcript_list = api.fetch(video_id)
                     
-                    # If we get here, the transcript was fetched successfully
                     print("Proxy successful!")
-                    break # Exit the loop since we succeeded
+                    break 
 
                 except Exception as e:
                     last_error = str(e)
                     print(f"Proxy {proxy_url} failed: {last_error}")
-                    continue # Try the next proxy
+                    continue
 
             if not transcript_list:
                 raise Exception(f"All proxies failed. Last error: {last_error}" if last_error else "No proxies found or all failed.")
