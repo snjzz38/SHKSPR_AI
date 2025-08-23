@@ -422,7 +422,7 @@ function initializeQuizApp() {
     const generateQuiz = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
-        if ((!text || text.length < 50) && uploadedFilesData.length === 0) {
+        if ((!text || text.length < 0) && uploadedFilesData.length === 0) {
             showMessage('Please provide at least 50 characters of text or upload a file.', 'error');
             return;
         }
