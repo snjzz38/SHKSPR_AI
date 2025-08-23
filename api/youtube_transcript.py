@@ -1,12 +1,12 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
 import json
 
 class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        # Parse query parameters
         query_components = parse_qs(urlparse(self.path).query)
         video_id = query_components.get('video_id', [None])[0]
 
@@ -18,24 +18,28 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # CORRECTED SECTION: Instantiate the class and call fetch()
-            # This was the line with the error.
-            # OLD: transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-            # NEW:
-            api = YouTubeTranscriptApi()
+            # --- Using the SOCKS4 proxy from your screenshot ---
+            # The format for SOCKS proxies is "socks4://IP_ADDRESS:PORT"
+            proxy_url = "socks4://1.52.17.239:80"
+
+            # The GenericProxyConfig needs both http and https URLs for SOCKS to work with the requests library
+            proxy_config = GenericProxyConfig(
+                http_url=proxy_url,
+                https_url=proxy_url,
+            )
+
+            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+            
             transcript_list = api.fetch(video_id)
             
-            # Combine the transcript text into a single string
             full_transcript = " ".join([item['text'] for item in transcript_list])
 
-            # Send a successful response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'transcript': full_transcript}).encode('utf-8'))
 
         except Exception as e:
-            # Handle errors (e.g., video not found, no transcript)
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
