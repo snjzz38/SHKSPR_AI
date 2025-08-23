@@ -6,7 +6,7 @@ import json
 import requests
 import random
 
-# --- NEW: API URL to get HTTP proxies instead of SOCKS4 ---
+# API URL to get a list of fresh, working HTTPS proxies
 PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text&protocol=http&ssl=yes"
 
 class handler(BaseHTTPRequestHandler):
@@ -22,32 +22,28 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
-        transcript_list = None
+        transcript_data = None
         last_error = None
 
         try:
-            # Fetch a fresh list of HTTPS proxies, with a 5-second timeout
+            # Fetch a fresh list of HTTPS proxies
             proxy_response = requests.get(PROXY_API_URL, timeout=5)
             proxy_response.raise_for_status()
             proxies = proxy_response.text.strip().split('\n')
             random.shuffle(proxies)
 
-            # Try up to 5 proxies to fail faster
+            # Try up to 5 proxies to find a working one quickly
             for proxy_str in proxies[:5]:
                 try:
-                    # The format from the API is like "http://1.2.3.4:5678"
-                    # We need to change it to "https://" for the config
                     proxy_url = "https://" + proxy_str.strip().split('://')[1]
-                    
                     print(f"Attempting to use proxy: {proxy_url}")
 
-                    # --- NEW: Use https_url for HTTP proxies ---
-                    proxy_config = GenericProxyConfig(
-                        https_url=proxy_url,
-                    )
-
+                    proxy_config = GenericProxyConfig(https_url=proxy_url)
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
-                    transcript_list = api.fetch(video_id)
+                    
+                    # This line fetches the transcript data, just like in the video.
+                    # It returns a list of dictionaries: [{'text': '...'}, {'text': '...'}]
+                    transcript_data = api.fetch(video_id)
                     
                     print("Proxy successful!")
                     break 
@@ -57,10 +53,11 @@ class handler(BaseHTTPRequestHandler):
                     print(f"Proxy {proxy_url} failed: {last_error}")
                     continue
 
-            if not transcript_list:
+            if not transcript_data:
                 raise Exception(f"All proxies failed. Last error: {last_error}" if last_error else "No proxies found or all failed.")
 
-            full_transcript = " ".join([item['text'] for item in transcript_list])
+            # This is the clean loop from the video to combine the text
+            full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
