@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.14.1",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "@vercel/analytics": "latest"
   }
 }
