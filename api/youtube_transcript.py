@@ -18,11 +18,9 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # --- Using the SOCKS5 proxy from your screenshot ---
-            # The format for SOCKS proxies is "socks4://IP_ADDRESS:PORT"
-            proxy_url = "socks5://108.162.192.185:80"
+            # --- Using the SOCKS4 proxy from your screenshot ---
+            proxy_url = "socks4://138.197.4.106:64348"
 
-            # The GenericProxyConfig needs both http and https URLs for SOCKS to work with the requests library
             proxy_config = GenericProxyConfig(
                 http_url=proxy_url,
                 https_url=proxy_url,
