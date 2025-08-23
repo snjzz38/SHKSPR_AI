@@ -18,8 +18,12 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # Fetch the transcript
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            # CORRECTED SECTION: Instantiate the class and call fetch()
+            # This was the line with the error.
+            # OLD: transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            # NEW:
+            api = YouTubeTranscriptApi()
+            transcript_list = api.fetch(video_id)
             
             # Combine the transcript text into a single string
             full_transcript = " ".join([item['text'] for item in transcript_list])
