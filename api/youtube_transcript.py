@@ -26,7 +26,7 @@ class handler(BaseHTTPRequestHandler):
         last_error = None
 
         try:
-            # Fetch a fresh list of HTTPS proxies
+            # Fetch a fresh list of HTTPS proxies, with a 5-second timeout
             proxy_response = requests.get(PROXY_API_URL, timeout=5)
             proxy_response.raise_for_status()
             proxies = proxy_response.text.strip().split('\n')
@@ -35,14 +35,18 @@ class handler(BaseHTTPRequestHandler):
             # Try up to 5 proxies to find a working one quickly
             for proxy_str in proxies[:5]:
                 try:
-                    proxy_url = "https://" + proxy_str.strip().split('://')[1]
+                    # Clean the raw proxy string before using it
+                    clean_proxy_str = proxy_str.strip()
+                    if not clean_proxy_str:
+                        continue # Skip empty lines
+
+                    proxy_url = "https://" + clean_proxy_str.split('://')[1]
+                    
                     print(f"Attempting to use proxy: {proxy_url}")
 
                     proxy_config = GenericProxyConfig(https_url=proxy_url)
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
                     
-                    # This line fetches the transcript data, just like in the video.
-                    # It returns a list of dictionaries: [{'text': '...'}, {'text': '...'}]
                     transcript_data = api.fetch(video_id)
                     
                     print("Proxy successful!")
@@ -50,13 +54,14 @@ class handler(BaseHTTPRequestHandler):
 
                 except Exception as e:
                     last_error = str(e)
-                    print(f"Proxy {proxy_url} failed: {last_error}")
+                    # --- THIS IS THE FIX ---
+                    # We use 'clean_proxy_str' here because 'proxy_url' might not have been created.
+                    print(f"Proxy {clean_proxy_str} failed: {last_error}")
                     continue
 
             if not transcript_data:
                 raise Exception(f"All proxies failed. Last error: {last_error}" if last_error else "No proxies found or all failed.")
 
-            # This is the clean loop from the video to combine the text
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
             self.send_response(200)
