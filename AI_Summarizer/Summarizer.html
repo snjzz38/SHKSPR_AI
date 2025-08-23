@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini MP3 Audio Summarization</title>
+    <title>Gemini Audio & YouTube Summarization</title>
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -109,12 +109,13 @@
         .file-name-display { font-size: 0.875rem; margin-top: 0.5rem; }
         .prompt-input-group { margin-top: 1rem; text-align: left; }
         .prompt-input-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
-        .prompt-input-group textarea {
+        .prompt-input-group textarea, .youtube-input {
             width: 100%; padding: 0.75rem; border: 1px solid var(--accent);
             border-radius: 0.5rem; background-color: var(--bg-secondary);
-            color: var(--text-primary); min-height: 120px; resize: vertical;
+            color: var(--text-primary); resize: vertical;
         }
-        .prompt-input-group textarea:focus {
+        .prompt-input-group textarea { min-height: 120px; }
+        .prompt-input-group textarea:focus, .youtube-input:focus {
             outline: none; border-color: var(--text-primary); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
         }
         .slider-group { margin-top: 1rem; text-align: center; }
@@ -135,6 +136,15 @@
         }
         .slider-value { margin-top: 0.5rem; font-weight: 500; }
         .hidden { display: none; }
+        .mode-toggle-btn {
+            background-color: transparent; border: 1px solid var(--accent);
+            color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 0.5rem;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .mode-toggle-btn.active {
+            background-color: var(--accent); color: var(--bg-primary);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+        }
         footer.main-footer {
             text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
             background-color: var(--bg-secondary); position: relative; z-index: 10; margin-top: auto;
@@ -156,17 +166,30 @@
 
     <main class="main-content animate-on-load">
         <section class="hero">
-            <h1>Gemini MP3 Audio Summarization</h1>
-            <p>Upload an audio file (MP3, M4A) to transcribe and summarize it using the Gemini AI model.</p>
+            <h1>Gemini Audio & YouTube Summarization</h1>
+            <p>Upload an audio file or provide a YouTube link to transcribe and summarize it using the Gemini AI model.</p>
         </section>
 
         <div class="container" style="transform: translateY(-50px);">
-            <h2 class="text-2xl font-semibold mb-4">Summarize Audio Content</h2>
+            <h2 class="text-2xl font-semibold mb-4">Summarize Content</h2>
+
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="modeAudioBtn" class="mode-toggle-btn active">Audio File</button>
+                <button id="modeYoutubeBtn" class="mode-toggle-btn">YouTube Video</button>
+            </div>
             
-            <div class="file-input-wrapper">
-                <label for="audioFileInput" class="custom-file-upload">Choose Audio File (MP3, M4A)</label>
-                <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
-                <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+            <!-- Audio Input Section -->
+            <div id="audioInputContainer">
+                <div class="file-input-wrapper">
+                    <label for="audioFileInput" class="custom-file-upload">Choose Audio File (MP3, M4A)</label>
+                    <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
+                    <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+                </div>
+            </div>
+
+            <!-- YouTube Input Section -->
+            <div id="youtubeInputContainer" class="hidden">
+                <input type="text" id="youtubeUrlInput" class="youtube-input" placeholder="Enter YouTube Video URL...">
             </div>
             
             <div class="slider-group">
@@ -247,7 +270,12 @@
 
         function initializeApp() {
             const dom = {
+                modeAudioBtn: document.getElementById('modeAudioBtn'),
+                modeYoutubeBtn: document.getElementById('modeYoutubeBtn'),
+                audioInputContainer: document.getElementById('audioInputContainer'),
+                youtubeInputContainer: document.getElementById('youtubeInputContainer'),
                 audioFileInput: document.getElementById('audioFileInput'),
+                youtubeUrlInput: document.getElementById('youtubeUrlInput'),
                 fileNameDisplay: document.getElementById('fileNameDisplay'),
                 processBtn: document.getElementById('processBtn'),
                 processLoadingIndicator: document.getElementById('processLoadingIndicator'),
@@ -261,6 +289,8 @@
                 concisenessValueSpan: document.getElementById('concisenessValue'),
             };
             
+            let currentMode = 'audio'; // 'audio' or 'youtube'
+
             const hideElement = (el) => el.classList.add('hidden');
             const showElement = (el) => el.classList.remove('hidden');
             
@@ -281,7 +311,6 @@
                 });
             }
             
-            // UPDATED: This function now only returns the SPECIFIC instruction
             function generateSummarizationInstruction(level) {
                 if (level <= 2) return "Generate a single, concise, and compelling headline (6-12 words) for the following text. The headline should capture the absolute core message or finding. Output only the headline text and nothing else.";
                 if (level <= 4) return "Provide a concise executive summary (3-4 sentences) of the following text. Focus on the main conclusion and the most critical supporting points. The tone should be professional and direct.";
@@ -290,14 +319,11 @@
                 return "Generate a comprehensive briefing document from the text, formatted in Markdown. It must include the following sections:\n- **Headline:** A compelling title for the content.\n- **Abstract:** A one-paragraph (4-5 sentences) summary of the entire text.\n- **Key Points:** A detailed bulleted list covering all significant arguments, evidence, and conclusions mentioned.\n- **Action Items:** (If applicable) A bulleted list of any tasks, recommendations, or next steps mentioned in the text.\n\nEnsure the summary is objective and strictly based on the provided text.";
             }
 
-            // UPDATED: This function now builds the full prompt from a base and the specific instruction
             function updateSummarizationPrompt() {
                 const level = parseInt(dom.concisenessSlider.value, 10);
                 dom.concisenessValueSpan.textContent = level;
-
-                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
+                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
                 const specificInstruction = generateSummarizationInstruction(level);
-
                 dom.summarizationPromptInput.value = `${basePrompt}\n\n--- SPECIFIC INSTRUCTION ---\n${specificInstruction}`;
             }
             
@@ -319,14 +345,11 @@
             
             async function callGeminiApi(payload, retriesLeft = MAX_RETRIES, triedModels = new Set()) {
                 if (!GEMINI_API_KEY) throw new Error("API Key is not configured.");
-                
                 let modelsToTry = ALL_GEMINI_MODELS.filter(model => !triedModels.has(model));
                 if (modelsToTry.length === 0) throw new Error('All available models have been tried and failed.');
-                
                 const currentModel = modelsToTry[0];
                 triedModels.add(currentModel);
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
-
                 try {
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -347,61 +370,79 @@
                     throw error;
                 }
             }
+
+            function extractVideoId(url) {
+                const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                const matches = url.match(regex);
+                return matches ? matches[1] : null;
+            }
+
+            async function fetchYouTubeTranscript(videoId) {
+                const response = await fetch(`/api/youtube_transcript?video_id=${videoId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch YouTube transcript.');
+                }
+                const data = await response.json();
+                return data.transcript;
+            }
             
-            async function processAudioFile() {
+            async function processContent() {
                 clearMessages();
                 hideElement(dom.transcribedTextDisplay);
                 hideElement(dom.summaryDisplay);
                 showElement(dom.processLoadingIndicator);
                 dom.processBtn.disabled = true;
 
-                const file = dom.audioFileInput.files[0];
-                if (!file) {
-                    displayMessage('Please select a file first.', true);
-                    hideElement(dom.processLoadingIndicator);
-                    dom.processBtn.disabled = false; return;
-                }
-                
                 try {
-                    // --- STEP 1: TRANSCRIPTION ---
-                    displayMessage("Transcribing audio... This may take a while for large files.", false);
-                    const base64Audio = await fileToBase64(file);
-                    const transcriptionPayload = {
-                        contents: [{
-                            role: "user",
-                            parts: [
-                                { text: "Transcribe the following audio file accurately. Provide only the text of the transcription." },
-                                { inlineData: { mimeType: file.type, data: base64Audio } }
-                            ]
-                        }]
-                    };
-                    const transcriptionResult = await callGeminiApi(transcriptionPayload);
-                    const transcript = transcriptionResult.candidates?.[0]?.content?.parts?.[0]?.text;
+                    let transcript = '';
 
-                    if (!transcript || transcript.trim() === '') {
-                        throw new Error("Transcription failed or returned empty. The audio might be silent or unsupported.");
+                    if (currentMode === 'audio') {
+                        const file = dom.audioFileInput.files[0];
+                        if (!file) throw new Error('Please select a file first.');
+                        
+                        displayMessage("Transcribing audio... This may take a while for large files.", false);
+                        const base64Audio = await fileToBase64(file);
+                        const transcriptionPayload = {
+                            contents: [{
+                                role: "user",
+                                parts: [
+                                    { text: "Transcribe the following audio file accurately. Provide only the text of the transcription." },
+                                    { inlineData: { mimeType: file.type, data: base64Audio } }
+                                ]
+                            }]
+                        };
+                        const transcriptionResult = await callGeminiApi(transcriptionPayload);
+                        transcript = transcriptionResult.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (!transcript || transcript.trim() === '') throw new Error("Transcription failed or returned empty. The audio might be silent or unsupported.");
+
+                    } else { // YouTube Mode
+                        const url = dom.youtubeUrlInput.value;
+                        if (!url) throw new Error('Please enter a YouTube URL.');
+                        const videoId = extractVideoId(url);
+                        if (!videoId) throw new Error('Invalid YouTube URL. Could not find a video ID.');
+
+                        displayMessage("Fetching YouTube transcript...", false);
+                        transcript = await fetchYouTubeTranscript(videoId);
+                        if (!transcript || transcript.trim() === '') throw new Error("Could not fetch transcript for this video. It may not have one available.");
                     }
                     
                     dom.transcribedTextContent.textContent = transcript;
                     showElement(dom.transcribedTextDisplay);
 
-                    // --- STEP 2: SUMMARIZATION ---
+                    // --- SUMMARIZATION (Common for both modes) ---
                     displayMessage("Transcription complete. Now summarizing...", false);
-                    const summarizationPrompt = dom.summarizationPromptInput.value; // This now includes the base prompt and user edits
+                    const summarizationPrompt = dom.summarizationPromptInput.value;
                     const summaryPayload = {
                         contents: [{
                             role: "user",
-                            parts: [
-                                { text: `${summarizationPrompt}\n\n---\n\n${transcript}` }
-                            ]
+                            parts: [{ text: `${summarizationPrompt}\n\n---\n\n${transcript}` }]
                         }]
                     };
                     const summaryResult = await callGeminiApi(summaryPayload);
                     const summary = summaryResult.candidates?.[0]?.content?.parts?.[0]?.text;
 
-                    if (!summary || summary.trim() === '') {
-                        throw new Error("Summarization failed or returned empty.");
-                    }
+                    if (!summary || summary.trim() === '') throw new Error("Summarization failed or returned empty.");
 
                     dom.summaryContent.textContent = summary;
                     showElement(dom.summaryDisplay);
@@ -414,24 +455,55 @@
                     dom.processBtn.disabled = false;
                 }
             }
+
+            function updateButtonState() {
+                let isReady = false;
+                if (currentMode === 'audio') {
+                    isReady = dom.audioFileInput.files.length > 0;
+                } else {
+                    isReady = dom.youtubeUrlInput.value.trim() !== '';
+                }
+                dom.processBtn.disabled = !GEMINI_API_KEY || !isReady;
+            }
+
+            function setMode(mode) {
+                currentMode = mode;
+                clearMessages();
+                [dom.transcribedTextDisplay, dom.summaryDisplay].forEach(hideElement);
+
+                if (mode === 'audio') {
+                    showElement(dom.audioInputContainer);
+                    hideElement(dom.youtubeInputContainer);
+                    dom.modeAudioBtn.classList.add('active');
+                    dom.modeYoutubeBtn.classList.remove('active');
+                } else {
+                    hideElement(dom.audioInputContainer);
+                    showElement(dom.youtubeInputContainer);
+                    dom.modeAudioBtn.classList.remove('active');
+                    dom.modeYoutubeBtn.classList.add('active');
+                }
+                updateButtonState();
+            }
             
             dom.audioFileInput.addEventListener('change', () => {
                 dom.fileNameDisplay.textContent = dom.audioFileInput.files.length > 0 ? dom.audioFileInput.files[0].name : 'No file chosen';
-                dom.processBtn.disabled = !GEMINI_API_KEY || dom.audioFileInput.files.length === 0;
-                clearMessages();
-                [dom.transcribedTextDisplay, dom.summaryDisplay].forEach(hideElement);
+                updateButtonState();
             });
+            dom.youtubeUrlInput.addEventListener('input', updateButtonState);
             dom.concisenessSlider.addEventListener('input', updateSummarizationPrompt);
-            dom.processBtn.addEventListener('click', processAudioFile);
+            dom.processBtn.addEventListener('click', processContent);
+            dom.modeAudioBtn.addEventListener('click', () => setMode('audio'));
+            dom.modeYoutubeBtn.addEventListener('click', () => setMode('youtube'));
 
             // Initial setup
             updateSummarizationPrompt();
+            setMode('audio'); // Set initial mode
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
                 if (GEMINI_API_KEY) {
                     clearMessages();
-                    dom.processBtn.disabled = dom.audioFileInput.files.length === 0;
+                    updateButtonState();
                 } else {
                     displayMessage("Failed to load API key. Application cannot function.", true);
                 }
@@ -442,16 +514,6 @@
             loadHeader();
             initializeApp();
         });
-</script>
-
-
-<!-- Vercel Analytics -->
-<script>
-  window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
-  window.va('set', 'mode', 'auto');
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-    
-
+    </script>
 </body>
 </html>
