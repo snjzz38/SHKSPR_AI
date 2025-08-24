@@ -39,7 +39,7 @@
       --text-primary: #fff;
       --accent: #e0e0e0;
       --card-bg: #222;
-      --accent-rgb: 224, 224, 224;
+      --accent-rgb: 224, 24, 224;
     }
     body.theme-red {
         --bg-primary: #1a0000;
@@ -71,8 +71,6 @@
       margin: 0;
     }
 
-    /* Add this inside the <style> block in header.html */
-
     /* --- Default Hero Section Styles --- */
     .hero {
         text-align: center;
@@ -91,7 +89,7 @@
         font-size: 1.2rem;
         margin: 0 auto 30px;
         text-shadow: 0 0 8px var(--accent);
-        max-width: 700px; /* Using the wider width for consistency */
+        max-width: 700px;
     }
 
     /* --- Particles Container --- */
@@ -114,30 +112,19 @@
         will-change: transform;
     }
     
-    /* --- NEW: Reusable Animation Section (UPDATED) --- */
-    /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
-/* --- Reusable Animation Section --- */
+    /* --- Reusable Animation Section --- */
+    @keyframes slideInUp {
+      from {
+        transform: translateY(50px);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
 
-/* 1. Define the Keyframe Animation for the slide ONLY */
-@keyframes slideInUp {
-  from {
-    /* No 'opacity' is set, so the content remains fully visible. */
-    /* Start 20px below the final position. */
-    transform: translateY(50px);
-  }
-  to {
-    /* End in the final, default position. */
-    transform: translateY(0);
-  }
-}
-
-/* 2. Create a Reusable Animation Class to apply the animation */
-.animate-on-load {
-  /* This applies the slide using the exact timing from the old transition. */
-  animation: slideInUp 0.6s ease forwards;
-}
-    /* --- END of Animation Section --- */
-
+    .animate-on-load {
+      animation: slideInUp 0.6s ease forwards;
+    }
 
     /* --- Header Specific Styles --- */
     header.main-header {
@@ -193,7 +180,6 @@
         position: relative;
     }
 
-    /* This rule now only applies to dropdowns that are NOT the support dropdown */
     .dropdown-container:not(#support-dropdown-container):hover .dropdown-options {
         display: block;
     }
@@ -210,7 +196,6 @@
         z-index: 10;
     }
     
-    /* Class to make dropdown visible with JavaScript */
     .dropdown-options.visible {
         display: block;
     }
@@ -237,7 +222,7 @@
 
     /* --- Support Form Dropdown Styles --- */
     #support-dropdown-panel {
-        min-width: 300px; /* Make it wider for the form */
+        min-width: 300px;
         padding: 1.5rem;
     }
     .support-form label {
@@ -246,7 +231,7 @@
         font-weight: 600;
         font-size: 0.9rem;
     }
-    .support-form input, .support-form textarea, .support-form select {
+    .support-form input, .support-form select, .support-form textarea {
         width: 100%;
         padding: 0.5rem;
         border: 1px solid var(--accent);
@@ -270,8 +255,9 @@
         border: none;
         cursor: pointer;
     }
-    #support-other-container {
-        display: none; /* Hidden by default */
+    /* New rule to hide the 'Other' subject text box by default */
+    #other-subject-container {
+        display: none;
     }
 </style>
 
@@ -300,21 +286,21 @@
         <button id="theme-red-btn">Red</button>
       </div>
     </div>
-    <!-- Support Dropdown Structure -->
+    <!-- Modified Support Dropdown Structure -->
     <div id="support-dropdown-container" class="dropdown-container">
         <button id="support-button" class="dropdown-button">Support</button>
         <div id="support-dropdown-panel" class="dropdown-options">
-            <form id="support-form" class="support-form">
-                <label for="support-category">How Can I Help?</label>
-                <select id="support-category" name="category" required>
+            <form id="support-form" class="support-form" novalidate>
+                <label for="support-subject">How Can I Help?</label>
+                <select id="support-subject" name="subject" required>
                     <option value="Suggestion">Suggestion</option>
                     <option value="Problem">Problem</option>
                     <option value="Other">Other</option>
                 </select>
-
-                <div id="support-other-container">
-                    <label for="support-other-subject">Please Specify:</label>
-                    <input type="text" id="support-other-subject" name="other_subject">
+                
+                <div id="other-subject-container">
+                    <label for="other-subject-text">Please Specify</label>
+                    <input type="text" id="other-subject-text" name="other_subject">
                 </div>
                 
                 <label for="support-message">Message</label>
@@ -337,42 +323,42 @@
     }
 
     window.Particle = class Particle {
-      constructor(container, colors) {
-        this.container = container;
-        this.element = document.createElement('div');
-        this.element.classList.add('particle');
-        this.container.appendChild(this.element);
-        this.size = Math.random() * 6 + 2;
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-        this.x = Math.random() * window.innerWidth;
-        this.y = Math.random() * window.innerHeight;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = (Math.random() - 0.5) * 4;
-        this.opacity = Math.random() * 0.5 + 0.3;
-        this.element.style.width = `${this.size}px`;
-        this.element.style.height = `${this.size}px`;
-        this.element.style.backgroundColor = this.color;
-        this.element.style.opacity = this.opacity;
-        this.update();
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-          this.vx *= -1;
-          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+        constructor(container, colors) {
+            this.container = container;
+            this.element = document.createElement('div');
+            this.element.classList.add('particle');
+            this.container.appendChild(this.element);
+            this.size = Math.random() * 6 + 2;
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.x = Math.random() * window.innerWidth;
+            this.y = Math.random() * window.innerHeight;
+            this.vx = (Math.random() - 0.5) * 4;
+            this.vy = (Math.random() - 0.5) * 4;
+            this.opacity = Math.random() * 0.5 + 0.3;
+            this.element.style.width = `${this.size}px`;
+            this.element.style.height = `${this.size}px`;
+            this.element.style.backgroundColor = this.color;
+            this.element.style.opacity = this.opacity;
+            this.update();
         }
-        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-          this.vy *= -1;
-          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+                this.vx *= -1;
+                this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+            }
+            if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+                this.vy *= -1;
+                this.y = this.y <= 0 ? this.y = 0 : window.innerHeight - this.size;
+            }
+            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
         }
-        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-      }
-      remove() {
-        if (this.container && this.element.parentNode === this.container) {
-            this.container.removeChild(this.element);
+        remove() {
+            if (this.container && this.element.parentNode === this.container) {
+                this.container.removeChild(this.element);
+            }
         }
-      }
     }
 
     let particles = [];
@@ -389,13 +375,15 @@
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
-        colors = [accentColor, '#c0c0c0', '#909090'];
+          colors = [accentColor, '#c0c0c0', '#909090'];
       } else if (document.body.classList.contains('theme-cyan')) {
-        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+          colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
       } else if (document.body.classList.contains('theme-purple')) {
-        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+          colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+      } else if (document.body.classList.contains('theme-green')) {
+          colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
       } else if (document.body.classList.contains('theme-red')) {
-        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+          colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
       }
       for (let i = 0; i < 60; i++) {
         particles.push(new window.Particle(container, colors));
@@ -408,79 +396,96 @@
       animationId = requestAnimationFrame(window.animateParticles);
     }
 
-    // --- Self-Contained Support Form Logic ---
-    (function() {
-        const checkInterval = setInterval(() => {
-            const supportButton = document.getElementById('support-button');
-            const supportDropdownPanel = document.getElementById('support-dropdown-panel');
-            const supportDropdownContainer = document.getElementById('support-dropdown-container');
-            const supportForm = document.getElementById('support-form');
-            const supportCategory = document.getElementById('support-category');
-            const otherContainer = document.getElementById('support-other-container');
-            const otherSubjectInput = document.getElementById('support-other-subject');
+    // --- UPDATED Self-Contained Support Form Logic ---
+    function initializeSupportDropdown() {
+        const supportButton = document.getElementById('support-button');
+        const supportDropdownPanel = document.getElementById('support-dropdown-panel');
+        const supportDropdownContainer = document.getElementById('support-dropdown-container');
+        const supportForm = document.getElementById('support-form');
+        const subjectSelect = document.getElementById('support-subject');
+        const otherSubjectContainer = document.getElementById('other-subject-container');
 
-            if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm && supportCategory && otherContainer) {
-                clearInterval(checkInterval); // Stop checking once all elements are found
+        if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm && subjectSelect && otherSubjectContainer) {
+            
+            // Toggle dropdown visibility on button click
+            supportButton.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent click from bubbling up to the document
+                supportDropdownPanel.classList.toggle('visible');
+            });
 
-                supportButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    supportDropdownPanel.classList.toggle('visible');
-                });
+            // Hide dropdown when clicking anywhere else on the page
+            document.addEventListener('click', (event) => {
+                if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
+                    supportDropdownPanel.classList.remove('visible');
+                }
+            });
+            
+            // Show/hide the 'Other' subject text box based on selection
+            subjectSelect.addEventListener('change', () => {
+                if (subjectSelect.value === 'Other') {
+                    otherSubjectContainer.style.display = 'block';
+                } else {
+                    otherSubjectContainer.style.display = 'none';
+                }
+            });
 
-                document.addEventListener('click', (event) => {
-                    if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
-                        supportDropdownPanel.classList.remove('visible');
-                    }
-                });
+            // Handle form submission
+            supportForm.addEventListener('submit', async (event) => {
+                event.preventDefault(); // Prevent default browser form submission
+                
+                const message = document.getElementById('support-message').value;
+                let subject = subjectSelect.value;
 
-                supportCategory.addEventListener('change', () => {
-                    if (supportCategory.value === 'Other') {
-                        otherContainer.style.display = 'block';
-                        otherSubjectInput.required = true;
-                    } else {
-                        otherContainer.style.display = 'none';
-                        otherSubjectInput.required = false;
-                    }
-                });
+                // If 'Other' is selected, use the text from the input box as the subject
+                if (subject === 'Other') {
+                    subject = document.getElementById('other-subject-text').value;
+                }
 
-                supportForm.addEventListener('submit', async (event) => {
-                    event.preventDefault();
-                    const submitButton = supportForm.querySelector('button[type="submit"]');
-                    submitButton.disabled = true;
-                    submitButton.textContent = 'Sending...';
+                // Prepare data for the API
+                const formData = {
+                    subject: subject,
+                    message: message,
+                    recipient: 'john.h.smith203@gmail.com'
+                };
+                
+                try {
+                    const response = await fetch('/api/Support_API.js', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData),
+                    });
 
-                    const formData = {
-                        category: supportCategory.value,
-                        otherSubject: otherSubjectInput.value,
-                        message: document.getElementById('support-message').value
-                    };
-
-                    try {
-                        const response = await fetch('/api/Support_API', { // Calling your API file
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(formData)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok.');
-                        }
-
-                        const result = await response.json();
+                    if (response.ok) {
                         alert('Thank you for your message! We will get back to you shortly.');
                         supportForm.reset();
-                        otherContainer.style.display = 'none';
-                        supportDropdownPanel.classList.remove('visible');
-
-                    } catch (error) {
-                        console.error('Failed to send support email:', error);
-                        alert('Sorry, there was an error sending your message. Please try again later.');
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Send Message';
+                        otherSubjectContainer.style.display = 'none'; // Hide 'Other' box on reset
+                        supportDropdownPanel.classList.remove('visible'); // Close dropdown
+                    } else {
+                        // Handle server errors (e.g., 404, 500)
+                        const errorData = await response.json();
+                        alert(`Error: ${errorData.message || 'Could not send message.'}`);
                     }
-                });
+                } catch (error) {
+                    // Handle network errors
+                    console.error('Failed to send support message:', error);
+                    alert('Failed to send message. Please check your network connection.');
+                }
+            });
+            
+            return true; // Indicate success
+        }
+        return false; // Indicate failure
+    }
+
+    // This script waits for the support button to appear in the DOM,
+    // then calls the initialization function.
+    (function() {
+        const checkInterval = setInterval(() => {
+            if (initializeSupportDropdown()) {
+                clearInterval(checkInterval); // Stop checking
             }
-        }, 100);
+        }, 100); // Check every 100 milliseconds
     })();
 </script>
