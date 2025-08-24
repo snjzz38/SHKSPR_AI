@@ -34,9 +34,9 @@ class handler(BaseHTTPRequestHandler):
             
             print("Proxy and fetch successful! Formatting transcript...")
 
-            # --- THIS IS THE FIX ---
-            # Changed segment['text'] to segment.text to correctly access the text from the object.
-            full_transcript = " ".join([segment['text'] for segment in transcript_data])
+            # --- THE ACTUAL FIX IS HERE ---
+            # The previous code still had segment['text']. This is now correct.
+            full_transcript = " ".join([segment.text for segment in transcript_data])
 
             # Send the successful response
             self.send_response(200)
@@ -50,4 +50,6 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
             
-        return
+        return```
+
+I am confident this will resolve the `'FetchedTranscriptSnippet' object is not subscriptable` error. Again, my sincere apologies for the repeated mistake.
