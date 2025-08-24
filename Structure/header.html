@@ -246,7 +246,7 @@
         font-weight: 600;
         font-size: 0.9rem;
     }
-    .support-form input, .support-form textarea, .support-form select {
+    .support-form input, .support-form textarea {
         width: 100%;
         padding: 0.5rem;
         border: 1px solid var(--accent);
@@ -269,9 +269,6 @@
         font-weight: bold;
         border: none;
         cursor: pointer;
-    }
-    #support-other-container {
-        display: none; /* Hidden by default */
     }
 </style>
 
@@ -305,17 +302,8 @@
         <button id="support-button" class="dropdown-button">Support</button>
         <div id="support-dropdown-panel" class="dropdown-options">
             <form id="support-form" class="support-form">
-                <label for="support-category">How Can I Help?</label>
-                <select id="support-category" name="category" required>
-                    <option value="Suggestion">Suggestion</option>
-                    <option value="Problem">Problem</option>
-                    <option value="Other">Other</option>
-                </select>
-
-                <div id="support-other-container">
-                    <label for="support-other-subject">Please Specify:</label>
-                    <input type="text" id="support-other-subject" name="other_subject">
-                </div>
+                <label for="support-subject">Subject</label>
+                <input type="text" id="support-subject" name="subject" required>
                 
                 <label for="support-message">Message</label>
                 <textarea id="support-message" name="message" required></textarea>
@@ -417,72 +405,35 @@
             const supportDropdownPanel = document.getElementById('support-dropdown-panel');
             const supportDropdownContainer = document.getElementById('support-dropdown-container');
             const supportForm = document.getElementById('support-form');
-            const supportCategory = document.getElementById('support-category');
-            const otherContainer = document.getElementById('support-other-container');
-            const otherSubjectInput = document.getElementById('support-other-subject');
 
-            if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm && supportCategory && otherContainer) {
+            if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm) {
                 clearInterval(checkInterval); // Stop checking once all elements are found
 
                 supportButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
+                    event.stopPropagation(); // Prevents the document click listener from firing immediately
                     supportDropdownPanel.classList.toggle('visible');
                 });
 
                 document.addEventListener('click', (event) => {
+                    // If the dropdown is visible and the click was outside of its container
                     if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
                         supportDropdownPanel.classList.remove('visible');
                     }
                 });
 
-                supportCategory.addEventListener('change', () => {
-                    if (supportCategory.value === 'Other') {
-                        otherContainer.style.display = 'block';
-                        otherSubjectInput.required = true;
-                    } else {
-                        otherContainer.style.display = 'none';
-                        otherSubjectInput.required = false;
-                    }
-                });
-
-                supportForm.addEventListener('submit', async (event) => {
+                supportForm.addEventListener('submit', (event) => {
                     event.preventDefault();
-                    const submitButton = supportForm.querySelector('button[type="submit"]');
-                    submitButton.disabled = true;
-                    submitButton.textContent = 'Sending...';
+                    const subject = document.getElementById('support-subject').value;
+                    const message = document.getElementById('support-message').value;
 
-                    const formData = {
-                        category: supportCategory.value,
-                        otherSubject: otherSubjectInput.value,
-                        message: document.getElementById('support-message').value
-                    };
-
-                    try {
-                        const response = await fetch('/api/Support_API', { // Corrected API endpoint name
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(formData)
-                        });
-
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok.');
-                        }
-
-                        const result = await response.json();
-                        alert('Thank you for your message! We will get back to you shortly.');
-                        supportForm.reset();
-                        otherContainer.style.display = 'none';
-                        supportDropdownPanel.classList.remove('visible');
-
-                    } catch (error) {
-                        console.error('Failed to send support email:', error);
-                        alert('Sorry, there was an error sending your message. Please try again later.');
-                    } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'Send Message';
-                    }
+                    // Placeholder for your email sending logic
+                    console.log('Support Request Submitted:', { subject, message });
+                    alert('Thank you for your message! We will get back to you shortly.');
+                    
+                    supportForm.reset();
+                    supportDropdownPanel.classList.remove('visible'); // Hide dropdown after submission
                 });
             }
-        }, 100);
+        }, 100); // Check every 100 milliseconds
     })();
 </script>
