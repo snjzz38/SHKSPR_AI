@@ -302,6 +302,16 @@
             }
             function clearMessages() { hideElement(dom.processMessageDiv); }
 
+            // --- NEW: Function to clear all results and local storage ---
+            function clearAllResults() {
+                hideElement(dom.transcribedTextDisplay);
+                hideElement(dom.summaryDisplay);
+                dom.transcribedTextContent.textContent = '';
+                dom.summaryContent.textContent = '';
+                localStorage.removeItem('summarizerTranscript');
+                localStorage.removeItem('summarizerSummary');
+            }
+
             function fileToBase64(file) {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -388,9 +398,7 @@
             }
             
             async function processContent() {
-                clearMessages();
-                hideElement(dom.transcribedTextDisplay);
-                hideElement(dom.summaryDisplay);
+                clearAllResults(); // Clear previous results before starting
                 showElement(dom.processLoadingIndicator);
                 dom.processBtn.disabled = true;
 
@@ -429,6 +437,7 @@
                     
                     dom.transcribedTextContent.textContent = transcript;
                     showElement(dom.transcribedTextDisplay);
+                    localStorage.setItem('summarizerTranscript', transcript); // Save transcript
 
                     // --- SUMMARIZATION (Common for both modes) ---
                     displayMessage("Transcription complete. Now summarizing...", false);
@@ -446,6 +455,7 @@
 
                     dom.summaryContent.textContent = summary;
                     showElement(dom.summaryDisplay);
+                    localStorage.setItem('summarizerSummary', summary); // Save summary
                     clearMessages();
 
                 } catch (error) {
@@ -469,7 +479,8 @@
             function setMode(mode) {
                 currentMode = mode;
                 clearMessages();
-                [dom.transcribedTextDisplay, dom.summaryDisplay].forEach(hideElement);
+                // DO NOT clear results when switching modes
+                // clearAllResults(); 
 
                 if (mode === 'audio') {
                     showElement(dom.audioInputContainer);
@@ -484,12 +495,31 @@
                 }
                 updateButtonState();
             }
+
+            // --- NEW: Function to load saved data on page load ---
+            function loadSavedResults() {
+                const savedTranscript = localStorage.getItem('summarizerTranscript');
+                const savedSummary = localStorage.getItem('summarizerSummary');
+
+                if (savedTranscript) {
+                    dom.transcribedTextContent.textContent = savedTranscript;
+                    showElement(dom.transcribedTextDisplay);
+                }
+                if (savedSummary) {
+                    dom.summaryContent.textContent = savedSummary;
+                    showElement(dom.summaryDisplay);
+                }
+            }
             
             dom.audioFileInput.addEventListener('change', () => {
                 dom.fileNameDisplay.textContent = dom.audioFileInput.files.length > 0 ? dom.audioFileInput.files[0].name : 'No file chosen';
                 updateButtonState();
+                clearAllResults(); // Clear old results when a new file is chosen
             });
-            dom.youtubeUrlInput.addEventListener('input', updateButtonState);
+            dom.youtubeUrlInput.addEventListener('input', () => {
+                updateButtonState();
+                clearAllResults(); // Clear old results when a new URL is typed
+            });
             dom.concisenessSlider.addEventListener('input', updateSummarizationPrompt);
             dom.processBtn.addEventListener('click', processContent);
             dom.modeAudioBtn.addEventListener('click', () => setMode('audio'));
@@ -498,6 +528,7 @@
             // Initial setup
             updateSummarizationPrompt();
             setMode('audio'); // Set initial mode
+            loadSavedResults(); // Load any previously saved results
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
