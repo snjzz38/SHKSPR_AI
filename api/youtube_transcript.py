@@ -18,13 +18,11 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # --- The Final Fix for this Proxy ---
-            # Changing the protocol from https to http as the error message suggested.
+            # Using the experimental HTTP proxy
             proxy_url = "http://51.79.99.237:4502"
             
             print(f"Attempting to use single experimental proxy with HTTP: {proxy_url}")
 
-            # Configure the proxy for both http and https traffic
             proxy_config = GenericProxyConfig(
                 http_url=proxy_url,
                 https_url=proxy_url
@@ -34,10 +32,13 @@ class handler(BaseHTTPRequestHandler):
             
             transcript_data = api.fetch(video_id)
             
-            print("Proxy successful!")
+            print("Proxy and fetch successful! Formatting transcript...")
 
+            # --- THIS IS THE FIX ---
+            # Changed segment['text'] to segment.text to correctly access the text from the object.
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
+            # Send the successful response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -47,6 +48,6 @@ class handler(BaseHTTPRequestHandler):
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({'error': f'An error occurred with the experimental proxy: {str(e)}'}).encode('utf-8'))
+            self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
             
         return
