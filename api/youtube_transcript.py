@@ -3,6 +3,15 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
 import json
+import random
+
+# --- A manually curated list of promising proxies from free-proxy-list.net ---
+# You can add more good ones you find here.
+PROXY_LIST = [
+    "http://51.79.99.237:4502",
+    # Add another proxy here, e.g., "http://IP_ADDRESS:PORT"
+    # Add a third one here...
+]
 
 class handler(BaseHTTPRequestHandler):
 
@@ -17,41 +26,52 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
+        transcript_data = None
+        last_error = None
+
         try:
-            # --- Hardcoded Experimental Proxy ---
-            # Using the specific HTTP proxy you found.
-            proxy_url = "http://51.79.99.237:4502"
-            
-            print(f"Attempting to use single hardcoded proxy: {proxy_url}")
+            # Shuffle our curated list of proxies
+            random.shuffle(PROXY_LIST)
 
-            # Configure the proxy for both http and https traffic
-            proxy_config = GenericProxyConfig(
-                http_url=proxy_url,
-                https_url=proxy_url
-            )
-            
-            # Create the API instance with the proxy
-            api = YouTubeTranscriptApi(proxy_config=proxy_config)
-            
-            # Attempt to fetch the transcript
-            transcript_data = api.fetch(video_id)
-            
-            print("Proxy and fetch successful!")
+            # Try every proxy in our list
+            for proxy_url in PROXY_LIST:
+                try:
+                    clean_proxy_url = proxy_url.strip()
+                    if not clean_proxy_url:
+                        continue
+                    
+                    print(f"Attempting to use proxy: {clean_proxy_url}")
 
-            # Correctly format the transcript text using .text
+                    proxy_config = GenericProxyConfig(
+                        http_url=clean_proxy_url,
+                        https_url=clean_proxy_url
+                    )
+                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
+                    
+                    transcript_data = api.fetch(video_id)
+                    
+                    print("Proxy successful!")
+                    break 
+
+                except Exception as e:
+                    last_error = str(e)
+                    print(f"Proxy {clean_proxy_url} failed: {last_error}")
+                    continue
+
+            if not transcript_data:
+                raise Exception(f"All curated proxies failed. Last error: {last_error}" if last_error else "Proxy list is empty.")
+
             full_transcript = " ".join([segment.text for segment in transcript_data])
 
-            # Send the successful response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'transcript': full_transcript}).encode('utf-8'))
 
         except Exception as e:
-            # If anything fails, send back a specific error
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({'error': f'The hardcoded proxy failed: {str(e)}'}).encode('utf-8'))
+            self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
             
         return
