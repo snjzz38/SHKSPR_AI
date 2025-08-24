@@ -394,7 +394,7 @@
       animationId = requestAnimationFrame(window.animateParticles);
     }
 
-    // --- RE-EDITED Self-Contained Support Form Logic ---
+  // --- FINALIZED Self-Contained Support Form Logic ---
     function initializeSupportDropdown() {
         const supportButton = document.getElementById('support-button');
         const supportDropdownPanel = document.getElementById('support-dropdown-panel');
@@ -431,15 +431,15 @@
                 const otherSubject = document.getElementById('other-subject-text').value;
                 const message = document.getElementById('support-message').value;
 
-                // Construct the payload to match the backend API
                 const formData = {
                     category: category,
-                    otherSubject: category === 'Other' ? otherSubject : '', // Only send otherSubject if category is 'Other'
+                    otherSubject: category === 'Other' ? otherSubject : '',
                     message: message
                 };
                 
                 try {
-                    const response = await fetch('../api/Support_API.js', {
+                    // This fetch call talks to the backend API
+                    const response = await fetch('/api/support', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
