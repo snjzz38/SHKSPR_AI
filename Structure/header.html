@@ -458,7 +458,7 @@
                     };
 
                     try {
-                        const response = await fetch('/api/send_support_email', {
+                        const response = await fetch('/api/Support_API', { // Corrected API endpoint name
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
