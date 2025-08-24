@@ -18,34 +18,32 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # --- Hardcoded Experimental Proxy ---
-            # Using the specific HTTPS proxy you found.
-            proxy_url = "https://51.79.99.237:4502"
+            # --- The Final Fix for this Proxy ---
+            # Changing the protocol from https to http as the error message suggested.
+            proxy_url = "http://51.79.99.237:4502"
             
-            print(f"Attempting to use single experimental proxy: {proxy_url}")
+            print(f"Attempting to use single experimental proxy with HTTP: {proxy_url}")
 
-            # Configure the proxy
-            proxy_config = GenericProxyConfig(https_url=proxy_url)
+            # Configure the proxy for both http and https traffic
+            proxy_config = GenericProxyConfig(
+                http_url=proxy_url,
+                https_url=proxy_url
+            )
             
-            # Create the API instance with the proxy
             api = YouTubeTranscriptApi(proxy_config=proxy_config)
             
-            # Attempt to fetch the transcript
             transcript_data = api.fetch(video_id)
             
             print("Proxy successful!")
 
-            # Format the transcript text
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
-            # Send the successful response
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'transcript': full_transcript}).encode('utf-8'))
 
         except Exception as e:
-            # If anything fails, send back the error
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
