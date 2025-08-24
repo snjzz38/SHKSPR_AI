@@ -113,6 +113,45 @@
         pointer-events: none;
         will-change: transform;
     }
+
+/* --- Support Form Dropdown Styles --- */
+#support-dropdown-panel {
+    min-width: 300px; /* Make it wider for the form */
+    padding: 1.5rem;
+}
+.support-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.support-form input, .support-form textarea, .support-form select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+.support-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+.support-form button {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 6px;
+    background-color: var(--accent);
+    color: var(--bg-primary);
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+}
+#support-other-container {
+    display: none; /* Hidden by default */
+}
     
     /* --- NEW: Reusable Animation Section (UPDATED) --- */
     /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
@@ -302,8 +341,17 @@
         <button id="support-button" class="dropdown-button">Support</button>
         <div id="support-dropdown-panel" class="dropdown-options">
             <form id="support-form" class="support-form">
-                <label for="support-subject">Subject</label>
-                <input type="text" id="support-subject" name="subject" required>
+                <label for="support-category">How Can I Help?</label>
+                <select id="support-category" name="category" required>
+                    <option value="Suggestion">Suggestion</option>
+                    <option value="Problem">Problem</option>
+                    <option value="Other">Other</option>
+                </select>
+    
+                <div id="support-other-container">
+                    <label for="support-other-subject">Please Specify:</label>
+                    <input type="text" id="support-other-subject" name="other_subject">
+                </div>
                 
                 <label for="support-message">Message</label>
                 <textarea id="support-message" name="message" required></textarea>
@@ -399,41 +447,125 @@
     }
 
     // --- Self-Contained Support Form Logic ---
+    function initializeSupportDropdown() {
+        const supportButton = document.getElementById('support-button');
+        const supportDropdownPanel = document.getElementById('support-dropdown-panel');
+        const supportDropdownContainer = document.getElementById('support-dropdown-container');
+        const supportForm = document.getElementById('support-form');
+
+        if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm) {
+            supportButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                supportDropdownPanel.classList.toggle('visible');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
+                    supportDropdownPanel.classList.remove('visible');
+                }
+            });
+
+            supportForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const subject = document.getElementById('support-subject').value;
+                const message = document.getElementById('support-message').value;
+
+                console.log('Support Request Submitted:', { subject, message });
+                alert('Thank you for your message! We will get back to you shortly.');
+                
+                supportForm.reset();
+                supportDropdownPanel.classList.remove('visible');
+            });
+            
+            return true; // Indicate success
+        }
+        return false; // Indicate failure
+    }
+
+    // This script waits for the support button to appear in the DOM,
+    // then calls the initialization function.
     (function() {
         const checkInterval = setInterval(() => {
-            const supportButton = document.getElementById('support-button');
-            const supportDropdownPanel = document.getElementById('support-dropdown-panel');
-            const supportDropdownContainer = document.getElementById('support-dropdown-container');
-            const supportForm = document.getElementById('support-form');
-
-            if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm) {
-                clearInterval(checkInterval); // Stop checking once all elements are found
-
-                supportButton.addEventListener('click', (event) => {
-                    event.stopPropagation(); // Prevents the document click listener from firing immediately
-                    supportDropdownPanel.classList.toggle('visible');
-                });
-
-                document.addEventListener('click', (event) => {
-                    // If the dropdown is visible and the click was outside of its container
-                    if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
-                        supportDropdownPanel.classList.remove('visible');
-                    }
-                });
-
-                supportForm.addEventListener('submit', (event) => {
-                    event.preventDefault();
-                    const subject = document.getElementById('support-subject').value;
-                    const message = document.getElementById('support-message').value;
-
-                    // Placeholder for your email sending logic
-                    console.log('Support Request Submitted:', { subject, message });
-                    alert('Thank you for your message! We will get back to you shortly.');
-                    
-                    supportForm.reset();
-                    supportDropdownPanel.classList.remove('visible'); // Hide dropdown after submission
-                });
+            // The initialize function will return true once it succeeds
+            if (initializeSupportDropdown()) {
+                clearInterval(checkInterval); // Stop checking
             }
         }, 100); // Check every 100 milliseconds
     })();
+
+// --- Self-Contained Support Form Logic ---
+(function() {
+    const checkInterval = setInterval(() => {
+        const supportButton = document.getElementById('support-button');
+        const supportDropdownPanel = document.getElementById('support-dropdown-panel');
+        const supportDropdownContainer = document.getElementById('support-dropdown-container');
+        const supportForm = document.getElementById('support-form');
+        const supportCategory = document.getElementById('support-category');
+        const otherContainer = document.getElementById('support-other-container');
+        const otherSubjectInput = document.getElementById('support-other-subject');
+
+        if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm && supportCategory && otherContainer) {
+            clearInterval(checkInterval); // Stop checking once all elements are found
+
+            supportButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                supportDropdownPanel.classList.toggle('visible');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
+                    supportDropdownPanel.classList.remove('visible');
+                }
+            });
+
+            supportCategory.addEventListener('change', () => {
+                if (supportCategory.value === 'Other') {
+                    otherContainer.style.display = 'block';
+                    otherSubjectInput.required = true;
+                } else {
+                    otherContainer.style.display = 'none';
+                    otherSubjectInput.required = false;
+                }
+            });
+
+            supportForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const submitButton = supportForm.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sending...';
+
+                const formData = {
+                    category: supportCategory.value,
+                    otherSubject: otherSubjectInput.value,
+                    message: document.getElementById('support-message').value
+                };
+
+                try {
+                    const response = await fetch('/api/Support_API', { // Calling your API file
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok.');
+                    }
+
+                    const result = await response.json();
+                    alert('Thank you for your message! We will get back to you shortly.');
+                    supportForm.reset();
+                    otherContainer.style.display = 'none';
+                    supportDropdownPanel.classList.remove('visible');
+
+                } catch (error) {
+                    console.error('Failed to send support email:', error);
+                    alert('Sorry, there was an error sending your message. Please try again later.');
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Send Message';
+                }
+            });
+        }
+    }, 100);
+})();
 </script>
