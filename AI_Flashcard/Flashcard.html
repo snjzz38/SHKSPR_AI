@@ -403,7 +403,7 @@ function initializeFlashcardApp() {
     };
 
     const showInputStep = (index) => {
-        dom.inputSteps.forEach((step, i) => step.classList.toggle('active', i !== index));
+        dom.inputSteps.forEach((step, i) => step.classList.toggle('active', i === index));
         currentInputStepIndex = index;
         dom.inputPrevButton.disabled = currentInputStepIndex === 0;
         dom.inputNextButton.disabled = currentInputStepIndex === dom.inputSteps.length - 1;
@@ -585,7 +585,7 @@ function initializeFlashcardApp() {
     dom.clearButton.addEventListener('click', clearState);
 
     showInputStep(0);
-    generateButton.style.display = 'none';
+    dom.generateButton.style.display = 'none'; // Hide generate button initially
     updateFileListDisplay();
     
     // NEW: Load saved state on initial page load
