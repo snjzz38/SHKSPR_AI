@@ -94,11 +94,6 @@
             border-color: rgb(var(--error-rgb));
             color: #fecaca;
         }
-        .data-display {
-            margin-top: 1.5rem; text-align: left; background-color: var(--bg-secondary);
-            padding: 1rem; border-radius: 0.75rem; max-height: 400px; overflow-y: auto; word-wrap: break-word;
-        }
-        .data-display pre { white-space: pre-wrap; }
         .file-input-wrapper { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; }
         .file-input-wrapper input[type="file"] { display: none; }
         .custom-file-upload {
@@ -115,6 +110,11 @@
             color: var(--text-primary); resize: vertical;
         }
         .prompt-input-group textarea { min-height: 120px; }
+        /* NEW: Style for the readonly output textareas */
+        .prompt-input-group textarea[readonly] {
+            min-height: 250px;
+            background-color: var(--bg-primary);
+        }
         .prompt-input-group textarea:focus, .youtube-input:focus {
             outline: none; border-color: var(--text-primary); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
         }
@@ -210,14 +210,16 @@
             
             <div id="processMessageDiv" class="message-box hidden"></div>
             
-            <div id="transcribedTextDisplay" class="data-display hidden">
-                <h3 class="text-xl font-semibold mb-2">Transcribed Text:</h3>
-                <pre id="transcribedTextContent"></pre>
+            <!-- NEW: Transcribed Text Output Section -->
+            <div id="transcribedTextContainer" class="prompt-input-group hidden">
+                <label for="transcribedTextOutput">Transcribed Text:</label>
+                <textarea id="transcribedTextOutput" readonly></textarea>
             </div>
             
-            <div id="summaryDisplay" class="data-display hidden">
-                <h3 class="text-xl font-semibold mb-2">Summary:</h3>
-                <pre id="summaryContent"></pre>
+            <!-- NEW: Summary Output Section -->
+            <div id="summaryContainer" class="prompt-input-group hidden">
+                <label for="summaryOutput">Summary:</label>
+                <textarea id="summaryOutput" readonly></textarea>
             </div>
         </div>
     </main>
@@ -280,10 +282,11 @@
                 processBtn: document.getElementById('processBtn'),
                 processLoadingIndicator: document.getElementById('processLoadingIndicator'),
                 processMessageDiv: document.getElementById('processMessageDiv'),
-                transcribedTextDisplay: document.getElementById('transcribedTextDisplay'),
-                transcribedTextContent: document.getElementById('transcribedTextContent'),
-                summaryDisplay: document.getElementById('summaryDisplay'),
-                summaryContent: document.getElementById('summaryContent'),
+                // UPDATED: New DOM references
+                transcribedTextContainer: document.getElementById('transcribedTextContainer'),
+                transcribedTextOutput: document.getElementById('transcribedTextOutput'),
+                summaryContainer: document.getElementById('summaryContainer'),
+                summaryOutput: document.getElementById('summaryOutput'),
                 summarizationPromptInput: document.getElementById('summarizationPrompt'),
                 concisenessSlider: document.getElementById('concisenessSlider'),
                 concisenessValueSpan: document.getElementById('concisenessValue'),
@@ -302,12 +305,12 @@
             }
             function clearMessages() { hideElement(dom.processMessageDiv); }
 
-            // --- NEW: Function to clear all results and local storage ---
             function clearAllResults() {
-                hideElement(dom.transcribedTextDisplay);
-                hideElement(dom.summaryDisplay);
-                dom.transcribedTextContent.textContent = '';
-                dom.summaryContent.textContent = '';
+                // UPDATED: Clear new elements
+                hideElement(dom.transcribedTextContainer);
+                hideElement(dom.summaryContainer);
+                dom.transcribedTextOutput.value = '';
+                dom.summaryOutput.value = '';
                 localStorage.removeItem('summarizerTranscript');
                 localStorage.removeItem('summarizerSummary');
             }
@@ -398,7 +401,7 @@
             }
             
             async function processContent() {
-                clearAllResults(); // Clear previous results before starting
+                clearAllResults();
                 showElement(dom.processLoadingIndicator);
                 dom.processBtn.disabled = true;
 
@@ -435,11 +438,11 @@
                         if (!transcript || transcript.trim() === '') throw new Error("Could not fetch transcript for this video. It may not have one available.");
                     }
                     
-                    dom.transcribedTextContent.textContent = transcript;
-                    showElement(dom.transcribedTextDisplay);
-                    localStorage.setItem('summarizerTranscript', transcript); // Save transcript
+                    // UPDATED: Set value of textarea
+                    dom.transcribedTextOutput.value = transcript;
+                    showElement(dom.transcribedTextContainer);
+                    localStorage.setItem('summarizerTranscript', transcript);
 
-                    // --- SUMMARIZATION (Common for both modes) ---
                     displayMessage("Transcription complete. Now summarizing...", false);
                     const summarizationPrompt = dom.summarizationPromptInput.value;
                     const summaryPayload = {
@@ -453,9 +456,10 @@
 
                     if (!summary || summary.trim() === '') throw new Error("Summarization failed or returned empty.");
 
-                    dom.summaryContent.textContent = summary;
-                    showElement(dom.summaryDisplay);
-                    localStorage.setItem('summarizerSummary', summary); // Save summary
+                    // UPDATED: Set value of textarea
+                    dom.summaryOutput.value = summary;
+                    showElement(dom.summaryContainer);
+                    localStorage.setItem('summarizerSummary', summary);
                     clearMessages();
 
                 } catch (error) {
@@ -479,8 +483,6 @@
             function setMode(mode) {
                 currentMode = mode;
                 clearMessages();
-                // DO NOT clear results when switching modes
-                // clearAllResults(); 
 
                 if (mode === 'audio') {
                     showElement(dom.audioInputContainer);
@@ -496,29 +498,30 @@
                 updateButtonState();
             }
 
-            // --- NEW: Function to load saved data on page load ---
             function loadSavedResults() {
                 const savedTranscript = localStorage.getItem('summarizerTranscript');
                 const savedSummary = localStorage.getItem('summarizerSummary');
 
                 if (savedTranscript) {
-                    dom.transcribedTextContent.textContent = savedTranscript;
-                    showElement(dom.transcribedTextDisplay);
+                    // UPDATED: Set value of textarea and show container
+                    dom.transcribedTextOutput.value = savedTranscript;
+                    showElement(dom.transcribedTextContainer);
                 }
                 if (savedSummary) {
-                    dom.summaryContent.textContent = savedSummary;
-                    showElement(dom.summaryDisplay);
+                    // UPDATED: Set value of textarea and show container
+                    dom.summaryOutput.value = savedSummary;
+                    showElement(dom.summaryContainer);
                 }
             }
             
             dom.audioFileInput.addEventListener('change', () => {
                 dom.fileNameDisplay.textContent = dom.audioFileInput.files.length > 0 ? dom.audioFileInput.files[0].name : 'No file chosen';
                 updateButtonState();
-                clearAllResults(); // Clear old results when a new file is chosen
+                clearAllResults();
             });
             dom.youtubeUrlInput.addEventListener('input', () => {
                 updateButtonState();
-                clearAllResults(); // Clear old results when a new URL is typed
+                clearAllResults();
             });
             dom.concisenessSlider.addEventListener('input', updateSummarizationPrompt);
             dom.processBtn.addEventListener('click', processContent);
@@ -527,8 +530,8 @@
 
             // Initial setup
             updateSummarizationPrompt();
-            setMode('audio'); // Set initial mode
-            loadSavedResults(); // Load any previously saved results
+            setMode('audio');
+            loadSavedResults();
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
