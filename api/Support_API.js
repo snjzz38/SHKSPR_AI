@@ -1,4 +1,4 @@
-// In /api/send_support_email.js
+// In /api/Support_API.js
 import { Resend } from 'resend';
 
 // Initialize Resend with your API key from Vercel Environment Variables
@@ -18,8 +18,8 @@ export default async function handler(req, res) {
 
     // Send the email
     const { data, error } = await resend.emails.send({
-      from: 'SHKSPR Support <onboarding@resend.dev>', // IMPORTANT: See setup instructions below
-      to: ['john.h.smith203@gmail.com'], // Your specified email address
+      from: 'SHKSPR Support <onboarding@resend.dev>', // This must be a verified domain in Resend
+      to: ['john.h.smith203@gmail.com'], // Your email address
       subject: subject,
       html: `
         <h1>New Support Request</h1>
