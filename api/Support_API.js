@@ -1,44 +1,37 @@
-// In /api/Support_API.js
-import { Resend } from 'resend';
+supportForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const category = subjectSelect.value;
+    const otherSubject = document.getElementById('other-subject-text').value;
+    const message = document.getElementById('support-message').value;
 
-// Initialize Resend with your API key from Vercel Environment Variables
-const resend = new Resend(process.env.SUPPORT_1);
+    const formData = {
+        category: category,
+        otherSubject: category === 'Other' ? otherSubject : '',
+        message: message
+    };
+    
+    try {
+        // CORRECTED: Use the absolute path for the Vercel API endpoint
+        const response = await fetch('/api/Support_API', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+        });
 
-export default async function handler(req, res) {
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-
-  try {
-    const { category, otherSubject, message } = req.body;
-
-    // Determine the final subject line
-    const subject = category === 'Other' ? `Support: Other - ${otherSubject}` : `Support: ${category}`;
-
-    // Send the email
-    const { data, error } = await resend.emails.send({
-      from: 'SHKSPR Support <onboarding@resend.dev>', // This must be a verified domain in Resend
-      to: ['john.h.smith203@gmail.com'], // Your email address
-      subject: subject,
-      html: `
-        <h1>New Support Request</h1>
-        <p><strong>Category:</strong> ${category}</p>
-        ${otherSubject ? `<p><strong>Specified Subject:</strong> ${otherSubject}</p>` : ''}
-        <hr>
-        <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, '<br>')}</p>
-      `,
-    });
-
-    if (error) {
-      console.error('Resend API Error:', error);
-      return res.status(400).json({ error: 'Failed to send message.' });
+        if (response.ok) {
+            alert('Thank you for your message! We will get back to you shortly.');
+            supportForm.reset();
+            otherSubjectContainer.style.display = 'none';
+            supportDropdownPanel.classList.remove('visible');
+        } else {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.error || 'Could not send message.'}`);
+        }
+    } catch (error) {
+        console.error('Failed to send support message:', error);
+        alert('Failed to send message. Please check your network connection.');
     }
-
-    res.status(200).json({ success: true, message: 'Message sent successfully!' });
-  } catch (error) {
-    console.error('Server Error:', error);
-    res.status(500).json({ error: 'An internal server error occurred.' });
-  }
-}
+});
