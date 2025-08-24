@@ -304,6 +304,58 @@ function initializeFlashcardApp() {
     let currentFlashcardIndex = 0;
     let currentInputStepIndex = 0;
 
+    // --- NEW: LocalStorage Functions ---
+    const saveState = () => {
+        localStorage.setItem('flashcardInput', dom.inputText.value);
+        localStorage.setItem('flashcardInstructions', dom.customInstructions.value);
+        // Only save flashcards if there are any
+        if (flashcardsData && flashcardsData.length > 0) {
+            localStorage.setItem('flashcardsData', JSON.stringify(flashcardsData));
+        } else {
+            localStorage.removeItem('flashcardsData');
+        }
+    };
+
+    const loadState = () => {
+        const savedInput = localStorage.getItem('flashcardInput');
+        const savedInstructions = localStorage.getItem('flashcardInstructions');
+        const savedFlashcards = localStorage.getItem('flashcardsData');
+
+        if (savedInput) {
+            dom.inputText.value = savedInput;
+        }
+        if (savedInstructions) {
+            dom.customInstructions.value = savedInstructions;
+        }
+        if (savedFlashcards) {
+            try {
+                flashcardsData = JSON.parse(savedFlashcards);
+                if (Array.isArray(flashcardsData) && flashcardsData.length > 0) {
+                    displayFlashcard(0);
+                } else {
+                    flashcardsData = []; // Reset if data is invalid
+                }
+            } catch (e) {
+                console.error("Failed to parse saved flashcards:", e);
+                flashcardsData = [];
+            }
+        }
+    };
+
+    const clearState = () => {
+        dom.inputText.value = '';
+        dom.customInstructions.value = '';
+        uploadedFilesData = [];
+        flashcardsData = [];
+        localStorage.removeItem('flashcardInput');
+        localStorage.removeItem('flashcardInstructions');
+        localStorage.removeItem('flashcardsData');
+        updateFileListDisplay();
+        displayFlashcard(0);
+        showInputStep(0);
+        showMessage('All content cleared.');
+    };
+
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -351,7 +403,7 @@ function initializeFlashcardApp() {
     };
 
     const showInputStep = (index) => {
-        dom.inputSteps.forEach((step, i) => step.classList.toggle('active', i === index));
+        dom.inputSteps.forEach((step, i) => step.classList.toggle('active', i !== index));
         currentInputStepIndex = index;
         dom.inputPrevButton.disabled = currentInputStepIndex === 0;
         dom.inputNextButton.disabled = currentInputStepIndex === dom.inputSteps.length - 1;
@@ -417,12 +469,11 @@ function initializeFlashcardApp() {
                 }
                 const result = await response.json();
                 if (result.flashcards && result.flashcards.length > 0) {
-                    // **FIX IS HERE**: Filter out empty cards before returning
                     const validFlashcards = result.flashcards.filter(card =>
                         card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
                     );
                     if (validFlashcards.length > 0) {
-                        return { flashcards: validFlashcards }; // Return only valid cards
+                        return { flashcards: validFlashcards };
                     }
                 }
                 lastError = new Error(`Model ${model} returned no valid flashcards.`);
@@ -465,9 +516,12 @@ function initializeFlashcardApp() {
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
-            flashcardsData = result.flashcards; // This is now guaranteed to be valid
+            flashcardsData = result.flashcards;
             displayFlashcard(0);
             showMessage('Flashcards generated successfully!', 'success');
+            
+            // NEW: Save state after successful generation
+            saveState();
 
         } catch (error) {
             console.error('Error:', error);
@@ -478,6 +532,10 @@ function initializeFlashcardApp() {
             setTimeout(() => { dom.loadingBarContainer.style.display = 'none'; dom.loadingBar.style.width = '0%'; }, 500);
         }
     };
+
+    // NEW: Add event listeners to save input text as user types
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
 
     dom.fileInput.addEventListener('change', async (e) => {
         for (const file of e.target.files) {
@@ -522,20 +580,16 @@ function initializeFlashcardApp() {
     dom.prevButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex - 1));
     dom.nextButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex + 1));
     dom.generateButton.addEventListener('click', generateFlashcards);
-    dom.clearButton.addEventListener('click', () => {
-        dom.inputText.value = '';
-        dom.customInstructions.value = '';
-        uploadedFilesData = [];
-        flashcardsData = [];
-        updateFileListDisplay();
-        displayFlashcard(0);
-        showInputStep(0);
-        showMessage('All content cleared.');
-    });
+    
+    // UPDATED: Clear button now calls clearState
+    dom.clearButton.addEventListener('click', clearState);
 
     showInputStep(0);
     generateButton.style.display = 'none';
     updateFileListDisplay();
+    
+    // NEW: Load saved state on initial page load
+    loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
