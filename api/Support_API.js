@@ -1,37 +1,49 @@
-supportForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    
-    const category = subjectSelect.value;
-    const otherSubject = document.getElementById('other-subject-text').value;
-    const message = document.getElementById('support-message').value;
+// In /api/Support_API.js
+import { Resend } from 'resend';
 
-    const formData = {
-        category: category,
-        otherSubject: category === 'Other' ? otherSubject : '',
-        message: message
-    };
-    
-    try {
-        // CORRECTED: Use the absolute path for the Vercel API endpoint
-        const response = await fetch('/api/support', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData),
-        });
+// Initialize Resend with your API key from Vercel Environment Variables
+const resend = new Resend(process.env.SUPPORT_1);
 
-        if (response.ok) {
-            alert('Thank you for your message! We will get back to you shortly.');
-            supportForm.reset();
-            otherSubjectContainer.style.display = 'none';
-            supportDropdownPanel.classList.remove('visible');
-        } else {
-            const errorData = await response.json();
-            alert(`Error: ${errorData.error || 'Could not send message.'}`);
-        }
-    } catch (error) {
-        console.error('Failed to send support message:', error);
-        alert('Failed to send message. Please check your network connection.');
+export default async function handler(req, res) {
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  try {
+    // Destructure the body from the frontend request
+    const { category, otherSubject, message } = req.body;
+
+    // Determine the final subject line
+    const subject = category === 'Other' ? `Support: Other - ${otherSubject}` : `Support: ${category}`;
+
+    // Send the email using Resend
+    const { data, error } = await resend.emails.send({
+      from: 'SHKSPR Support <YOUR_VERIFIED_DOMAIN_EMAIL>', // IMPORTANT: Replace with your verified email
+      to: ['john.h.smith203@gmail.com'],
+      subject: subject,
+      html: `
+        <h1>New Support Request</h1>
+        <p><strong>Category:</strong> ${category}</p>
+        ${otherSubject ? `<p><strong>Specified Subject:</strong> ${otherSubject}</p>` : ''}
+        <hr>
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br>')}</p>
+      `,
+    });
+
+    // Handle errors from Resend
+    if (error) {
+      console.error('Resend API Error:', error);
+      return res.status(400).json({ error: 'Failed to send message via Resend.' });
     }
-});
+
+    // Send a success response
+    res.status(200).json({ success: true, message: 'Message sent successfully!' });
+
+  } catch (error) {
+    // Handle any other server errors
+    console.error('Server Error:', error);
+    res.status(500).json({ error: 'An internal server error occurred.' });
+  }
+}
