@@ -16,6 +16,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/support",
+      "destination": "/api/Support_API.js"
+    },
+    {
       "source": "/api/humanizer",
       "destination": "/api/Humanizer_API.js"
     },
