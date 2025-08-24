@@ -323,6 +323,55 @@ function initializeQuizApp() {
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
 
+    // --- NEW: LocalStorage Functions ---
+    const saveState = () => {
+        localStorage.setItem('quizInputText', dom.inputText.value);
+        localStorage.setItem('quizCustomInstructions', dom.customInstructions.value);
+        if (quizData && quizData.length > 0) {
+            localStorage.setItem('quizData', JSON.stringify(quizData));
+        } else {
+            localStorage.removeItem('quizData');
+        }
+    };
+
+    const loadState = () => {
+        dom.inputText.value = localStorage.getItem('quizInputText') || '';
+        dom.customInstructions.value = localStorage.getItem('quizCustomInstructions') || '';
+        const savedQuizData = localStorage.getItem('quizData');
+        if (savedQuizData) {
+            try {
+                quizData = JSON.parse(savedQuizData);
+                if (Array.isArray(quizData) && quizData.length > 0) {
+                    renderQuizPreview(quizData);
+                } else {
+                    quizData = [];
+                }
+            } catch (e) {
+                console.error("Failed to parse saved quiz data:", e);
+                quizData = [];
+            }
+        }
+    };
+
+    const clearState = () => {
+        dom.inputText.value = '';
+        dom.customInstructions.value = '';
+        uploadedFilesData = [];
+        quizData = [];
+        userAnswers = [];
+        localStorage.removeItem('quizInputText');
+        localStorage.removeItem('quizCustomInstructions');
+        localStorage.removeItem('quizData');
+        dom.quizPreviewArea.innerHTML = '';
+        dom.quizPreviewArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.generatorContainer.classList.remove('hidden');
+        updateFileListDisplay();
+        showInputStep(0);
+        showMessage('All content cleared.');
+    };
+
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -427,6 +476,7 @@ function initializeQuizApp() {
             return;
         }
         quizData = [];
+        localStorage.removeItem('quizData'); // Clear old quiz before generating new one
         dom.quizPreviewArea.classList.add('hidden');
         dom.startQuizArea.classList.add('hidden');
         dom.loadingBarContainer.style.display = 'block';
@@ -461,6 +511,7 @@ function initializeQuizApp() {
             quizData = result.quizQuestions;
             renderQuizPreview(quizData);
             showMessage(`Quiz generated successfully! (${quizData.length} questions)`, 'info');
+            saveState(); // Save successful result
 
         } catch (error) {
             console.error('Error:', error);
@@ -658,6 +709,9 @@ function initializeQuizApp() {
     };
 
     // --- Event Listeners ---
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
+
     dom.fileInput.addEventListener('change', async (e) => {
         for (const file of e.target.files) {
             try {
@@ -699,26 +753,13 @@ function initializeQuizApp() {
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateQuiz);
     dom.startQuizButton.addEventListener('click', startQuiz);
-    dom.clearButton.addEventListener('click', () => {
-        dom.inputText.value = '';
-        dom.customInstructions.value = '';
-        uploadedFilesData = [];
-        quizData = [];
-        userAnswers = [];
-        dom.quizPreviewArea.innerHTML = '';
-        dom.quizPreviewArea.classList.add('hidden');
-        dom.startQuizArea.classList.add('hidden');
-        dom.interactiveQuizContainer.classList.add('hidden');
-        dom.generatorContainer.classList.remove('hidden');
-        updateFileListDisplay();
-        showInputStep(0);
-        showMessage('All content cleared.');
-    });
+    dom.clearButton.addEventListener('click', clearState);
 
     // Initialization
     showInputStep(0);
     dom.generateButton.style.display = 'none';
     updateFileListDisplay();
+    loadState(); // Load saved state on startup
 }
 
 document.addEventListener('DOMContentLoaded', () => {
