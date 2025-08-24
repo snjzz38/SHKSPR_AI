@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     // Send the email using Resend
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev', // IMPORTANT: Replace with your verified email
-      to: ['john.h.smith203@gmail.com'],
+      to: ['delivered@resend.dev'],
       subject: subject,
       html: `
         <h1>New Support Request</h1>
