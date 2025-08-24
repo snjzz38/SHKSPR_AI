@@ -13,7 +13,7 @@ supportForm.addEventListener('submit', async (event) => {
     
     try {
         // CORRECTED: Use the absolute path for the Vercel API endpoint
-        const response = await fetch('/api/Support_API', {
+        const response = await fetch('/api/support', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
