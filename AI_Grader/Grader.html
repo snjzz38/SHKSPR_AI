@@ -575,6 +575,10 @@
                 subjectQuickAddArea: document.getElementById('subject-quick-add'),
                 subjectSelect: document.getElementById('subject-select'),
                 addSubjectBtn: document.getElementById('add-subject-to-prompt-btn'),
+                // NEW: Add textareas to dom object for easy access
+                instructions: document.getElementById('instructions'),
+                rubric: document.getElementById('rubric'),
+                essay: document.getElementById('essay'),
             };
 
             const fileInputs = [
@@ -603,6 +607,67 @@
 
             let currentStep = 0;
             let selectedGrade = 'None';
+
+            // --- NEW: LocalStorage Functions ---
+            const saveState = () => {
+                localStorage.setItem('graderInstructions', dom.instructions.value);
+                localStorage.setItem('graderRubric', dom.rubric.value);
+                localStorage.setItem('graderEssay', dom.essay.value);
+                localStorage.setItem('graderExtraInstructions', dom.extraInstructions.value);
+                localStorage.setItem('graderSelectedGrade', selectedGrade);
+                if (dom.gradeResultDiv.classList.contains('hidden') === false) {
+                    localStorage.setItem('graderResultHTML', dom.resultContentDiv.innerHTML);
+                }
+            };
+
+            const loadState = () => {
+                dom.instructions.value = localStorage.getItem('graderInstructions') || '';
+                dom.rubric.value = localStorage.getItem('graderRubric') || '';
+                dom.essay.value = localStorage.getItem('graderEssay') || '';
+                dom.extraInstructions.value = localStorage.getItem('graderExtraInstructions') || '';
+
+                const savedGrade = localStorage.getItem('graderSelectedGrade');
+                if (savedGrade && savedGrade !== 'None') {
+                    const btn = document.querySelector(`.grade-level-btn[data-grade="${savedGrade}"]`);
+                    if (btn) {
+                        btn.classList.add('selected');
+                        selectedGrade = savedGrade;
+                        refreshSubjectAreas();
+                    }
+                }
+
+                const savedResult = localStorage.getItem('graderResultHTML');
+                if (savedResult) {
+                    dom.resultContentDiv.innerHTML = savedResult;
+                    dom.gradeResultDiv.classList.remove('hidden');
+                }
+            };
+
+            const clearState = () => {
+                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
+                fileInputs.forEach(fi => { fi.data = []; updateFileList(fi); });
+                dom.strictnessMeter.value = 3;
+                dom.strictnessValueDisplay.textContent = '3';
+                dom.gradeResultDiv.classList.add('hidden');
+                dom.errorMessageDiv.classList.add('hidden');
+                dom.successMessageDiv.classList.add('hidden');
+                dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
+                dom.rubricQuickAddArea.classList.add('hidden');
+                dom.subjectQuickAddArea.classList.add('hidden');
+                dom.rubricSelect.value = 'none';
+                dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
+                selectedGrade = 'None';
+                
+                // Clear from localStorage
+                localStorage.removeItem('graderInstructions');
+                localStorage.removeItem('graderRubric');
+                localStorage.removeItem('graderEssay');
+                localStorage.removeItem('graderExtraInstructions');
+                localStorage.removeItem('graderSelectedGrade');
+                localStorage.removeItem('graderResultHTML');
+
+                showStep(0);
+            };
 
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
@@ -659,15 +724,28 @@
                 if (tmpl) {
                     dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
                     displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
+                    saveState(); // Save after adding
                 }
             });
 
+            // --- UPDATED: Grade Level Button Logic ---
             dom.gradeLevelButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
+                    const isAlreadySelected = btn.classList.contains('selected');
+                    
                     dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedGrade = btn.dataset.grade;
+
+                    if (isAlreadySelected) {
+                        // If it was already selected, deselect it
+                        selectedGrade = 'None';
+                    } else {
+                        // Otherwise, select the new one
+                        btn.classList.add('selected');
+                        selectedGrade = btn.dataset.grade;
+                    }
+                    
                     refreshSubjectAreas();
+                    saveState(); // Save the new selection state
                 });
             });
 
@@ -678,6 +756,7 @@
                     if (rubricText) {
                         dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
                         displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
+                        saveState(); // Save after adding
                     }
                 }
             });
@@ -715,22 +794,8 @@
                 });
             });
 
-            dom.clearButton.addEventListener('click', () => {
-                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
-                fileInputs.forEach(fi => { fi.data = []; updateFileList(fi); });
-                dom.strictnessMeter.value = 3;
-                dom.strictnessValueDisplay.textContent = '3';
-                dom.gradeResultDiv.classList.add('hidden');
-                dom.errorMessageDiv.classList.add('hidden');
-                dom.successMessageDiv.classList.add('hidden');
-                dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
-                dom.rubricQuickAddArea.classList.add('hidden');
-                dom.subjectQuickAddArea.classList.add('hidden');
-                dom.rubricSelect.value = 'none';
-                dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
-                selectedGrade = 'None';
-                showStep(0);
-            });
+            // UPDATED: Clear button now calls clearState
+            dom.clearButton.addEventListener('click', clearState);
 
             dom.strictnessMeter.addEventListener('input', (e) => {
                 dom.strictnessValueDisplay.textContent = e.target.value;
@@ -741,6 +806,9 @@
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
+                
+                // NEW: Clear previous result from localStorage
+                localStorage.removeItem('graderResultHTML');
 
                 let availableModels = [...ALL_GEMINI_MODELS];
                 let attemptCount = 0;
@@ -810,6 +878,9 @@
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // NEW: Save state after successful grading
+                    saveState();
 
                 } catch (error) {
                     console.error("Grading Error:", error);
@@ -819,7 +890,14 @@
                 }
             };
 
+            // NEW: Add event listeners to save textarea content on input
+            ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
+                document.getElementById(id).addEventListener('input', saveState);
+            });
+
             showStep(0);
+            // NEW: Load any saved state from localStorage on startup
+            loadState();
         });
 
         document.addEventListener('DOMContentLoaded', loadHeader);
