@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     // Send the email using Resend
     const { data, error } = await resend.emails.send({
-      from: 'SHKSPR Support dee.ree.pee.tree38@gmail.com', // IMPORTANT: Replace with your verified email
+      from: 'SHKSPR Support <onboarding@resend.dev>', // IMPORTANT: Replace with your verified email
       to: ['john.h.smith203@gmail.com'],
       subject: subject,
       html: `
