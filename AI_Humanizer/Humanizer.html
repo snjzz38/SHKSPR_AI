@@ -281,6 +281,8 @@
                 <span>Personal</span>
             </div>
             <button id="process">Humanize Text</button>
+            <!-- NEW: Clear Button -->
+            <button id="clear" style="background-color: #555; color: #fff;">Clear All</button>
         </div>
         <div class="areas">
             <div class="area">
@@ -382,12 +384,56 @@
     ];
     const $ = id => document.getElementById(id);
 
+    // --- NEW: LocalStorage Functions ---
+    const saveState = () => {
+        localStorage.setItem('humanizerInput', $('input').value);
+        localStorage.setItem('humanizerOutput', $('output').value);
+    };
+
+    const loadState = () => {
+        const savedInput = localStorage.getItem('humanizerInput');
+        const savedOutput = localStorage.getItem('humanizerOutput');
+        if (savedInput) {
+            $('input').value = savedInput;
+        }
+        if (savedOutput) {
+            $('output').value = savedOutput;
+        }
+        // Trigger word count update for loaded text
+        ['input', 'output'].forEach(id => {
+            const el = $(id);
+            const counter = $(`${id}-count`);
+            const words = el.value.trim().match(/\S+/g) || [];
+            counter.textContent = `${words.length} words`;
+        });
+    };
+
+    const clearState = () => {
+        $('input').value = '';
+        $('output').value = '';
+        localStorage.removeItem('humanizerInput');
+        localStorage.removeItem('humanizerOutput');
+        // Trigger word count update
+        ['input', 'output'].forEach(id => {
+            const el = $(id);
+            const counter = $(`${id}-count`);
+            counter.textContent = `0 words`;
+        });
+        $('status').textContent = 'Cleared.';
+        setTimeout(() => $('status').textContent = '', 1500);
+    };
+
+
     const init = () => {
         const processButton = $('process');
         if (!processButton) {
             console.error("Error: 'process' button not found in the DOM. Check its ID in HTML.");
             return;
         }
+        
+        // Load any saved state from localStorage on startup
+        loadState();
+
         ['input', 'output'].forEach(id => {
             const el = $(id);
             const counter = $(`${id}-count`);
@@ -396,8 +442,12 @@
                 counter.textContent = `${words.length} words`;
             };
             el.addEventListener('input', updateCount);
-            updateCount();
+            // No need to call updateCount() here, loadState() already did it.
         });
+
+        // NEW: Save input text in real-time as the user types
+        $('input').addEventListener('input', saveState);
+
         const outputHeaderEl = $('area-header-output');
         if (outputHeaderEl) {
             const copyJsonButton = document.createElement('button');
@@ -433,6 +483,9 @@
             });
         }
         processButton.addEventListener('click', processText);
+        
+        // NEW: Add event listener for the Clear button
+        $('clear').addEventListener('click', clearState);
     };
 
     const isNonsense = (text) => {
@@ -709,6 +762,9 @@
         if (copyJsonButton) {
             copyJsonButton.style.display = 'inline-block';
         }
+        
+        // NEW: Clear previous output from localStorage before starting
+        localStorage.removeItem('humanizerOutput');
 
         try {
             const tone = $('tone').value;
@@ -798,6 +854,9 @@
                 copyJsonButton.style.display = 'inline-block';
             }
             statusEl.textContent = 'Humanization complete!';
+            
+            // NEW: Save the final successful output to localStorage
+            saveState();
 
         } catch (error) {
             outputEl.value = `Error: ${error.message}`;
