@@ -367,14 +367,12 @@
             }
             function clearMessages() { hideElement(dom.processMessageDiv); }
 
-            // --- MODIFIED readFileContent FUNCTION ---
             async function readFileContent(file) {
                 return new Promise(async (resolve, reject) => {
                     const reader = new FileReader();
                     reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 
                     if (file.type.startsWith('image/') || file.type.startsWith('audio/')) {
-                        // Handle both image and audio by converting to Base64
                         reader.onload = (e) => resolve({ type: file.type, content: e.target.result.split(',')[1] });
                         reader.readAsDataURL(file);
                     } else if (file.type === 'application/pdf') {
@@ -512,7 +510,8 @@
                         displayMessage(message, false);
 
                         for (const file of uploadedFilesData) {
-                            promptParts.push({ text: `Analyze the following file named "${file.name}":` });
+                            const promptText = currentMode === 'image' ? `Describe this image in detail, capturing all text, objects, and the overall context. The file is named "${file.name}":` : `Transcribe the following audio file accurately. Provide only the text of the transcription. The file is named "${file.name}":`;
+                            promptParts.push({ text: promptText });
                             promptParts.push({ inlineData: { mimeType: file.type, data: file.content } });
                         }
                         
@@ -596,7 +595,6 @@
                 }
                 
                 const fileInput = dom.inputs.file;
-                // --- MODIFIED file input accept attributes ---
                 if (mode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
                 else if (mode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
                 else if (mode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
@@ -628,6 +626,8 @@
                 clearAllResults();
                 localStorage.removeItem('summarizerTextInput');
                 localStorage.removeItem('summarizerYoutubeInput');
+                localStorage.removeItem('summarizerTranscript');
+                localStorage.removeItem('summarizerSummary');
                 showStep(0);
             }
 
@@ -636,8 +636,22 @@
                 hideElement(dom.summaryContainer);
                 dom.transcribedTextOutput.innerHTML = '';
                 dom.summaryOutput.innerHTML = '';
-                localStorage.removeItem('summarizerTranscript');
-                localStorage.removeItem('summarizerSummary');
+            }
+
+            function loadSavedResults() {
+                dom.inputs.text.value = localStorage.getItem('summarizerTextInput') || '';
+                dom.inputs.youtube.value = localStorage.getItem('summarizerYoutubeInput') || '';
+                const savedTranscript = localStorage.getItem('summarizerTranscript');
+                const savedSummary = localStorage.getItem('summarizerSummary');
+
+                if (savedTranscript) {
+                    dom.transcribedTextOutput.innerHTML = marked.parse(savedTranscript);
+                    showElement(dom.transcribedTextContainer);
+                }
+                if (savedSummary) {
+                    dom.summaryOutput.innerHTML = marked.parse(savedSummary);
+                    showElement(dom.summaryContainer);
+                }
             }
 
             // Event Listeners
@@ -673,6 +687,7 @@
             // Initial setup
             updateSummarizationPrompt();
             showStep(0);
+            loadSavedResults();
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
