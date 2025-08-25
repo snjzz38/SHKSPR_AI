@@ -39,7 +39,7 @@
       --text-primary: #fff;
       --accent: #e0e0e0;
       --card-bg: #222;
-      --accent-rgb: 224, 24, 224;
+      --accent-rgb: 224, 224, 224;
     }
     body.theme-red {
         --bg-primary: #1a0000;
@@ -71,6 +71,8 @@
       margin: 0;
     }
 
+    /* Add this inside the <style> block in header.html */
+
     /* --- Default Hero Section Styles --- */
     .hero {
         text-align: center;
@@ -89,7 +91,7 @@
         font-size: 1.2rem;
         margin: 0 auto 30px;
         text-shadow: 0 0 8px var(--accent);
-        max-width: 700px;
+        max-width: 700px; /* Using the wider width for consistency */
     }
 
     /* --- Particles Container --- */
@@ -112,19 +114,30 @@
         will-change: transform;
     }
     
-    /* --- Reusable Animation Section --- */
-    @keyframes slideInUp {
-      from {
-        transform: translateY(50px);
-      }
-      to {
-        transform: translateY(0);
-      }
-    }
+    /* --- NEW: Reusable Animation Section (UPDATED) --- */
+    /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
+/* --- Reusable Animation Section --- */
 
-    .animate-on-load {
-      animation: slideInUp 0.6s ease forwards;
-    }
+/* 1. Define the Keyframe Animation for the slide ONLY */
+@keyframes slideInUp {
+  from {
+    /* No 'opacity' is set, so the content remains fully visible. */
+    /* Start 20px below the final position. */
+    transform: translateY(50px);
+  }
+  to {
+    /* End in the final, default position. */
+    transform: translateY(0);
+  }
+}
+
+/* 2. Create a Reusable Animation Class to apply the animation */
+.animate-on-load {
+  /* This applies the slide using the exact timing from the old transition. */
+  animation: slideInUp 0.6s ease forwards;
+}
+    /* --- END of Animation Section --- */
+
 
     /* --- Header Specific Styles --- */
     header.main-header {
@@ -180,7 +193,7 @@
         position: relative;
     }
 
-    .dropdown-container:not(#support-dropdown-container):hover .dropdown-options {
+    .dropdown-container:hover .dropdown-options {
         display: block;
     }
 
@@ -194,10 +207,6 @@
         padding: 10px;
         min-width: 150px;
         z-index: 10;
-    }
-    
-    .dropdown-options.visible {
-        display: block;
     }
 
     .dropdown-options button,
@@ -218,45 +227,6 @@
     .dropdown-options a:hover {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 4px;
-    }
-
-    /* --- Support Form Dropdown Styles --- */
-    #support-dropdown-panel {
-        min-width: 300px;
-        padding: 1.5rem;
-    }
-    .support-form label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    .support-form input, .support-form select, .support-form textarea {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid var(--accent);
-        border-radius: 6px;
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
-    }
-    .support-form textarea {
-        min-height: 120px;
-        resize: vertical;
-    }
-    .support-form button {
-        width: 100%;
-        padding: 0.5rem;
-        border-radius: 6px;
-        background-color: var(--accent);
-        color: var(--bg-primary);
-        font-weight: bold;
-        border: none;
-        cursor: pointer;
-    }
-    #other-subject-container {
-        display: none;
     }
 </style>
 
@@ -285,29 +255,6 @@
         <button id="theme-red-btn">Red</button>
       </div>
     </div>
-    <div id="support-dropdown-container" class="dropdown-container">
-        <button id="support-button" class="dropdown-button">Support</button>
-        <div id="support-dropdown-panel" class="dropdown-options">
-            <form id="support-form" class="support-form" novalidate>
-                <label for="support-subject">How Can I Help?</label>
-                <select id="support-subject" name="subject" required>
-                    <option value="Suggestion">Suggestion</option>
-                    <option value="Problem">Problem</option>
-                    <option value="Other">Other</option>
-                </select>
-                
-                <div id="other-subject-container">
-                    <label for="other-subject-text">Please Specify</label>
-                    <input type="text" id="other-subject-text" name="other_subject">
-                </div>
-                
-                <label for="support-message">Message</label>
-                <textarea id="support-message" name="message" required></textarea>
-                
-                <button type="submit">Send Message</button>
-            </form>
-        </div>
-    </div>
   </div>
 </header>
 
@@ -321,42 +268,42 @@
     }
 
     window.Particle = class Particle {
-        constructor(container, colors) {
-            this.container = container;
-            this.element = document.createElement('div');
-            this.element.classList.add('particle');
-            this.container.appendChild(this.element);
-            this.size = Math.random() * 6 + 2;
-            this.color = colors[Math.floor(Math.random() * colors.length)];
-            this.x = Math.random() * window.innerWidth;
-            this.y = Math.random() * window.innerHeight;
-            this.vx = (Math.random() - 0.5) * 4;
-            this.vy = (Math.random() - 0.5) * 4;
-            this.opacity = Math.random() * 0.5 + 0.3;
-            this.element.style.width = `${this.size}px`;
-            this.element.style.height = `${this.size}px`;
-            this.element.style.backgroundColor = this.color;
-            this.element.style.opacity = this.opacity;
-            this.update();
+      constructor(container, colors) {
+        this.container = container;
+        this.element = document.createElement('div');
+        this.element.classList.add('particle');
+        this.container.appendChild(this.element);
+        this.size = Math.random() * 6 + 2;
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.opacity = Math.random() * 0.5 + 0.3;
+        this.element.style.width = `${this.size}px`;
+        this.element.style.height = `${this.size}px`;
+        this.element.style.backgroundColor = this.color;
+        this.element.style.opacity = this.opacity;
+        this.update();
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
+          this.vx *= -1;
+          this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
         }
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-                this.vx *= -1;
-                this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
-            }
-            if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-                this.vy *= -1;
-                this.y = this.y <= 0 ? this.y = 0 : window.innerHeight - this.size;
-            }
-            this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+        if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
+          this.vy *= -1;
+          this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
         }
-        remove() {
-            if (this.container && this.element.parentNode === this.container) {
-                this.container.removeChild(this.element);
-            }
+        this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+      }
+      remove() {
+        if (this.container && this.element.parentNode === this.container) {
+            this.container.removeChild(this.element);
         }
+      }
     }
 
     let particles = [];
@@ -373,15 +320,15 @@
       const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
       let colors = [accentColor];
       if (document.body.classList.contains('theme-blackwhite')) {
-          colors = [accentColor, '#c0c0c0', '#909090'];
+        colors = [accentColor, '#c0c0c0', '#909090'];
       } else if (document.body.classList.contains('theme-cyan')) {
-          colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
+        colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
       } else if (document.body.classList.contains('theme-purple')) {
-          colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
+        colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
       } else if (document.body.classList.contains('theme-green')) {
-          colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
+        colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
       } else if (document.body.classList.contains('theme-red')) {
-          colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
+        colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
       }
       for (let i = 0; i < 60; i++) {
         particles.push(new window.Particle(container, colors));
@@ -393,85 +340,4 @@
       particles.forEach(p => p.update());
       animationId = requestAnimationFrame(window.animateParticles);
     }
-
-  // --- FINALIZED Self-Contained Support Form Logic ---
-    function initializeSupportDropdown() {
-        const supportButton = document.getElementById('support-button');
-        const supportDropdownPanel = document.getElementById('support-dropdown-panel');
-        const supportDropdownContainer = document.getElementById('support-dropdown-container');
-        const supportForm = document.getElementById('support-form');
-        const subjectSelect = document.getElementById('support-subject');
-        const otherSubjectContainer = document.getElementById('other-subject-container');
-
-        if (supportButton && supportDropdownPanel && supportDropdownContainer && supportForm && subjectSelect && otherSubjectContainer) {
-            
-            supportButton.addEventListener('click', (event) => {
-                event.stopPropagation();
-                supportDropdownPanel.classList.toggle('visible');
-            });
-
-            document.addEventListener('click', (event) => {
-                if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
-                    supportDropdownPanel.classList.remove('visible');
-                }
-            });
-            
-            subjectSelect.addEventListener('change', () => {
-                if (subjectSelect.value === 'Other') {
-                    otherSubjectContainer.style.display = 'block';
-                } else {
-                    otherSubjectContainer.style.display = 'none';
-                }
-            });
-
-            supportForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                
-                const category = subjectSelect.value;
-                const otherSubject = document.getElementById('other-subject-text').value;
-                const message = document.getElementById('support-message').value;
-
-                const formData = {
-                    category: category,
-                    otherSubject: category === 'Other' ? otherSubject : '',
-                    message: message
-                };
-                
-                try {
-                    // This fetch call talks to the backend API
-                    const response = await fetch('/api/support', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData),
-                    });
-
-                    if (response.ok) {
-                        alert('Thank you for your message! We will get back to you shortly.');
-                        supportForm.reset();
-                        otherSubjectContainer.style.display = 'none';
-                        supportDropdownPanel.classList.remove('visible');
-                    } else {
-                        const errorData = await response.json();
-                        alert(`Error: ${errorData.error || 'Could not send message.'}`);
-                    }
-                } catch (error) {
-                    console.error('Failed to send support message:', error);
-                    alert('Failed to send message. Please check your network connection.');
-                }
-            });
-            
-            return true;
-        }
-        return false;
-    }
-
-    (function() {
-        const checkInterval = setInterval(() => {
-            if (initializeSupportDropdown()) {
-                clearInterval(checkInterval);
-            }
-        }, 100);
-    })();
 </script>
