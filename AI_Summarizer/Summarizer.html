@@ -735,7 +735,6 @@
             showStep(0);
             loadSavedResults();
             (async () => {
-                displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
                 if (GEMINI_API_KEY) { clearMessages(); updateButtonState(); }
                 else { displayMessage("Failed to load API key. Application cannot function.", true); }
