@@ -402,20 +402,52 @@
                 });
             };
             
+            // --- MODIFIED: generateSummarizationInstruction FUNCTION ---
             function generateSummarizationInstruction(level) {
-                if (level <= 2) return "Generate a single, concise, and compelling headline (6-12 words) for the following text. The headline should capture the absolute core message or finding. Output only the headline text and nothing else.";
-                if (level <= 4) return "Provide a concise executive summary (3-4 sentences) of the following text. Focus on the main conclusion and the most critical supporting points. The tone should be professional and direct.";
-                if (level <= 6) return "Summarize the text into 3-5 key bullet points using Markdown. Each bullet point should clearly and concisely state a main argument, finding, or conclusion. Use bold text for key terms within each point.";
-                if (level <= 8) return "Create a detailed summary with two sections. First, a summary paragraph (4-6 sentences) covering the main narrative. Second, a bulleted list of 'Key Takeaways' that highlights the most important insights or data points. Use Markdown for formatting.";
-                return "Generate a comprehensive briefing document from the text, formatted in Markdown. It must include the following sections:\n- **Headline:** A compelling title for the content.\n- **Abstract:** A one-paragraph (4-5 sentences) summary of the entire text.\n- **Key Points:** A detailed bulleted list covering all significant arguments, evidence, and conclusions mentioned.\n- **Action Items:** (If applicable) A bulleted list of any tasks, recommendations, or next steps mentioned in the text.\n\nEnsure the summary is objective and strictly based on the provided text.";
+                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
+                let specificInstruction = '';
+
+                switch (level) {
+                    case 1:
+                        specificInstruction = "Identify the single most important keyword or concept from the text. Output only that single word or short phrase.";
+                        break;
+                    case 2:
+                        specificInstruction = "Generate a compelling, clickbait-style headline (6-12 words) for the text. It should be intriguing and capture the main point.";
+                        break;
+                    case 3:
+                        specificInstruction = "Condense the entire text into a single, concise sentence (a logline or elevator pitch).";
+                        break;
+                    case 4:
+                        specificInstruction = "Provide a concise executive summary (2-3 sentences). Focus on the main conclusion and the most critical supporting points.";
+                        break;
+                    case 5:
+                        specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown. Each bullet point should clearly state a main argument or finding.";
+                        break;
+                    case 6:
+                        specificInstruction = "Create a list of 'Expanded Bullet Points'. For each of the 3-4 main points, provide the point as a bolded title, followed by a 1-2 sentence explanation.";
+                        break;
+                    case 7:
+                        specificInstruction = "Create a detailed summary with two sections using Markdown. First, a summary paragraph (4-6 sentences). Second, a bulleted list of 'Key Takeaways'.";
+                        break;
+                    case 8:
+                        specificInstruction = "Generate a summary in a 'Frequently Asked Questions' (FAQ) format. Create 3-5 relevant questions that the text answers, and provide concise answers for each.";
+                        break;
+                    case 9:
+                        specificInstruction = "Provide a 'Detailed Analysis' of the text using Markdown. Include three sections: **Main Arguments**, **Supporting Evidence**, and **Overall Conclusion**.";
+                        break;
+                    case 10:
+                        specificInstruction = "Generate a comprehensive briefing document from the text, formatted in Markdown. It must include the following sections:\n- **Headline:** A compelling title.\n- **Abstract:** A one-paragraph (4-5 sentences) summary.\n- **Key Points:** A detailed bulleted list covering all significant arguments and conclusions.\n- **Action Items:** (If applicable) A bulleted list of any tasks or recommendations mentioned.";
+                        break;
+                    default:
+                        specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown.";
+                }
+                return `${basePrompt}\n\n--- SPECIFIC INSTRUCTION ---\n${specificInstruction}`;
             }
 
             function updateSummarizationPrompt() {
                 const level = parseInt(dom.concisenessSlider.value, 10);
                 dom.concisenessValueSpan.textContent = level;
-                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
-                const specificInstruction = generateSummarizationInstruction(level);
-                dom.summarizationPromptInput.value = `${basePrompt}\n\n--- SPECIFIC INSTRUCTION ---\n${specificInstruction}`;
+                dom.summarizationPromptInput.value = generateSummarizationInstruction(level);
             }
             
             async function getApiKeyFromFile() {
@@ -468,7 +500,6 @@
                 throw lastError || new Error("All available models have been tried and failed.");
             }
 
-            // ADDED: The missing function
             function extractVideoId(url) {
                 const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
                 const matches = url.match(regex);
