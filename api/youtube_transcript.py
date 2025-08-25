@@ -4,6 +4,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
 import json
 import random
+import asyncio
+import aiohttp
 
 # --- A manually curated list of promising proxies from free-proxy-list.net ---
 # You can add more good ones you find here.
