@@ -272,9 +272,7 @@
             'gemini-2.5-flash-preview-05-20', 'gemini-2.5-flash',
             'gemini-2.5-flash-lite-preview-06-17', 'gemini-2.0-flash',
         ];
-        const MAX_RETRIES = ALL_GEMINI_MODELS.length;
-
-        // ADD THIS HELPER FUNCTION
+        
         const shuffleArray = (array) => {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -436,52 +434,55 @@
                 }
             }
             
-             async function callGeminiApi(payload) {
+            async function callGeminiApi(payload) {
                 if (!GEMINI_API_KEY) throw new Error("API Key is not configured.");
-            
-                // 1. Create a new, shuffled list of models to try for this specific request
                 let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
                 let lastError = null;
-            
-                // 2. Loop through the shuffled models one by one
                 for (const currentModel of modelsToTry) {
                     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
                     console.log(`Attempting API call with model: ${currentModel}`);
-                    
                     try {
-                        // 3. Attempt the API call
                         const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-            
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
                             const errorMessage = errorData.error?.message || response.statusText;
                             throw new Error(`API call with ${currentModel} failed (Status: ${response.status}): ${errorMessage}`);
                         }
-            
                         const result = await response.json();
-                        
-                        // 4. Validate the result to make sure it's not empty
                         const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         if (text && text.trim() !== '') {
                             console.log(`Success with model: ${currentModel}`);
-                            return result; // Success! Exit the loop and return the result.
+                            return result;
                         } else {
                             throw new Error(`Model ${currentModel} returned an empty or invalid response.`);
                         }
-            
                     } catch (error) {
-                        // 5. If it fails, log the error and let the loop continue to the next model
                         console.warn(error.message);
                         lastError = error;
                     }
                 }
-            
-                // 6. If the loop finishes and all models have failed, throw the last recorded error.
                 throw lastError || new Error("All available models have been tried and failed.");
+            }
+
+            // ADDED: The missing function
+            function extractVideoId(url) {
+                const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                const matches = url.match(regex);
+                return matches ? matches[1] : null;
+            }
+
+            async function fetchYouTubeTranscript(videoId) {
+                const response = await fetch(`/api/youtube_transcript?video_id=${videoId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch YouTube transcript.');
+                }
+                const data = await response.json();
+                return data.transcript;
             }
             
             async function processContent() {
