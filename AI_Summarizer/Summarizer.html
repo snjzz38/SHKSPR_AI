@@ -6,6 +6,10 @@
     <title>Gemini Multi-Modal Summarization</title>
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <!-- Marked.js CDN for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
         :root {
@@ -50,7 +54,7 @@
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
         .hero h1 {
             font-size: 3.2rem;
-            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent), 0 0 40px var(--accent), 0 0 50px var(--accent), 0 0 60px var(--accent);
+            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent);
             margin-bottom: 20px;
         }
         .hero p { font-size: 1.2rem; margin: 0 auto 30px; text-shadow: 0 0 8px var(--accent); max-width: 600px; }
@@ -58,112 +62,90 @@
             max-width: 800px; width: 95%; margin: 2rem auto;
             background-color: var(--card-bg); border-radius: 1rem;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            padding: 2rem; text-align: center;
+            padding: 2rem;
         }
-        .button {
-            background-color: var(--accent); color: var(--bg-primary); padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem; font-weight: 600; cursor: pointer; border: none;
-            transition: background-color 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+        .step-content { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .step-header .title { flex: 2 1 auto; text-align: center; font-size: 1.25rem; font-weight: 600; margin: 0 1rem; }
+        .step-header .btn-container { flex: 1 0 0; }
+        
+        .nav-button, .button {
+            background-color: var(--accent); color: var(--bg-primary); padding: 0.8rem 1.75rem;
+            border-radius: 9999px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none;
+            transition: all 0.3s ease; box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.7);
         }
-        .button:hover {
-            background-color: var(--text-primary);
-            color: var(--bg-primary);
-            box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.7);
+        .nav-button:hover, .button:hover {
+            box-shadow: 0 0 25px rgba(var(--accent-rgb), 1), 0 0 35px rgba(var(--accent-rgb), 0.5);
+            transform: translateY(-3px);
         }
-        .button:disabled { background-color: #666; cursor: not-allowed; box-shadow: none; }
-        .loading-spinner {
-            border: 4px solid rgba(var(--accent-rgb), 0.3); border-left-color: var(--accent);
-            border-radius: 50%; width: 24px; height: 24px;
-            animation: spin 1s linear infinite; display: inline-block;
-            vertical-align: middle; margin-left: 0.5rem;
+        .nav-button:disabled, .button:disabled {
+            background-color: #555 !important; color: #999 !important; cursor: not-allowed !important;
+            box-shadow: none !important; transform: none !important;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .message-box {
-            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
-            text-align: left; border: 1px solid;
+        .clear-button {
+            background-color: #4a5568; color: var(--text-primary); padding: 0.8rem 1.75rem;
+            border-radius: 9999px; font-weight: bold; font-size: 1rem; cursor: pointer; border: none;
+            transition: all 0.3s ease; box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.2);
         }
-        .message-box.info {
-            background-color: rgba(var(--accent-rgb), 0.1);
-            border-color: var(--accent);
-            color: var(--text-primary);
+        .clear-button:hover {
+            background-color: #2d3748; transform: translateY(-3px);
+            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4);
         }
-        .message-box.error {
-            --error-rgb: 239, 68, 68;
-            background-color: rgba(var(--error-rgb), 0.1);
-            border-color: rgb(var(--error-rgb));
-            color: #fecaca;
-        }
-        .prompt-input-group { margin-top: 1rem; text-align: left; }
-        .prompt-input-group .label-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-        .prompt-input-group .label-header label { font-weight: 600; margin-bottom: 0; }
-        .prompt-input-group .copy-btn {
-            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
-            padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;
-        }
-        .prompt-input-group .copy-btn:hover { background-color: var(--accent); color: var(--bg-primary); }
-        .prompt-input-group textarea, .youtube-input {
-            width: 100%; padding: 0.75rem; border: 1px solid var(--accent);
-            border-radius: 0.5rem; background-color: var(--bg-secondary);
-            color: var(--text-primary); resize: vertical;
-        }
-        .prompt-input-group textarea { min-height: 120px; }
-        .prompt-input-group textarea[readonly] {
-            min-height: 250px;
-            background-color: var(--bg-primary);
-        }
-        .prompt-input-group textarea:focus, .youtube-input:focus {
-            outline: none; border-color: var(--text-primary); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5);
-        }
-        .slider-group { margin-top: 1rem; text-align: center; }
-        .slider-group label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
-        .slider-group input[type="range"] {
-            width: 80%; -webkit-appearance: none; height: 8px; background: var(--bg-secondary);
-            border-radius: 5px; outline: none; opacity: 0.7; transition: opacity .2s;
-        }
-        .slider-group input[type="range"]:hover { opacity: 1; }
-        .slider-group input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
-            border-radius: 50%; background: var(--accent); cursor: pointer;
-            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
-        }
-        .slider-group input[type="range"]::-moz-range-thumb {
-            width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer;
-            box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5);
-        }
-        .slider-value { margin-top: 0.5rem; font-weight: 500; }
-        .hidden { display: none; }
+
         .mode-toggle-btn {
-            background-color: transparent; border: 1px solid var(--accent);
-            color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 0.5rem;
-            cursor: pointer; transition: all 0.3s;
+            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary);
+            padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center;
         }
         .mode-toggle-btn.active {
-            background-color: var(--accent); color: var(--bg-primary);
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+            background: var(--accent); color: var(--bg-primary); border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); font-weight: bold;
         }
-        footer.main-footer {
-            text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
-            background-color: var(--bg-secondary); position: relative; z-index: 10; margin-top: auto;
-        }
-        /* --- NEW: Consistent File Upload Styles --- */
+        .input-wrapper { position: relative; }
+        .input-clear-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--accent); font-size: 1.5rem; cursor: pointer; line-height: 1; opacity: 0.6; transition: opacity 0.2s; }
+        .input-clear-btn:hover { opacity: 1; }
+        textarea, .youtube-input { width: 100%; padding: 0.75rem; border: 1px solid var(--accent); border-radius: 0.5rem; background-color: var(--bg-secondary); color: var(--text-primary); resize: vertical; }
+        textarea { min-height: 150px; }
+        textarea:focus, .youtube-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
         .file-upload-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; align-items: center; }
         .file-input-wrapper { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
-        .file-input-label {
-            background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
-            padding: 10px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
-            transition: all 0.3s; white-space: nowrap; z-index: 1;
-        }
+        .file-input-label { background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); padding: 10px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; white-space: nowrap; z-index: 1; }
         .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
         .file-input-wrapper input[type="file"] { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; z-index: 2; }
-        .file-name-display {
-            flex-grow: 1; padding: 8px 10px; border: 1px solid var(--card-bg); border-radius: 8px;
-            background-color: var(--bg-primary); color: rgba(var(--accent-rgb), 0.8); font-size: 0.9rem;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
+        .file-name-display { flex-grow: 1; padding: 8px 10px; border: 1px solid var(--card-bg); border-radius: 8px; background-color: var(--bg-primary); color: rgba(var(--accent-rgb), 0.8); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-clear-button { background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; transition: color 0.3s; }
+        .file-clear-button:hover { color: var(--text-primary); }
+        .file-list-container { width: 100%; max-width: 400px; margin-top: 15px; }
+        .file-list-toggle-button { background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; margin-bottom: 10px; width: 100%; }
+        .file-list-toggle-button:hover { background: var(--accent); color: var(--bg-primary); }
+        .file-list { list-style: none; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; border: 1px solid var(--card-bg); border-radius: 8px; background-color: var(--bg-primary); }
+        .file-list.expanded { max-height: 200px; overflow-y: auto; padding: 10px; }
+        .file-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(var(--accent-rgb), 0.2); font-size: 0.9rem; }
+        .file-list-item:last-child { border-bottom: none; }
+        .file-list-item span { flex-grow: 1; margin-right: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-list-item button { background: none; border: none; color: #ff6666; font-size: 1.2rem; cursor: pointer; transition: color 0.3s; }
+        .file-list-item button:hover { color: #ff0000; }
+        .slider-group { margin-top: 1rem; text-align: center; }
+        .slider-group label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
+        .slider-group input[type="range"] { width: 80%; -webkit-appearance: none; height: 8px; background: var(--bg-secondary); border-radius: 5px; outline: none; opacity: 0.7; transition: opacity .2s; }
+        .slider-group input[type="range"]:hover { opacity: 1; }
+        .slider-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5); }
+        .slider-group input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 2px 4px rgba(var(--accent-rgb), 0.5); }
+        .slider-value { margin-top: 0.5rem; font-weight: 500; }
+        .hidden { display: none; }
+        .prompt-input-group .label-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .prompt-input-group .label-header label { font-weight: 600; margin-bottom: 0; }
+        .prompt-input-group .copy-btn { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+        .prompt-input-group .copy-btn:hover { background-color: var(--accent); color: var(--bg-primary); }
+        .output-content { background: var(--bg-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem; min-height: 250px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
+        .prose { color: var(--text-primary); }
+        .prose h1, .prose h2, .prose h3 { color: var(--accent); }
+        .prose a { color: var(--accent); text-decoration: underline; }
+        .prose strong { color: var(--text-primary); }
+        .prose ul > li::before { background-color: var(--accent); }
+        footer.main-footer { text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary); background-color: var(--bg-secondary); position: relative; z-index: 10; margin-top: auto; }
     </style>
     <script>
-        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -173,7 +155,6 @@
     </script>
 </head>
 <body>
-    <!-- Container for the dynamically loaded header -->
     <div id="header-container"></div>
 
     <main class="main-content animate-on-load">
@@ -183,92 +164,99 @@
         </section>
 
         <div class="container" style="transform: translateY(-50px);">
-            <h2 class="text-2xl font-semibold mb-4">Summarize Content</h2>
-
-            <div class="flex justify-center gap-4 mb-6 flex-wrap">
-                <button id="modeTextBtn" class="mode-toggle-btn active">Text</button>
-                <button id="modeImageBtn" class="mode-toggle-btn">Image</button>
-                <button id="modeAudioBtn" class="mode-toggle-btn">Audio</button>
-                <button id="modeYoutubeBtn" class="mode-toggle-btn">YouTube Video</button>
-            </div>
             
-            <!-- Text Input Section -->
-            <div id="textInputContainer">
+            <div id="step1" class="step-content">
+                <div class="step-header">
+                    <div class="btn-container"></div>
+                    <h2 class="title">Step 1: Choose Content Type</h2>
+                    <div class="btn-container"></div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <button id="modeTextBtn" class="mode-toggle-btn">Text</button>
+                    <button id="modeImageBtn" class="mode-toggle-btn">Image</button>
+                    <button id="modeAudioBtn" class="mode-toggle-btn">Audio</button>
+                    <button id="modeYoutubeBtn" class="mode-toggle-btn">YouTube Video</button>
+                </div>
+            </div>
+
+            <div id="step2" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button class="nav-button" onclick="prevStep()">Back</button></div>
+                    <h2 id="step2-title" class="title">Step 2: Provide Content</h2>
+                    <div class="btn-container text-right"><button class="nav-button" onclick="nextStep()">Next</button></div>
+                </div>
+                
+                <div id="textInputContainer" class="hidden">
+                    <div class="input-wrapper">
+                        <textarea id="textInput" rows="8" placeholder="Paste your text here..."></textarea>
+                        <button id="clearTextInput" class="input-clear-btn">&times;</button>
+                    </div>
+                </div>
+                <div id="youtubeInputContainer" class="hidden">
+                    <div class="input-wrapper">
+                        <input type="text" id="youtubeUrlInput" class="youtube-input" placeholder="Enter YouTube Video URL...">
+                        <button id="clearYoutubeInput" class="input-clear-btn">&times;</button>
+                    </div>
+                </div>
+                <div id="fileUploadContainer" class="file-upload-container hidden">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" multiple>
+                        <label for="fileInput" id="fileInputLabel" class="file-input-label">Upload Files</label>
+                        <span id="fileNameDisplay" class="file-name-display">No files chosen</span>
+                        <button id="fileClearButton" class="file-clear-button" style="display:none;">&times;</button>
+                    </div>
+                    <div class="file-list-container">
+                        <button id="toggleFileListButton" class="file-list-toggle-button" style="display:none;">Show Uploaded Files (0)</button>
+                        <ul id="fileList" class="file-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step3" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button class="nav-button" onclick="prevStep()">Back</button></div>
+                    <h2 class="title">Step 3: Customize & Summarize</h2>
+                    <div class="btn-container"></div>
+                </div>
+                <div class="slider-group">
+                    <label for="concisenessSlider">Conciseness (1-10):</label>
+                    <input type="range" id="concisenessSlider" min="1" max="10" value="5">
+                    <span id="concisenessValue" class="slider-value">5</span>
+                </div>
                 <div class="prompt-input-group">
-                    <textarea id="textInput" rows="8" placeholder="Paste your text here..."></textarea>
-                </div>
-                <div class="file-upload-container">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="textFileInput" accept=".txt,.pdf,.md">
-                        <label for="textFileInput" class="file-input-label">Upload Text File</label>
-                        <span id="textFileNameDisplay" class="file-name-display">No file chosen</span>
+                    <div class="label-header">
+                        <label for="summarizationPrompt">Summarization Prompt (Customizable):</label>
                     </div>
+                    <textarea id="summarizationPrompt" rows="5"></textarea>
                 </div>
             </div>
 
-            <!-- Image Input Section -->
-            <div id="imageInputContainer" class="hidden">
-                <div class="file-upload-container">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="imageFileInput" accept="image/*">
-                        <label for="imageFileInput" class="file-input-label">Upload Image File</label>
-                        <span id="imageFileNameDisplay" class="file-name-display">No file chosen</span>
-                    </div>
+            <div id="action-buttons-container" class="hidden">
+                <div class="mt-6 space-y-4">
+                    <button id="processBtn" class="button w-full flex items-center justify-center" disabled>
+                        Process Content
+                        <span id="processLoadingIndicator" class="loading-spinner hidden"></span>
+                    </button>
+                    <button id="clearButton" class="w-full clear-button">Clear All & Reset</button>
                 </div>
             </div>
-
-            <!-- Audio Input Section -->
-            <div id="audioInputContainer" class="hidden">
-                <div class="file-upload-container">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
-                        <label for="audioFileInput" class="file-input-label">Upload Audio File</label>
-                        <span id="audioFileNameDisplay" class="file-name-display">No file chosen</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- YouTube Input Section -->
-            <div id="youtubeInputContainer" class="hidden">
-                <input type="text" id="youtubeUrlInput" class="youtube-input" placeholder="Enter YouTube Video URL...">
-            </div>
-            
-            <div class="slider-group">
-                <label for="concisenessSlider">Conciseness (1-10):</label>
-                <input type="range" id="concisenessSlider" min="1" max="10" value="5">
-                <span id="concisenessValue" class="slider-value">5</span>
-            </div>
-
-            <div class="prompt-input-group">
-                <div class="label-header">
-                    <label for="summarizationPrompt">Summarization Prompt (Customizable):</label>
-                </div>
-                <textarea id="summarizationPrompt" rows="5"></textarea>
-            </div>
-
-            <button id="processBtn" class="button flex items-center justify-center mx-auto mt-4" disabled>
-                Process Content
-                <span id="processLoadingIndicator" class="loading-spinner hidden"></span>
-            </button>
             
             <div id="processMessageDiv" class="message-box hidden"></div>
             
-            <!-- Transcribed Text Output Section -->
-            <div id="transcribedTextContainer" class="prompt-input-group hidden">
+            <div id="transcribedTextContainer" class="prompt-input-group hidden mt-8">
                 <div class="label-header">
-                    <label for="transcribedTextOutput">Source Content / Description:</label>
+                    <label>Source Content / Description:</label>
                     <button id="copyTranscriptBtn" class="copy-btn">Copy</button>
                 </div>
-                <textarea id="transcribedTextOutput" readonly></textarea>
+                <div id="transcribedTextOutput" class="output-content prose"></div>
             </div>
             
-            <!-- Summary Output Section -->
-            <div id="summaryContainer" class="prompt-input-group hidden">
+            <div id="summaryContainer" class="prompt-input-group hidden mt-8">
                 <div class="label-header">
-                    <label for="summaryOutput">Summary:</label>
+                    <label>Summary:</label>
                     <button id="copySummaryBtn" class="copy-btn">Copy</button>
                 </div>
-                <textarea id="summaryOutput" readonly></textarea>
+                <div id="summaryOutput" class="output-content prose"></div>
             </div>
         </div>
     </main>
@@ -321,6 +309,8 @@
 
         function initializeApp() {
             const dom = {
+                steps: [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')],
+                step2Title: document.getElementById('step2-title'),
                 modeButtons: {
                     text: document.getElementById('modeTextBtn'),
                     image: document.getElementById('modeImageBtn'),
@@ -329,23 +319,26 @@
                 },
                 inputContainers: {
                     text: document.getElementById('textInputContainer'),
-                    image: document.getElementById('imageInputContainer'),
-                    audio: document.getElementById('audioInputContainer'),
                     youtube: document.getElementById('youtubeInputContainer'),
+                    file: document.getElementById('fileUploadContainer'),
                 },
                 inputs: {
                     text: document.getElementById('textInput'),
-                    textFile: document.getElementById('textFileInput'),
-                    image: document.getElementById('imageFileInput'),
-                    audio: document.getElementById('audioFileInput'),
+                    file: document.getElementById('fileInput'),
                     youtube: document.getElementById('youtubeUrlInput'),
                 },
-                fileNameDisplays: {
-                    text: document.getElementById('textFileNameDisplay'),
-                    image: document.getElementById('imageFileNameDisplay'),
-                    audio: document.getElementById('audioFileNameDisplay'),
+                clearInputs: {
+                    text: document.getElementById('clearTextInput'),
+                    youtube: document.getElementById('clearYoutubeInput'),
                 },
+                fileInputLabel: document.getElementById('fileInputLabel'),
+                fileNameDisplay: document.getElementById('fileNameDisplay'),
+                fileClearButton: document.getElementById('fileClearButton'),
+                fileList: document.getElementById('fileList'),
+                toggleFileListButton: document.getElementById('toggleFileListButton'),
                 processBtn: document.getElementById('processBtn'),
+                clearButton: document.getElementById('clearButton'),
+                actionButtonsContainer: document.getElementById('action-buttons-container'),
                 processLoadingIndicator: document.getElementById('processLoadingIndicator'),
                 processMessageDiv: document.getElementById('processMessageDiv'),
                 transcribedTextContainer: document.getElementById('transcribedTextContainer'),
@@ -359,7 +352,9 @@
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
             };
             
+            let currentStep = 0;
             let currentMode = 'text';
+            let uploadedFilesData = [];
 
             const hideElement = (el) => el.classList.add('hidden');
             const showElement = (el) => el.classList.remove('hidden');
@@ -372,29 +367,14 @@
             }
             function clearMessages() { hideElement(dom.processMessageDiv); }
 
-            function clearAllResults() {
-                hideElement(dom.transcribedTextContainer);
-                hideElement(dom.summaryContainer);
-                dom.transcribedTextOutput.value = '';
-                dom.summaryOutput.value = '';
-                localStorage.removeItem('summarizerTranscript');
-                localStorage.removeItem('summarizerSummary');
-            }
-
-            function fileToBase64(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = error => reject(error);
-                });
-            }
-            
+            // --- MODIFIED readFileContent FUNCTION ---
             async function readFileContent(file) {
                 return new Promise(async (resolve, reject) => {
                     const reader = new FileReader();
                     reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-                    if (file.type.startsWith('image/')) {
+
+                    if (file.type.startsWith('image/') || file.type.startsWith('audio/')) {
+                        // Handle both image and audio by converting to Base64
                         reader.onload = (e) => resolve({ type: file.type, content: e.target.result.split(',')[1] });
                         reader.readAsDataURL(file);
                     } else if (file.type === 'application/pdf') {
@@ -411,7 +391,9 @@
                     } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
                         reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
                         reader.readAsText(file);
-                    } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
+                    } else {
+                        reject(new Error(`Unsupported file type: ${file.type}`));
+                    }
                 });
             };
             
@@ -498,59 +480,53 @@
 
                 try {
                     let sourceContent = '';
-                    let firstStepPayload;
+                    let promptParts = [];
 
                     if (currentMode === 'text') {
-                        let combinedText = dom.inputs.text.value.trim();
-                        const file = dom.inputs.textFile.files[0];
-                        if (file) {
-                            const fileContent = await readFileContent(file);
-                            combinedText += `\n\n--- From File: ${file.name} ---\n${fileContent.content}`;
+                        sourceContent = dom.inputs.text.value.trim();
+                        for (const file of uploadedFilesData) {
+                            sourceContent += `\n\n--- From File: ${file.name} ---\n${file.content}`;
                         }
-                        sourceContent = combinedText.trim();
+                        sourceContent = sourceContent.trim();
                         if (!sourceContent) throw new Error('Please enter text or upload a text file.');
                         displayMessage("Summarizing text...", false);
-                        dom.transcribedTextOutput.value = "N/A - Direct text input was used.";
+                        dom.transcribedTextOutput.innerHTML = marked.parse("N/A - Direct text/file input was used.");
                         showElement(dom.transcribedTextContainer);
-                    } else {
-                        if (currentMode === 'image') {
-                            const file = dom.inputs.image.files[0];
-                            if (!file) throw new Error('Please select an image file.');
-                            displayMessage("Analyzing image...", false);
-                            const base64Image = await fileToBase64(file);
-                            firstStepPayload = {
-                                contents: [{ parts: [{ text: "Describe this image in detail, capturing all text, objects, and the overall context." }, { inlineData: { mimeType: file.type, data: base64Image } }] }]
-                            };
-                        } else if (currentMode === 'audio') {
-                            const file = dom.inputs.audio.files[0];
-                            if (!file) throw new Error('Please select an audio file.');
-                            displayMessage("Transcribing audio...", false);
-                            const base64Audio = await fileToBase64(file);
-                            firstStepPayload = {
-                                contents: [{ parts: [{ text: "Transcribe the following audio file accurately. Provide only the text of the transcription." }, { inlineData: { mimeType: file.type, data: base64Audio } }] }]
-                            };
-                        } else if (currentMode === 'youtube') {
-                            const url = dom.inputs.youtube.value;
-                            if (!url) throw new Error('Please enter a YouTube URL.');
-                            const videoId = extractVideoId(url);
-                            if (!videoId) throw new Error('Invalid YouTube URL.');
-                            displayMessage("Fetching YouTube transcript...", false);
-                            sourceContent = await fetchYouTubeTranscript(videoId);
-                            if (!sourceContent || sourceContent.trim() === '') throw new Error("Could not fetch transcript for this video.");
-                        }
-
-                        if (firstStepPayload) {
-                            const result = await callGeminiApi(firstStepPayload);
-                            sourceContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (!sourceContent || sourceContent.trim() === '') throw new Error("Failed to process the file. It might be empty or unsupported.");
-                        }
-                        
-                        dom.transcribedTextOutput.value = sourceContent;
+                        promptParts.push({ text: sourceContent });
+                    } else if (currentMode === 'youtube') {
+                        const url = dom.inputs.youtube.value;
+                        if (!url) throw new Error('Please enter a YouTube URL.');
+                        const videoId = extractVideoId(url);
+                        if (!videoId) throw new Error('Invalid YouTube URL.');
+                        displayMessage("Fetching YouTube transcript...", false);
+                        sourceContent = await fetchYouTubeTranscript(videoId);
+                        if (!sourceContent || sourceContent.trim() === '') throw new Error("Could not fetch transcript for this video.");
+                        dom.transcribedTextOutput.innerHTML = marked.parse(sourceContent);
                         showElement(dom.transcribedTextContainer);
                         localStorage.setItem('summarizerTranscript', sourceContent);
-                        displayMessage("Processing complete. Now summarizing...", false);
+                        promptParts.push({ text: sourceContent });
+                    } else { // Image or Audio
+                        if (uploadedFilesData.length === 0) throw new Error(`Please select one or more ${currentMode} files.`);
+                        
+                        const message = currentMode === 'image' ? 'Analyzing image(s)...' : 'Transcribing audio...';
+                        displayMessage(message, false);
+
+                        for (const file of uploadedFilesData) {
+                            promptParts.push({ text: `Analyze the following file named "${file.name}":` });
+                            promptParts.push({ inlineData: { mimeType: file.type, data: file.content } });
+                        }
+                        
+                        const firstStepPayload = { contents: [{ parts: promptParts }] };
+                        const result = await callGeminiApi(firstStepPayload);
+                        sourceContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (!sourceContent || sourceContent.trim() === '') throw new Error("Failed to process the file(s). They might be empty or unsupported.");
+                        
+                        dom.transcribedTextOutput.innerHTML = marked.parse(sourceContent);
+                        showElement(dom.transcribedTextContainer);
+                        localStorage.setItem('summarizerTranscript', sourceContent);
                     }
 
+                    displayMessage("Processing complete. Now summarizing...", false);
                     const summarizationPrompt = dom.summarizationPromptInput.value;
                     const summaryPayload = {
                         contents: [{ parts: [{ text: `${summarizationPrompt}\n\n---\n\n${sourceContent}` }] }]
@@ -560,7 +536,7 @@
 
                     if (!summary || summary.trim() === '') throw new Error("Summarization failed or returned empty.");
 
-                    dom.summaryOutput.value = summary;
+                    dom.summaryOutput.innerHTML = marked.parse(summary);
                     showElement(dom.summaryContainer);
                     localStorage.setItem('summarizerSummary', summary);
                     clearMessages();
@@ -576,106 +552,132 @@
             function updateButtonState() {
                 let isReady = false;
                 if (currentMode === 'text') {
-                    isReady = dom.inputs.text.value.trim() !== '' || dom.inputs.textFile.files.length > 0;
-                } else if (currentMode === 'image') {
-                    isReady = dom.inputs.image.files.length > 0;
-                } else if (currentMode === 'audio') {
-                    isReady = dom.inputs.audio.files.length > 0;
+                    isReady = dom.inputs.text.value.trim() !== '' || uploadedFilesData.length > 0;
+                } else if (currentMode === 'image' || currentMode === 'audio') {
+                    isReady = uploadedFilesData.length > 0;
                 } else if (currentMode === 'youtube') {
                     isReady = dom.inputs.youtube.value.trim() !== '';
                 }
                 dom.processBtn.disabled = !GEMINI_API_KEY || !isReady;
             }
+            
+            function showStep(index) {
+                dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
+                currentStep = index;
+                dom.actionButtonsContainer.classList.toggle('hidden', index !== dom.steps.length - 1);
+            }
+
+            window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
+            window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
 
             function setMode(mode) {
                 currentMode = mode;
                 clearMessages();
+                uploadedFilesData = [];
+                updateFileListDisplay();
                 
-                Object.values(dom.inputContainers).forEach(hideElement);
                 Object.values(dom.modeButtons).forEach(btn => btn.classList.remove('active'));
-
-                showElement(dom.inputContainers[mode]);
                 dom.modeButtons[mode].classList.add('active');
                 
-                updateButtonState();
+                hideElement(dom.inputContainers.text);
+                hideElement(dom.inputContainers.youtube);
+                hideElement(dom.inputContainers.file);
+
+                if (mode === 'text') {
+                    showElement(dom.inputContainers.text);
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = "Step 2: Provide Text";
+                } else if (mode === 'youtube') {
+                    showElement(dom.inputContainers.youtube);
+                    dom.step2Title.textContent = "Step 2: Provide YouTube URL";
+                } else {
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = `Step 2: Upload ${mode.charAt(0).toUpperCase() + mode.slice(1)}(s)`;
+                }
+                
+                const fileInput = dom.inputs.file;
+                // --- MODIFIED file input accept attributes ---
+                if (mode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
+                else if (mode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
+                else if (mode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
+                
+                nextStep();
             }
 
-            function loadSavedResults() {
-                dom.inputs.text.value = localStorage.getItem('summarizerTextInput') || '';
-                dom.inputs.youtube.value = localStorage.getItem('summarizerYoutubeInput') || '';
-                const savedTranscript = localStorage.getItem('summarizerTranscript');
-                const savedSummary = localStorage.getItem('summarizerSummary');
+            function updateFileListDisplay() {
+                dom.fileNameDisplay.textContent = uploadedFilesData.length > 0 ? `${uploadedFilesData.length} file(s) chosen` : 'No files chosen';
+                dom.fileClearButton.style.display = uploadedFilesData.length > 0 ? 'inline-block' : 'none';
+                dom.toggleFileListButton.style.display = uploadedFilesData.length > 0 ? 'block' : 'none';
+                dom.toggleFileListButton.textContent = `Show Uploaded Files (${uploadedFilesData.length})`;
+                
+                dom.fileList.innerHTML = '';
+                uploadedFilesData.forEach(file => {
+                    const item = document.createElement('li');
+                    item.className = 'file-list-item';
+                    item.innerHTML = `<span>${file.name}</span><button data-id="${file.id}">&times;</button>`;
+                    dom.fileList.appendChild(item);
+                });
+                dom.fileList.classList.toggle('expanded', uploadedFilesData.length > 0 && dom.fileList.classList.contains('expanded'));
+            }
 
-                if (savedTranscript) {
-                    dom.transcribedTextOutput.value = savedTranscript;
-                    showElement(dom.transcribedTextContainer);
-                }
-                if (savedSummary) {
-                    dom.summaryOutput.value = savedSummary;
-                    showElement(dom.summaryContainer);
-                }
+            function clearState() {
+                dom.inputs.text.value = '';
+                dom.inputs.youtube.value = '';
+                uploadedFilesData = [];
+                updateFileListDisplay();
+                clearAllResults();
+                localStorage.removeItem('summarizerTextInput');
+                localStorage.removeItem('summarizerYoutubeInput');
+                showStep(0);
             }
-            
-            async function copyToClipboard(text, buttonElement) {
-                if (!text) return;
-                try {
-                    await navigator.clipboard.writeText(text);
-                    buttonElement.textContent = 'Copied!';
-                    setTimeout(() => { buttonElement.textContent = 'Copy'; }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
-                    buttonElement.textContent = 'Error';
-                    setTimeout(() => { buttonElement.textContent = 'Copy'; }, 2000);
-                }
+
+            function clearAllResults() {
+                hideElement(dom.transcribedTextContainer);
+                hideElement(dom.summaryContainer);
+                dom.transcribedTextOutput.innerHTML = '';
+                dom.summaryOutput.innerHTML = '';
+                localStorage.removeItem('summarizerTranscript');
+                localStorage.removeItem('summarizerSummary');
             }
-            
+
             // Event Listeners
-            dom.inputs.text.addEventListener('input', () => {
-                updateButtonState();
-                localStorage.setItem('summarizerTextInput', dom.inputs.text.value);
+            dom.inputs.text.addEventListener('input', () => { updateButtonState(); localStorage.setItem('summarizerTextInput', dom.inputs.text.value); });
+            dom.inputs.youtube.addEventListener('input', () => { updateButtonState(); localStorage.setItem('summarizerYoutubeInput', dom.inputs.youtube.value); });
+            dom.clearInputs.text.addEventListener('click', () => { dom.inputs.text.value = ''; updateButtonState(); localStorage.setItem('summarizerTextInput', ''); });
+            dom.clearInputs.youtube.addEventListener('click', () => { dom.inputs.youtube.value = ''; updateButtonState(); localStorage.setItem('summarizerYoutubeInput', ''); });
+            dom.inputs.file.addEventListener('change', async (e) => {
+                for (const file of e.target.files) {
+                    try {
+                        const { type, content } = await readFileContent(file);
+                        uploadedFilesData.push({ id: Date.now() + Math.random(), name: file.name, type, content });
+                    } catch (error) { displayMessage(error.message, true); }
+                }
+                updateFileListDisplay(); updateButtonState(); e.target.value = '';
             });
-            dom.inputs.textFile.addEventListener('change', () => {
-                dom.fileNameDisplays.text.textContent = dom.inputs.textFile.files.length > 0 ? dom.inputs.textFile.files[0].name : 'No file chosen';
-                updateButtonState();
-                clearAllResults();
+            dom.fileClearButton.addEventListener('click', () => { uploadedFilesData = []; updateFileListDisplay(); updateButtonState(); });
+            dom.fileList.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const idToRemove = parseFloat(e.target.dataset.id);
+                    uploadedFilesData = uploadedFilesData.filter(f => f.id !== idToRemove);
+                    updateFileListDisplay(); updateButtonState();
+                }
             });
-            dom.inputs.image.addEventListener('change', () => {
-                dom.fileNameDisplays.image.textContent = dom.inputs.image.files.length > 0 ? dom.inputs.image.files[0].name : 'No file chosen';
-                updateButtonState();
-                clearAllResults();
-            });
-            dom.inputs.audio.addEventListener('change', () => {
-                dom.fileNameDisplays.audio.textContent = dom.inputs.audio.files.length > 0 ? dom.inputs.audio.files[0].name : 'No file chosen';
-                updateButtonState();
-                clearAllResults();
-            });
-            dom.inputs.youtube.addEventListener('input', () => {
-                updateButtonState();
-                localStorage.setItem('summarizerYoutubeInput', dom.inputs.youtube.value);
-            });
-
+            dom.toggleFileListButton.addEventListener('click', () => dom.fileList.classList.toggle('expanded'));
             dom.concisenessSlider.addEventListener('input', updateSummarizationPrompt);
             dom.processBtn.addEventListener('click', processContent);
-            Object.entries(dom.modeButtons).forEach(([mode, button]) => {
-                button.addEventListener('click', () => setMode(mode));
-            });
-
-            dom.copyTranscriptBtn.addEventListener('click', () => copyToClipboard(dom.transcribedTextOutput.value, dom.copyTranscriptBtn));
-            dom.copySummaryBtn.addEventListener('click', () => copyToClipboard(dom.summaryOutput.value, dom.copySummaryBtn));
+            dom.clearButton.addEventListener('click', clearState);
+            Object.entries(dom.modeButtons).forEach(([mode, button]) => { button.addEventListener('click', () => setMode(mode)); });
+            dom.copyTranscriptBtn.addEventListener('click', () => copyToClipboard(dom.transcribedTextOutput.textContent, dom.copyTranscriptBtn));
+            dom.copySummaryBtn.addEventListener('click', () => copyToClipboard(dom.summaryOutput.textContent, dom.copySummaryBtn));
 
             // Initial setup
             updateSummarizationPrompt();
-            setMode('text');
-            loadSavedResults();
+            showStep(0);
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
-                if (GEMINI_API_KEY) {
-                    clearMessages();
-                    updateButtonState();
-                } else {
-                    displayMessage("Failed to load API key. Application cannot function.", true);
-                }
+                if (GEMINI_API_KEY) { clearMessages(); updateButtonState(); }
+                else { displayMessage("Failed to load API key. Application cannot function.", true); }
             })();
         }
 
