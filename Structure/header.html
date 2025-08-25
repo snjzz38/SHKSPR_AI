@@ -71,8 +71,6 @@
       margin: 0;
     }
 
-    /* Add this inside the <style> block in header.html */
-
     /* --- Default Hero Section Styles --- */
     .hero {
         text-align: center;
@@ -91,7 +89,7 @@
         font-size: 1.2rem;
         margin: 0 auto 30px;
         text-shadow: 0 0 8px var(--accent);
-        max-width: 700px; /* Using the wider width for consistency */
+        max-width: 700px;
     }
 
     /* --- Particles Container --- */
@@ -114,30 +112,19 @@
         will-change: transform;
     }
     
-    /* --- NEW: Reusable Animation Section (UPDATED) --- */
-    /* 1. Define the Keyframe Animation (Changed to slide UP and fade IN) */
-/* --- Reusable Animation Section --- */
+    /* --- Reusable Animation Section --- */
+    @keyframes slideInUp {
+      from {
+        transform: translateY(50px);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
 
-/* 1. Define the Keyframe Animation for the slide ONLY */
-@keyframes slideInUp {
-  from {
-    /* No 'opacity' is set, so the content remains fully visible. */
-    /* Start 20px below the final position. */
-    transform: translateY(50px);
-  }
-  to {
-    /* End in the final, default position. */
-    transform: translateY(0);
-  }
-}
-
-/* 2. Create a Reusable Animation Class to apply the animation */
-.animate-on-load {
-  /* This applies the slide using the exact timing from the old transition. */
-  animation: slideInUp 0.6s ease forwards;
-}
-    /* --- END of Animation Section --- */
-
+    .animate-on-load {
+      animation: slideInUp 0.6s ease forwards;
+    }
 
     /* --- Header Specific Styles --- */
     header.main-header {
@@ -193,7 +180,8 @@
         position: relative;
     }
 
-    .dropdown-container:hover .dropdown-options {
+    /* MODIFIED: This rule now only applies to dropdowns that are NOT the support dropdown */
+    .dropdown-container:not(#support-dropdown-container):hover .dropdown-options {
         display: block;
     }
 
@@ -207,6 +195,11 @@
         padding: 10px;
         min-width: 150px;
         z-index: 10;
+    }
+    
+    /* ADDED: Class to make dropdown visible with JavaScript */
+    .dropdown-options.visible {
+        display: block;
     }
 
     .dropdown-options button,
@@ -227,6 +220,37 @@
     .dropdown-options a:hover {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 4px;
+    }
+
+    /* --- ADDED: Support Dropdown Styles --- */
+    #support-dropdown-panel {
+        min-width: 250px;
+        padding: 1rem;
+        margin-top: 10px;
+    }
+    .support-description {
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        line-height: 1.4;
+    }
+    .support-email-button {
+        display: block;
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 10px;
+        background-color: var(--accent);
+        color: var(--bg-primary);
+        font-weight: bold;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        border: none;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+    .support-email-button:hover {
+        transform: translateY(-2px);
+        background-color: var(--accent);
     }
 </style>
 
@@ -254,6 +278,14 @@
         <button id="theme-green-btn">Green</button>
         <button id="theme-red-btn">Red</button>
       </div>
+    </div>
+    <!-- ADDED: The new support dropdown menu -->
+    <div id="support-dropdown-container" class="dropdown-container">
+        <button id="support-button" class="dropdown-button">Support</button>
+        <div id="support-dropdown-panel" class="dropdown-options">
+            <p class="support-description">Write any suggestions or problems here.</p>
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=john.h.smith203@gmail.com&su=SHKSPR%20SUPPORT" class="support-email-button" target="_blank" rel="noopener noreferrer">Email Me!</a>
+        </div>
     </div>
   </div>
 </header>
@@ -340,4 +372,37 @@
       particles.forEach(p => p.update());
       animationId = requestAnimationFrame(window.animateParticles);
     }
+
+    // ADDED: JavaScript logic for the support dropdown
+    function initializeSupportDropdown() {
+        const supportButton = document.getElementById('support-button');
+        const supportDropdownPanel = document.getElementById('support-dropdown-panel');
+        const supportDropdownContainer = document.getElementById('support-dropdown-container');
+
+        if (supportButton && supportDropdownPanel && supportDropdownContainer) {
+            
+            supportButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                supportDropdownPanel.classList.toggle('visible');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (supportDropdownPanel.classList.contains('visible') && !supportDropdownContainer.contains(event.target)) {
+                    supportDropdownPanel.classList.remove('visible');
+                }
+            });
+            
+            return true;
+        }
+        return false;
+    }
+
+    // ADDED: Self-executing function to initialize the dropdown logic
+    (function() {
+        const checkInterval = setInterval(() => {
+            if (initializeSupportDropdown()) {
+                clearInterval(checkInterval);
+            }
+        }, 100);
+    })();
 </script>
