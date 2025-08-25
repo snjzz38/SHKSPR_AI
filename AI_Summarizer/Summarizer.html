@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="/favicon.png">
     <title>Gemini Multi-Modal Summarization</title>
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -360,8 +359,8 @@
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
             };
             
-            let currentStep = 0;
-            let currentMode = 'text';
+            let currentStep = parseInt(localStorage.getItem('summarizerStep'), 10) || 0;
+            let currentMode = localStorage.getItem('summarizerMode') || 'text';
             let uploadedFilesData = [];
 
             const hideElement = (el) => el.classList.add('hidden');
@@ -403,7 +402,6 @@
                 });
             };
             
-            // --- MODIFIED: generateSummarizationInstruction FUNCTION ---
             function generateSummarizationInstruction(level) {
                 const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
                 let specificInstruction = '';
@@ -609,6 +607,7 @@
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 currentStep = index;
+                localStorage.setItem('summarizerStep', currentStep);
                 dom.actionButtonsContainer.classList.toggle('hidden', index !== dom.steps.length - 1);
             }
 
@@ -617,6 +616,7 @@
 
             function setMode(mode) {
                 currentMode = mode;
+                localStorage.setItem('summarizerMode', currentMode);
                 clearMessages();
                 uploadedFilesData = [];
                 updateFileListDisplay();
@@ -674,6 +674,8 @@
                 localStorage.removeItem('summarizerYoutubeInput');
                 localStorage.removeItem('summarizerTranscript');
                 localStorage.removeItem('summarizerSummary');
+                localStorage.removeItem('summarizerMode');
+                localStorage.removeItem('summarizerStep');
                 showStep(0);
             }
 
@@ -698,6 +700,36 @@
                     dom.summaryOutput.innerHTML = marked.parse(savedSummary);
                     showElement(dom.summaryContainer);
                 }
+            }
+            
+            function initializeUIFromState() {
+                Object.values(dom.modeButtons).forEach(btn => btn.classList.remove('active'));
+                if (dom.modeButtons[currentMode]) {
+                    dom.modeButtons[currentMode].classList.add('active');
+                }
+
+                hideElement(dom.inputContainers.text);
+                hideElement(dom.inputContainers.youtube);
+                hideElement(dom.inputContainers.file);
+
+                if (currentMode === 'text') {
+                    showElement(dom.inputContainers.text);
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = "Step 2: Provide Text";
+                } else if (currentMode === 'youtube') {
+                    showElement(dom.inputContainers.youtube);
+                    dom.step2Title.textContent = "Step 2: Provide YouTube URL";
+                } else {
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = `Step 2: Upload ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}(s)`;
+                }
+                
+                const fileInput = dom.inputs.file;
+                if (currentMode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
+                else if (currentMode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
+                else if (currentMode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
+
+                showStep(currentStep);
             }
 
             // Event Listeners
@@ -732,11 +764,15 @@
 
             // Initial setup
             updateSummarizationPrompt();
-            showStep(0);
             loadSavedResults();
+            initializeUIFromState();
+            
             (async () => {
                 GEMINI_API_KEY = await getApiKeyFromFile();
-                if (GEMINI_API_KEY) { clearMessages(); updateButtonState(); }
+                if (GEMINI_API_KEY) { 
+                    clearMessages(); 
+                    updateButtonState(); 
+                }
                 else { displayMessage("Failed to load API key. Application cannot function.", true); }
             })();
         }
