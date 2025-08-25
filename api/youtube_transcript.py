@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+"""
+YouTube Transcript API Server with Proxy Support, Caching & Health Checks
+
+Usage:
+    python youtube_transcript.py
+
+Test:
+    curl "http://localhost:8000?video_id=dQw4w9WgXcQ"
+"""
+
 import asyncio
 import aiohttp
 import json
@@ -8,10 +19,12 @@ from urllib.parse import urlparse, parse_qs
 from threading import Thread
 from typing import Dict, Optional, Tuple
 
+
 # ========================
 # 🔧 CONFIGURATION
 # ========================
 
+# List of reliable HTTPS proxies (manually curated, North America)
 PROXY_LIST = [
     "http://51.79.99.237:4502",
     "http://43.154.134.238:50001",
@@ -36,15 +49,19 @@ PROXY_LIST = [
     "http://67.43.228.250:7015"
 ]
 
+# Shuffle to avoid bias
 random.shuffle(PROXY_LIST)
 
+# Cache: video_id -> { text, time }
 TRANSCRIPT_CACHE: Dict[str, Dict] = {}
 CACHE_TTL = 600  # 10 minutes
 
+# Healthy proxies (updated by monitor)
 HEALTHY_PROXIES: list = PROXY_LIST.copy()
-HEALTH_CHECK_INTERVAL = 60
-PROXY_TIMEOUT = 8.0
+HEALTH_CHECK_INTERVAL = 60  # seconds
+PROXY_TIMEOUT = 10.0
 
+# Rotate User-Agent
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -52,89 +69,114 @@ USER_AGENTS = [
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 ]
 
+# YouTube Transcript API URL
 TRANSCRIPT_URL = "https://www.youtube.com/api/timedtext?video_id={video_id}&fmt=json3&lang=en"
+
 
 # ========================
 # 🧪 Proxy Health Checker
 # ========================
 
 async def is_proxy_healthy(proxy: str, test_video_id: str = "dQw4w9WgXcQ") -> bool:
+    """Check if proxy can fetch a transcript."""
     url = TRANSCRIPT_URL.format(video_id=test_video_id)
     timeout = aiohttp.ClientTimeout(total=PROXY_TIMEOUT)
     headers = {"User-Agent": random.choice(USER_AGENTS)}
+    connector = aiohttp.TCPConnector(ssl=False)  # Avoid SSL issues
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             async with session.get(url, proxy=proxy, headers=headers) as resp:
                 return resp.status == 200
-    except Exception:
+    except Exception as e:
+        print(f"Health check failed for {proxy}: {type(e).__name__}")
         return False
 
+
 async def health_monitor():
+    """Background task to monitor proxy health."""
     global HEALTHY_PROXIES
-    print("[Health Monitor] Starting health checks...")
+    print("[Health Monitor] Starting...")
     while True:
-        print("[Health Monitor] Checking proxy health...")
+        print("[Health Monitor] Running health check...")
         tasks = [is_proxy_healthy(proxy) for proxy in PROXY_LIST]
         results = await asyncio.gather(*tasks)
         healthy = [proxy for proxy, ok in zip(PROXY_LIST, results) if ok]
-        HEALTHY_PROXIES[:] = healthy
-        print(f"[Health Monitor] {len(healthy)}/{len(PROXY_LIST)} proxies healthy.")
+        HEALTHY_PROXIES[:] = healthy  # Update in place
+        print(f"[Health Monitor] ✅ {len(healthy)} / {len(PROXY_LIST)} proxies healthy")
         await asyncio.sleep(HEALTH_CHECK_INTERVAL)
+
 
 # ========================
 # 🌐 Transcript Fetcher
 # ========================
 
 async def fetch_transcript_from_proxy(video_id: str, proxy: str) -> Tuple[Optional[str], Optional[str]]:
+    """Fetch transcript using one proxy."""
     url = TRANSCRIPT_URL.format(video_id=video_id)
     timeout = aiohttp.ClientTimeout(total=PROXY_TIMEOUT)
     headers = {"User-Agent": random.choice(USER_AGENTS)}
+    connector = aiohttp.TCPConnector(ssl=False)  # Prevent SSL errors
 
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             async with session.get(url, proxy=proxy, headers=headers) as response:
                 if response.status != 200:
-                    text = await response.text()
-                    return None, f"HTTP {response.status}: {text[:100]}"
+                    body = await response.text()
+                    return None, f"HTTP {response.status}: {body[:100]}"
+
                 try:
                     data = await response.json()
                     text_parts = []
-                    for entry in data.get("events", []):
-                        if "segs" in entry:
-                            for seg in entry["segs"]:
+                    for event in data.get("events", []):
+                        if "segs" in event:
+                            for seg in event["segs"]:
                                 text_parts.append(seg.get("utf8", ""))
-                    return " ".join(text_parts).strip(), None
+                    transcript = " ".join(text_parts).strip()
+                    return (transcript, None) if transcript else (None, "Empty transcript")
                 except Exception as e:
                     body = await response.text()
-                    return None, f"JSON parse failed: {str(e)} | Body: {body[:200]}"
+                    return None, f"Parse failed: {str(e)} | Body: {body[:150]}"
+
     except asyncio.TimeoutError:
         return None, "Timeout"
     except Exception as e:
         return None, f"Request failed: {type(e).__name__}: {str(e)}"
 
-async def fetch_transcript_with_proxies(video_id: str, max_concurrent: int = 8) -> Dict:
+
+async def fetch_transcript_with_proxies(video_id: str, max_concurrent: int = 6) -> Dict:
+    """Try multiple proxies concurrently, return first success."""
     global HEALTHY_PROXIES
     if not HEALTHY_PROXIES:
-        return {"success": False, "error": "No healthy proxies available."}
+        return {"success": False, "error": "No healthy proxies available"}
 
+    # Use up to N random healthy proxies
     candidates = random.sample(HEALTHY_PROXIES, min(max_concurrent, len(HEALTHY_PROXIES)))
-    tasks = [fetch_transcript_from_proxy(video_id, proxy) for proxy in candidates]
+    tasks = [fetch_transcript_from_proxy(video_id, p) for p in candidates]
 
     done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
     for task in done:
-        transcript, error = await task
-        if transcript:
-            for t in pending:
-                t.cancel()
-            return {"success": True, "transcript": transcript}
+        try:
+            transcript, error = await task
+            if transcript:
+                for t in pending:
+                    t.cancel()
+                return {"success": True, "transcript": transcript}
+        except:
+            pass  # Ignore failed task resolution
 
-    last_error = "All proxies failed."
+    # If all failed, return last error
+    errors = []
     for task in done:
-        _, err = await task
-        if err:
-            last_error = err
+        try:
+            _, err = await task
+            if err:
+                errors.append(err)
+        except:
+            errors.append("Unknown error")
+    last_error = errors[-1] if errors else "All proxies failed"
     return {"success": False, "error": last_error}
+
 
 # ========================
 # 📦 Caching Layer
@@ -142,11 +184,14 @@ async def fetch_transcript_with_proxies(video_id: str, max_concurrent: int = 8) 
 
 def get_cached_transcript(video_id: str) -> Optional[str]:
     item = TRANSCRIPT_CACHE.get(video_id)
-    if item and time.time() - item["time"] < CACHE_TTL:
+    if not item:
+        return None
+    if time.time() - item["time"] < CACHE_TTL:
         return item["text"]
-    elif item:
+    else:
         TRANSCRIPT_CACHE.pop(video_id, None)
-    return None
+        return None
+
 
 def cache_transcript(video_id: str, transcript: str):
     TRANSCRIPT_CACHE[video_id] = {
@@ -154,71 +199,97 @@ def cache_transcript(video_id: str, transcript: str):
         "time": time.time()
     }
 
+
 # ========================
 # 🖥️ HTTP Request Handler
 # ========================
 
 class handler(BaseHTTPRequestHandler):
-    def send_json_response(self, status: int, data: dict):
-        self.send_response(status)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
+    def send_json_response(self, status: int,  dict):
+        """Safely send JSON response. Never fail."""
+        try:
+            self.send_response(status)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            body = json.dumps(data)
+            self.wfile.write(body.encode('utf-8'))
+        except Exception as e:
+            print(f"🔥 Failed to send response: {e}")
 
     def do_GET(self):
         try:
-            query_components = parse_qs(urlparse(self.path).query)
-            video_id = query_components.get('video_id', [None])[0]
-
-            if not video_id:
-                self.send_json_response(400, {"error": "video_id parameter is required"})
-                return
-
-            video_id = video_id.split("&")[0][:11]
-            if len(video_id) != 11:
-                self.send_json_response(400, {"error": "Invalid YouTube video_id format"})
-                return
-
-            # Check cache
-            cached = get_cached_transcript(video_id)
-            if cached:
-                self.send_json_response(200, {
-                    "video_id": video_id,
-                    "transcript": cached,
-                    "source": "cache"
-                })
-                print(f"✅ Cache HIT for {video_id}")
-                return
-
-            # Fetch live
+            # --- Parse video_id ---
             try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(fetch_transcript_with_proxies(video_id))
-                loop.close()
-            except Exception as e:
-                print(f"🚨 Async error: {e}")
-                self.send_json_response(500, {"error": "Fetch failed", "details": str(e)})
-                return
+                query = urlparse(self.path)
+                query_components = parse_qs(query.query)
+                video_id = query_components.get('video_id', [None])[0]
 
-            if result["success"]:
-                cache_transcript(video_id, result["transcript"])
-                self.send_json_response(200, {
-                    "video_id": video_id,
-                    "transcript": result["transcript"],
-                    "source": "live"
-                })
-                print(f"✅ Fetched transcript for {video_id}")
-            else:
-                self.send_json_response(500, {
-                    "error": "Failed to fetch transcript",
-                    "details": result["error"]
+                if not video_id:
+                    return self.send_json_response(400, {"error": "video_id parameter is required"})
+
+                video_id = video_id.split("&")[0][:15]  # Allow room
+                if not video_id or len(video_id) < 11:
+                    return self.send_json_response(400, {"error": "Invalid video_id format"})
+
+                # Trim to 11 chars (standard YouTube ID)
+                video_id = video_id[:11]
+
+            except Exception:
+                return self.send_json_response(400, {"error": "Malformed query parameters"})
+
+            # --- Check cache ---
+            try:
+                cached = get_cached_transcript(video_id)
+                if cached:
+                    return self.send_json_response(200, {
+                        "video_id": video_id,
+                        "transcript": cached,
+                        "source": "cache"
+                    })
+            except Exception as e:
+                print(f"⚠️ Cache lookup failed: {e}")
+
+            # --- Fetch live transcript ---
+            try:
+                # Get or create event loop
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                result = loop.run_until_complete(fetch_transcript_with_proxies(video_id))
+
+                if result["success"]:
+                    transcript = result["transcript"]
+                    cache_transcript(video_id, transcript)
+                    return self.send_json_response(200, {
+                        "video_id": video_id,
+                        "transcript": transcript,
+                        "source": "live"
+                    })
+                else:
+                    return self.send_json_response(500, {
+                        "error": "Transcript fetch failed",
+                        "details": result["error"]
+                    })
+
+            except Exception as e:
+                print(f"🚨 Fetch execution error: {type(e).__name__}: {e}")
+                return self.send_json_response(500, {
+                    "error": "Internal fetch error",
+                    "details": "Proxy system failed"
                 })
 
         except Exception as e:
-            print(f"🚨 Unexpected error in handler: {e}")
-            self.send_json_response(500, {"error": "Internal server error"})
+            # 🔥 LAST RESORT: Catch ALL exceptions to prevent raw error output
+            print(f"💥 Uncaught exception in handler: {e}")
+            try:
+                self.send_json_response(500, {"error": "Internal server error"})
+            except:
+                pass  # If sending fails, nothing we can do
+
 
 # ========================
 # ▶️ Start Server + Monitor
@@ -226,17 +297,24 @@ class handler(BaseHTTPRequestHandler):
 
 def run_server():
     port = 8000
-    server = HTTPServer(('localhost', port), handler)
-    print(f"🚀 Server running on http://localhost:{port}")
     try:
+        server = HTTPServer(('localhost', port), handler)
+        print(f"🚀 YouTube Transcript Server running on http://localhost:{port}")
+        print(f"💡 Test: curl 'http://localhost:{port}?video_id=dQw4w9WgXcQ'")
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n🛑 Server stopped.")
+    except Exception as e:
+        print(f"🔥 Server failed to start: {e}")
+
 
 if __name__ == "__main__":
-    # Start health monitor
+    # Start health monitor in background
     monitor_thread = Thread(target=lambda: asyncio.run(health_monitor()), daemon=True)
     monitor_thread.start()
 
-    # Start server
+    # Give health check time to warm up
+    time.sleep(2)
+
+    # Start HTTP server
     run_server()
