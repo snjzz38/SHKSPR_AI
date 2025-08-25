@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Audio & YouTube Summarization</title>
+    <title>Gemini Multi-Modal Summarization</title>
     <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -94,14 +94,6 @@
             border-color: rgb(var(--error-rgb));
             color: #fecaca;
         }
-        .file-input-wrapper { margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; }
-        .file-input-wrapper input[type="file"] { display: none; }
-        .custom-file-upload {
-            border: 2px dashed var(--accent); padding: 1rem 1.5rem; border-radius: 0.5rem;
-            cursor: pointer; font-weight: 500; transition: background-color 0.3s;
-        }
-        .custom-file-upload:hover { background-color: rgba(var(--accent-rgb), 0.1); }
-        .file-name-display { font-size: 0.875rem; margin-top: 0.5rem; }
         .prompt-input-group { margin-top: 1rem; text-align: left; }
         .prompt-input-group .label-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
         .prompt-input-group .label-header label { font-weight: 600; margin-bottom: 0; }
@@ -154,6 +146,21 @@
             text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
             background-color: var(--bg-secondary); position: relative; z-index: 10; margin-top: auto;
         }
+        /* --- NEW: Consistent File Upload Styles --- */
+        .file-upload-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; align-items: center; }
+        .file-input-wrapper { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
+        .file-input-label {
+            background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
+            padding: 10px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+            transition: all 0.3s; white-space: nowrap; z-index: 1;
+        }
+        .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
+        .file-input-wrapper input[type="file"] { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; z-index: 2; }
+        .file-name-display {
+            flex-grow: 1; padding: 8px 10px; border: 1px solid var(--card-bg); border-radius: 8px;
+            background-color: var(--bg-primary); color: rgba(var(--accent-rgb), 0.8); font-size: 0.9rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
     </style>
     <script>
         // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
@@ -171,24 +178,53 @@
 
     <main class="main-content animate-on-load">
         <section class="hero">
-            <h1>Gemini Audio & YouTube Summarization</h1>
-            <p>Upload an audio file or provide a YouTube link to transcribe and summarize it using the Gemini AI model.</p>
+            <h1>Gemini Multi-Modal Summarization</h1>
+            <p>Provide text, an image, an audio file, or a YouTube link to transcribe and summarize it using the Gemini AI model.</p>
         </section>
 
         <div class="container" style="transform: translateY(-50px);">
             <h2 class="text-2xl font-semibold mb-4">Summarize Content</h2>
 
-            <div class="flex justify-center gap-4 mb-6">
-                <button id="modeAudioBtn" class="mode-toggle-btn active">Audio File</button>
+            <div class="flex justify-center gap-4 mb-6 flex-wrap">
+                <button id="modeTextBtn" class="mode-toggle-btn active">Text</button>
+                <button id="modeImageBtn" class="mode-toggle-btn">Image</button>
+                <button id="modeAudioBtn" class="mode-toggle-btn">Audio</button>
                 <button id="modeYoutubeBtn" class="mode-toggle-btn">YouTube Video</button>
             </div>
             
+            <!-- Text Input Section -->
+            <div id="textInputContainer">
+                <div class="prompt-input-group">
+                    <textarea id="textInput" rows="8" placeholder="Paste your text here..."></textarea>
+                </div>
+                <div class="file-upload-container">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="textFileInput" accept=".txt,.pdf,.md">
+                        <label for="textFileInput" class="file-input-label">Upload Text File</label>
+                        <span id="textFileNameDisplay" class="file-name-display">No file chosen</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Input Section -->
+            <div id="imageInputContainer" class="hidden">
+                <div class="file-upload-container">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="imageFileInput" accept="image/*">
+                        <label for="imageFileInput" class="file-input-label">Upload Image File</label>
+                        <span id="imageFileNameDisplay" class="file-name-display">No file chosen</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Audio Input Section -->
-            <div id="audioInputContainer">
-                <div class="file-input-wrapper">
-                    <label for="audioFileInput" class="custom-file-upload">Choose Audio File (MP3, M4A)</label>
-                    <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
-                    <span id="fileNameDisplay" class="file-name-display">No file chosen</span>
+            <div id="audioInputContainer" class="hidden">
+                <div class="file-upload-container">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="audioFileInput" accept="audio/mp3, audio/m4a">
+                        <label for="audioFileInput" class="file-input-label">Upload Audio File</label>
+                        <span id="audioFileNameDisplay" class="file-name-display">No file chosen</span>
+                    </div>
                 </div>
             </div>
 
@@ -220,7 +256,7 @@
             <!-- Transcribed Text Output Section -->
             <div id="transcribedTextContainer" class="prompt-input-group hidden">
                 <div class="label-header">
-                    <label for="transcribedTextOutput">Transcribed Text:</label>
+                    <label for="transcribedTextOutput">Source Content / Description:</label>
                     <button id="copyTranscriptBtn" class="copy-btn">Copy</button>
                 </div>
                 <textarea id="transcribedTextOutput" readonly></textarea>
@@ -285,13 +321,30 @@
 
         function initializeApp() {
             const dom = {
-                modeAudioBtn: document.getElementById('modeAudioBtn'),
-                modeYoutubeBtn: document.getElementById('modeYoutubeBtn'),
-                audioInputContainer: document.getElementById('audioInputContainer'),
-                youtubeInputContainer: document.getElementById('youtubeInputContainer'),
-                audioFileInput: document.getElementById('audioFileInput'),
-                youtubeUrlInput: document.getElementById('youtubeUrlInput'),
-                fileNameDisplay: document.getElementById('fileNameDisplay'),
+                modeButtons: {
+                    text: document.getElementById('modeTextBtn'),
+                    image: document.getElementById('modeImageBtn'),
+                    audio: document.getElementById('modeAudioBtn'),
+                    youtube: document.getElementById('modeYoutubeBtn'),
+                },
+                inputContainers: {
+                    text: document.getElementById('textInputContainer'),
+                    image: document.getElementById('imageInputContainer'),
+                    audio: document.getElementById('audioInputContainer'),
+                    youtube: document.getElementById('youtubeInputContainer'),
+                },
+                inputs: {
+                    text: document.getElementById('textInput'),
+                    textFile: document.getElementById('textFileInput'),
+                    image: document.getElementById('imageFileInput'),
+                    audio: document.getElementById('audioFileInput'),
+                    youtube: document.getElementById('youtubeUrlInput'),
+                },
+                fileNameDisplays: {
+                    text: document.getElementById('textFileNameDisplay'),
+                    image: document.getElementById('imageFileNameDisplay'),
+                    audio: document.getElementById('audioFileNameDisplay'),
+                },
                 processBtn: document.getElementById('processBtn'),
                 processLoadingIndicator: document.getElementById('processLoadingIndicator'),
                 processMessageDiv: document.getElementById('processMessageDiv'),
@@ -302,12 +355,11 @@
                 summarizationPromptInput: document.getElementById('summarizationPrompt'),
                 concisenessSlider: document.getElementById('concisenessSlider'),
                 concisenessValueSpan: document.getElementById('concisenessValue'),
-                // NEW: Add copy buttons to DOM object
                 copyTranscriptBtn: document.getElementById('copyTranscriptBtn'),
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
             };
             
-            let currentMode = 'audio'; // 'audio' or 'youtube'
+            let currentMode = 'text';
 
             const hideElement = (el) => el.classList.add('hidden');
             const showElement = (el) => el.classList.remove('hidden');
@@ -337,6 +389,31 @@
                     reader.onerror = error => reject(error);
                 });
             }
+            
+            async function readFileContent(file) {
+                return new Promise(async (resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+                    if (file.type.startsWith('image/')) {
+                        reader.onload = (e) => resolve({ type: file.type, content: e.target.result.split(',')[1] });
+                        reader.readAsDataURL(file);
+                    } else if (file.type === 'application/pdf') {
+                        try {
+                            const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+                            let text = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const content = await page.getTextContent();
+                                text += content.items.map(item => item.str).join(' ') + '\n';
+                            }
+                            resolve({ type: 'text/plain', content: text });
+                        } catch (e) { reject(e); }
+                    } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
+                        reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
+                        reader.readAsText(file);
+                    } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
+                });
+            };
             
             function generateSummarizationInstruction(level) {
                 if (level <= 2) return "Generate a single, concise, and compelling headline (6-12 words) for the following text. The headline should capture the absolute core message or finding. Output only the headline text and nothing else.";
@@ -420,49 +497,63 @@
                 dom.processBtn.disabled = true;
 
                 try {
-                    let transcript = '';
+                    let sourceContent = '';
+                    let firstStepPayload;
 
-                    if (currentMode === 'audio') {
-                        const file = dom.audioFileInput.files[0];
-                        if (!file) throw new Error('Please select a file first.');
+                    if (currentMode === 'text') {
+                        let combinedText = dom.inputs.text.value.trim();
+                        const file = dom.inputs.textFile.files[0];
+                        if (file) {
+                            const fileContent = await readFileContent(file);
+                            combinedText += `\n\n--- From File: ${file.name} ---\n${fileContent.content}`;
+                        }
+                        sourceContent = combinedText.trim();
+                        if (!sourceContent) throw new Error('Please enter text or upload a text file.');
+                        displayMessage("Summarizing text...", false);
+                        dom.transcribedTextOutput.value = "N/A - Direct text input was used.";
+                        showElement(dom.transcribedTextContainer);
+                    } else {
+                        if (currentMode === 'image') {
+                            const file = dom.inputs.image.files[0];
+                            if (!file) throw new Error('Please select an image file.');
+                            displayMessage("Analyzing image...", false);
+                            const base64Image = await fileToBase64(file);
+                            firstStepPayload = {
+                                contents: [{ parts: [{ text: "Describe this image in detail, capturing all text, objects, and the overall context." }, { inlineData: { mimeType: file.type, data: base64Image } }] }]
+                            };
+                        } else if (currentMode === 'audio') {
+                            const file = dom.inputs.audio.files[0];
+                            if (!file) throw new Error('Please select an audio file.');
+                            displayMessage("Transcribing audio...", false);
+                            const base64Audio = await fileToBase64(file);
+                            firstStepPayload = {
+                                contents: [{ parts: [{ text: "Transcribe the following audio file accurately. Provide only the text of the transcription." }, { inlineData: { mimeType: file.type, data: base64Audio } }] }]
+                            };
+                        } else if (currentMode === 'youtube') {
+                            const url = dom.inputs.youtube.value;
+                            if (!url) throw new Error('Please enter a YouTube URL.');
+                            const videoId = extractVideoId(url);
+                            if (!videoId) throw new Error('Invalid YouTube URL.');
+                            displayMessage("Fetching YouTube transcript...", false);
+                            sourceContent = await fetchYouTubeTranscript(videoId);
+                            if (!sourceContent || sourceContent.trim() === '') throw new Error("Could not fetch transcript for this video.");
+                        }
+
+                        if (firstStepPayload) {
+                            const result = await callGeminiApi(firstStepPayload);
+                            sourceContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (!sourceContent || sourceContent.trim() === '') throw new Error("Failed to process the file. It might be empty or unsupported.");
+                        }
                         
-                        displayMessage("Transcribing audio... This may take a while for large files.", false);
-                        const base64Audio = await fileToBase64(file);
-                        const transcriptionPayload = {
-                            contents: [{
-                                role: "user",
-                                parts: [
-                                    { text: "Transcribe the following audio file accurately. Provide only the text of the transcription." },
-                                    { inlineData: { mimeType: file.type, data: base64Audio } }
-                                ]
-                            }]
-                        };
-                        const transcriptionResult = await callGeminiApi(transcriptionPayload);
-                        transcript = transcriptionResult.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (!transcript || transcript.trim() === '') throw new Error("Transcription failed or returned empty. The audio might be silent or unsupported.");
-
-                    } else { // YouTube Mode
-                        const url = dom.youtubeUrlInput.value;
-                        if (!url) throw new Error('Please enter a YouTube URL.');
-                        const videoId = extractVideoId(url);
-                        if (!videoId) throw new Error('Invalid YouTube URL. Could not find a video ID.');
-
-                        displayMessage("Fetching YouTube transcript...", false);
-                        transcript = await fetchYouTubeTranscript(videoId);
-                        if (!transcript || transcript.trim() === '') throw new Error("Could not fetch transcript for this video. It may not have one available.");
+                        dom.transcribedTextOutput.value = sourceContent;
+                        showElement(dom.transcribedTextContainer);
+                        localStorage.setItem('summarizerTranscript', sourceContent);
+                        displayMessage("Processing complete. Now summarizing...", false);
                     }
-                    
-                    dom.transcribedTextOutput.value = transcript;
-                    showElement(dom.transcribedTextContainer);
-                    localStorage.setItem('summarizerTranscript', transcript);
 
-                    displayMessage("Transcription complete. Now summarizing...", false);
                     const summarizationPrompt = dom.summarizationPromptInput.value;
                     const summaryPayload = {
-                        contents: [{
-                            role: "user",
-                            parts: [{ text: `${summarizationPrompt}\n\n---\n\n${transcript}` }]
-                        }]
+                        contents: [{ parts: [{ text: `${summarizationPrompt}\n\n---\n\n${sourceContent}` }] }]
                     };
                     const summaryResult = await callGeminiApi(summaryPayload);
                     const summary = summaryResult.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -484,10 +575,14 @@
 
             function updateButtonState() {
                 let isReady = false;
-                if (currentMode === 'audio') {
-                    isReady = dom.audioFileInput.files.length > 0;
-                } else {
-                    isReady = dom.youtubeUrlInput.value.trim() !== '';
+                if (currentMode === 'text') {
+                    isReady = dom.inputs.text.value.trim() !== '' || dom.inputs.textFile.files.length > 0;
+                } else if (currentMode === 'image') {
+                    isReady = dom.inputs.image.files.length > 0;
+                } else if (currentMode === 'audio') {
+                    isReady = dom.inputs.audio.files.length > 0;
+                } else if (currentMode === 'youtube') {
+                    isReady = dom.inputs.youtube.value.trim() !== '';
                 }
                 dom.processBtn.disabled = !GEMINI_API_KEY || !isReady;
             }
@@ -495,22 +590,19 @@
             function setMode(mode) {
                 currentMode = mode;
                 clearMessages();
+                
+                Object.values(dom.inputContainers).forEach(hideElement);
+                Object.values(dom.modeButtons).forEach(btn => btn.classList.remove('active'));
 
-                if (mode === 'audio') {
-                    showElement(dom.audioInputContainer);
-                    hideElement(dom.youtubeInputContainer);
-                    dom.modeAudioBtn.classList.add('active');
-                    dom.modeYoutubeBtn.classList.remove('active');
-                } else {
-                    hideElement(dom.audioInputContainer);
-                    showElement(dom.youtubeInputContainer);
-                    dom.modeAudioBtn.classList.remove('active');
-                    dom.modeYoutubeBtn.classList.add('active');
-                }
+                showElement(dom.inputContainers[mode]);
+                dom.modeButtons[mode].classList.add('active');
+                
                 updateButtonState();
             }
 
             function loadSavedResults() {
+                dom.inputs.text.value = localStorage.getItem('summarizerTextInput') || '';
+                dom.inputs.youtube.value = localStorage.getItem('summarizerYoutubeInput') || '';
                 const savedTranscript = localStorage.getItem('summarizerTranscript');
                 const savedSummary = localStorage.getItem('summarizerSummary');
 
@@ -523,8 +615,7 @@
                     showElement(dom.summaryContainer);
                 }
             }
-
-            // --- NEW: Helper function for copying text ---
+            
             async function copyToClipboard(text, buttonElement) {
                 if (!text) return;
                 try {
@@ -538,27 +629,43 @@
                 }
             }
             
-            dom.audioFileInput.addEventListener('change', () => {
-                dom.fileNameDisplay.textContent = dom.audioFileInput.files.length > 0 ? dom.audioFileInput.files[0].name : 'No file chosen';
+            // Event Listeners
+            dom.inputs.text.addEventListener('input', () => {
+                updateButtonState();
+                localStorage.setItem('summarizerTextInput', dom.inputs.text.value);
+            });
+            dom.inputs.textFile.addEventListener('change', () => {
+                dom.fileNameDisplays.text.textContent = dom.inputs.textFile.files.length > 0 ? dom.inputs.textFile.files[0].name : 'No file chosen';
                 updateButtonState();
                 clearAllResults();
             });
-            dom.youtubeUrlInput.addEventListener('input', () => {
+            dom.inputs.image.addEventListener('change', () => {
+                dom.fileNameDisplays.image.textContent = dom.inputs.image.files.length > 0 ? dom.inputs.image.files[0].name : 'No file chosen';
                 updateButtonState();
                 clearAllResults();
             });
+            dom.inputs.audio.addEventListener('change', () => {
+                dom.fileNameDisplays.audio.textContent = dom.inputs.audio.files.length > 0 ? dom.inputs.audio.files[0].name : 'No file chosen';
+                updateButtonState();
+                clearAllResults();
+            });
+            dom.inputs.youtube.addEventListener('input', () => {
+                updateButtonState();
+                localStorage.setItem('summarizerYoutubeInput', dom.inputs.youtube.value);
+            });
+
             dom.concisenessSlider.addEventListener('input', updateSummarizationPrompt);
             dom.processBtn.addEventListener('click', processContent);
-            dom.modeAudioBtn.addEventListener('click', () => setMode('audio'));
-            dom.modeYoutubeBtn.addEventListener('click', () => setMode('youtube'));
+            Object.entries(dom.modeButtons).forEach(([mode, button]) => {
+                button.addEventListener('click', () => setMode(mode));
+            });
 
-            // --- NEW: Add event listeners for copy buttons ---
             dom.copyTranscriptBtn.addEventListener('click', () => copyToClipboard(dom.transcribedTextOutput.value, dom.copyTranscriptBtn));
             dom.copySummaryBtn.addEventListener('click', () => copyToClipboard(dom.summaryOutput.value, dom.copySummaryBtn));
 
             // Initial setup
             updateSummarizationPrompt();
-            setMode('audio');
+            setMode('text');
             loadSavedResults();
             (async () => {
                 displayMessage("Loading API key...");
