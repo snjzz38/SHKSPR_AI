@@ -1,3 +1,6 @@
+<!-- ADD THIS LINE right before your <style> tag. It's essential for mobile browsing. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
     /* --- Theme Variables --- */
     :root {
@@ -11,7 +14,7 @@
     }
     body.theme-cyan {
         --bg-primary: #000;
-        --bg-secondary: #0a1a1c;
+        --bg-secondary: #0b0b0b;
         --text-primary: #e0ffff;
         --accent: #00f6ff;
         --card-bg: #072a2c;
@@ -180,7 +183,6 @@
         position: relative;
     }
 
-    /* MODIFIED: This rule now only applies to dropdowns that are NOT the support dropdown */
     .dropdown-container:not(#support-dropdown-container):hover .dropdown-options {
         display: block;
     }
@@ -197,7 +199,6 @@
         z-index: 10;
     }
     
-    /* ADDED: Class to make dropdown visible with JavaScript */
     .dropdown-options.visible {
         display: block;
     }
@@ -222,7 +223,7 @@
         border-radius: 4px;
     }
 
-    /* --- ADDED: Support Dropdown Styles --- */
+    /* --- Support Dropdown Styles --- */
     #support-dropdown-panel {
         min-width: 250px;
         padding: 1rem;
@@ -239,8 +240,8 @@
         width: 100%;
         padding: 0.75rem;
         border-radius: 10px;
-        background-color: var(--accent) !important;
-        color: var(--bg-primary) !important;
+        background-color: var(--accent);
+        color: var(--bg-primary);
         font-weight: bold;
         cursor: pointer;
         text-decoration: none;
@@ -249,8 +250,46 @@
         transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
     .support-email-button:hover {
+        box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.8);
         transform: translateY(-2px);
         background-color: var(--accent);
+    }
+    
+
+    /* --- ADDED: RESPONSIVE STYLES FOR MOBILE --- */
+    @media (max-width: 768px) {
+        /* Adjust header layout for vertical stacking */
+        header.main-header {
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px; /* Use fixed padding on mobile */
+        }
+
+        /* Center the control buttons */
+        .theme-controls {
+            flex-wrap: wrap; /* Allow buttons to wrap to the next line if needed */
+            justify-content: center;
+        }
+        
+        /* Reduce logo size */
+        .logo {
+            font-size: 2rem;
+        }
+
+        /* Reduce hero text size */
+        .hero h1 {
+            font-size: 2.5rem;
+        }
+        .hero p {
+            font-size: 1rem;
+        }
+        
+        /* Make dropdowns take up screen width instead of a fixed width */
+        .dropdown-options {
+            min-width: auto;
+            width: 80vw; /* 80% of the viewport width */
+            max-width: 250px; /* But don't let it get too large */
+        }
     }
 </style>
 
@@ -279,17 +318,11 @@
         <button id="theme-red-btn">Red</button>
       </div>
     </div>
-    <!-- ADDED: The new support dropdown menu -->
     <div id="support-dropdown-container" class="dropdown-container">
         <button id="support-button" class="dropdown-button">Support</button>
         <div id="support-dropdown-panel" class="dropdown-options">
-            <p class="support-description" style="text-align: center;">Write any suggestions or problems here.<br><br> I will usually respond in a couple hours since I'm chronically online.</p>
-            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=john.h.smith203@gmail.com&su=SHKSPR%20SUPPORT"
-               class="support-email-button"
-               target="_blank"
-               rel="noopener noreferrer">
-               Email Me!
-            </a>
+            <p class="support-description">Write any suggestions or problems here.</p>
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=john.h.smith203@gmail.com&su=SHKSPR%20SUPPORT" class="support-email-button" target="_blank" rel="noopener noreferrer">Email Me!</a>
         </div>
     </div>
   </div>
@@ -378,7 +411,6 @@
       animationId = requestAnimationFrame(window.animateParticles);
     }
 
-    // ADDED: JavaScript logic for the support dropdown
     function initializeSupportDropdown() {
         const supportButton = document.getElementById('support-button');
         const supportDropdownPanel = document.getElementById('support-dropdown-panel');
@@ -402,7 +434,6 @@
         return false;
     }
 
-    // ADDED: Self-executing function to initialize the dropdown logic
     (function() {
         const checkInterval = setInterval(() => {
             if (initializeSupportDropdown()) {
