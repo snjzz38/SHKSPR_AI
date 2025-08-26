@@ -121,9 +121,36 @@
         }
         .exit-quiz-button:hover { box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6); }
         .study-guide-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
-        .study-guide-content { padding: 1rem; border: 1px solid var(--accent); border-radius: 8px; background-color: var(--card-bg); }
-        .study-guide-content h2, .study-guide-content h3 { color: var(--accent); margin-top: 1rem; margin-bottom: 0.5rem; }
-        .study-guide-content ul { list-style-position: inside; padding-left: 1rem; }
+        
+        .study-guide-content { 
+            padding: 1rem; 
+            border: 1px solid var(--accent); 
+            border-radius: 8px; 
+            background-color: var(--card-bg); 
+            overflow-wrap: break-word;
+        }
+        
+        .study-guide-content h1, .study-guide-content h2, .study-guide-content h3 { 
+            color: var(--accent); 
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .study-guide-content p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .study-guide-content ul, .study-guide-content ol { 
+            list-style-position: inside; 
+            padding-left: 1rem; 
+            margin-bottom: 1rem;
+        }
+        .study-guide-content li {
+            margin-bottom: 0.5rem;
+        }
+        .study-guide-content li:last-child {
+            margin-bottom: 0;
+        }
+
         .quiz-question {
             background-color: var(--card-bg);
             border: 1px solid var(--accent);
@@ -144,6 +171,10 @@
         .quiz-results { text-align: left; }
         .quiz-results h2 { font-size: 1.8rem; color: var(--accent); text-align: center; margin-bottom: 1.5rem; }
         .result-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-bg); }
+        .result-item p { 
+            margin-bottom: 0.5rem; 
+            overflow-wrap: break-word;
+        }
         .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
         .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
         .start-quiz-area { text-align: center; }
@@ -289,14 +320,20 @@ async function loadHeader() {
     }
   } catch (error) {
     console.error('Error loading header:', error);
-    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
+    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header. Make sure ../Structure/header.html exists.</p>';
   }
 }
 
 function initializeStudyGuideApp() {
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
-      'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-pro-latest'
     ];
     
     const dom = {
@@ -328,6 +365,75 @@ function initializeStudyGuideApp() {
     let userAnswers = [];
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
+    let studyGuideMarkdown = '';
+
+    const saveState = () => {
+        localStorage.setItem('studyGuideInput', dom.inputText.value);
+        localStorage.setItem('studyGuideInstructions', dom.customInstructions.value);
+        if (quizData && quizData.length > 0) {
+            localStorage.setItem('studyGuideMarkdown', studyGuideMarkdown);
+            localStorage.setItem('studyGuideQuizData', JSON.stringify(quizData));
+        } else {
+            localStorage.removeItem('studyGuideMarkdown');
+            localStorage.removeItem('studyGuideQuizData');
+        }
+    };
+
+    const loadState = () => {
+        const savedInput = localStorage.getItem('studyGuideInput');
+        const savedInstructions = localStorage.getItem('studyGuideInstructions');
+        const savedMarkdown = localStorage.getItem('studyGuideMarkdown');
+        const savedQuizData = localStorage.getItem('studyGuideQuizData');
+
+        if (savedInput) dom.inputText.value = savedInput;
+        if (savedInstructions) dom.customInstructions.value = savedInstructions;
+
+        if (savedMarkdown !== null && savedQuizData) {
+            try {
+                quizData = JSON.parse(savedQuizData);
+                studyGuideMarkdown = savedMarkdown;
+                if (Array.isArray(quizData) && quizData.length > 0) {
+                    if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
+                        dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
+                    } else {
+                        dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the previous content, but a quiz is available.</p>`;
+                    }
+                    dom.studyGuideArea.classList.remove('hidden');
+                    dom.startQuizArea.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to parse saved data:", e);
+                quizData = [];
+                studyGuideMarkdown = '';
+            }
+        }
+    };
+
+    const clearState = () => {
+        dom.inputText.value = '';
+        dom.customInstructions.value = '';
+        uploadedFilesData = [];
+        quizData = [];
+        userAnswers = [];
+        studyGuideMarkdown = '';
+        
+        localStorage.removeItem('studyGuideInput');
+        localStorage.removeItem('studyGuideInstructions');
+        localStorage.removeItem('studyGuideMarkdown');
+        localStorage.removeItem('studyGuideQuizData');
+
+        dom.studyGuideContent.innerHTML = '';
+        dom.studyGuideArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.generatorContainer.classList.remove('hidden');
+        updateFileListDisplay();
+        
+        showInputStep(0);
+        
+        showMessage('All content cleared.');
+    };
+
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -397,24 +503,27 @@ function initializeStudyGuideApp() {
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
+
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/Study_Guide_API', {
+                const response = await fetch('/api/study_guide', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
                 });
+
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
                 }
+                
                 const result = await response.json();
-                // Check for both parts of the response
-                if (result.studyGuide && result.quizQuestions && result.quizQuestions.length > 0) {
+                
+                if (result.studyGuide !== null && result.quizQuestions && result.quizQuestions.length > 0) {
                     return result;
                 }
-                lastError = new Error(`Model ${model} returned an invalid response.`);
+                lastError = new Error(`Model ${model} returned an invalid response structure.`);
             } catch (error) {
                 console.warn(error.message);
                 lastError = error;
@@ -457,16 +566,25 @@ function initializeStudyGuideApp() {
                 }
             });
             
-            const instructionPrompt = `\n\n${instructions ? `Follow these specific instructions for both the guide and the quiz: "${instructions}".` : ''} The final output MUST be a single JSON object with two keys: "studyGuide" (containing the Markdown text of the guide) and "quizQuestions" (containing a JSON array of quiz objects). Each quiz object must have 'question', 'answer', 'type' ('multiple_choice', 'true_false', or 'short_answer'), and an 'options' array for multiple_choice. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer', 'alternative_keywords', and 'not_contains'.`;
+            const instructionPrompt = `\n\n${instructions ? `Follow these specific instructions for both the guide and the quiz: "${instructions}".` : ''} The final output MUST be a single JSON object with two keys: "studyGuide" (containing the Markdown text of the guide) and "quizQuestions" (containing a JSON array of quiz objects). Each quiz object must have 'question', 'answer', 'type' ('multiple_choice', 'true_false', or 'short_answer'), and an 'options' array for multiple_choice. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a comma-separated string of keywords. Be flexible and forgiving: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive". This ensures a user who answers "it's repetitive" is graded correctly. For answers that are a list of items (e.g., "a and e"), provide only the core items separated by a comma (e.g., "a,e").`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
             quizData = result.quizQuestions;
-            dom.studyGuideContent.innerHTML = marked.parse(result.studyGuide);
+            studyGuideMarkdown = result.studyGuide;
+
+            if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
+                dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
+            } else {
+                dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the provided content, but a quiz is available.</p>`;
+            }
+
             dom.studyGuideArea.classList.remove('hidden');
             dom.startQuizArea.classList.remove('hidden');
             showMessage(`Study guide and quiz generated successfully!`, 'info');
+            
+            saveState();
 
         } catch (error) {
             console.error('Error:', error);
@@ -503,8 +621,14 @@ function initializeStudyGuideApp() {
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'quiz-options-container';
 
-        if (questionData.type === 'multiple_choice' || questionData.type === 'true_false') {
-            const options = questionData.options || (questionData.type === 'true_false' ? ['True', 'False'] : []);
+        let options = [];
+        if (questionData.type === 'true_false') {
+            options = ['True', 'False'];
+        } else if (questionData.type === 'multiple_choice' && questionData.options) {
+            options = questionData.options;
+        }
+
+        if (options.length > 0) {
             options.forEach(option => {
                 const btn = document.createElement('button');
                 btn.className = 'quiz-option-btn';
@@ -517,7 +641,7 @@ function initializeStudyGuideApp() {
                 });
                 optionsContainer.appendChild(btn);
             });
-        } else { // short_answer
+        } else if (questionData.type === 'short_answer') {
             const textarea = document.createElement('textarea');
             textarea.placeholder = "Type your answer here...";
             textarea.value = userAnswers[index] || '';
@@ -544,8 +668,7 @@ function initializeStudyGuideApp() {
         }
         
         const exitBtn = document.createElement('button');
-        exitBtn.id = 'exitButton';
-        exitBtn.className = 'nav-button';
+        exitBtn.className = 'exit-quiz-button';
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
@@ -555,20 +678,29 @@ function initializeStudyGuideApp() {
     };
 
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
-        if (!userAnswer) return false;
-        const userAnswerLower = userAnswer.toLowerCase();
-        try {
-            const answerObj = JSON.parse(correctAnswer);
-            
-            const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
-            const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
+        if (!userAnswer || !correctAnswer) return false;
 
-            const hasRequired = allKeywords.some(keyword => userAnswerLower.includes(keyword));
-            const hasForbidden = forbiddenKeywords.length > 0 ? forbiddenKeywords.some(keyword => userAnswerLower.includes(keyword)) : false;
-            
-            return hasRequired && !hasForbidden;
-        } catch (e) {
-            return correctAnswer.toLowerCase().split(',').map(k => k.trim()).some(k => userAnswerLower.includes(k));
+        const normalizedUserAnswer = userAnswer
+            .toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ")
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const keywords = correctAnswer
+            .toLowerCase()
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k);
+
+        if (keywords.length === 0) return false;
+
+        const isComponentBased = keywords.every(k => k.length <= 3);
+
+        if (isComponentBased) {
+            const userAnswerParts = normalizedUserAnswer.split(' ');
+            return keywords.every(key => userAnswerParts.includes(key));
+        } else {
+            return keywords.some(key => normalizedUserAnswer.includes(key));
         }
     };
 
@@ -590,26 +722,29 @@ function initializeStudyGuideApp() {
         resultsDiv.innerHTML = `<h2>Quiz Complete!</h2><p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem;">You scored ${score} out of ${quizData.length}</p>`;
         
         quizData.forEach((q, i) => {
-            const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
+            const isCorrect = q.type === 'short_answer' 
+                ? gradeShortAnswer(userAnswers[i], q.answer) 
+                : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
+            
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
-            let correctAnswerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    correctAnswerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            
+            let displayAnswer = q.answer;
+            if (q.type === 'true_false') {
+                displayAnswer = displayAnswer.charAt(0).toUpperCase() + displayAnswer.slice(1);
+            } else if (q.type === 'short_answer') {
+                displayAnswer = displayAnswer.replace(/,/g, ' / ');
+            }
+
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
                 <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
-                <p><strong>Correct Answer:</strong> ${correctAnswerText}</p>
+                <p><strong>Correct Answer:</strong> ${displayAnswer}</p>
             `;
             resultsDiv.appendChild(item);
         });
 
         const exitBtn = document.createElement('button');
-        exitBtn.id = 'exitButton';
         exitBtn.className = 'nav-button mt-4 mx-auto';
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
@@ -660,26 +795,15 @@ function initializeStudyGuideApp() {
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateStudyGuide);
     dom.startQuizButton.addEventListener('click', startQuiz);
-    dom.clearButton.addEventListener('click', () => {
-        dom.inputText.value = '';
-        dom.customInstructions.value = '';
-        uploadedFilesData = [];
-        quizData = [];
-        userAnswers = [];
-        dom.studyGuideArea.innerHTML = '';
-        dom.studyGuideArea.classList.add('hidden');
-        dom.startQuizArea.classList.add('hidden');
-        dom.interactiveQuizContainer.classList.add('hidden');
-        dom.generatorContainer.classList.remove('hidden');
-        updateFileListDisplay();
-        showInputStep(0);
-        showMessage('All content cleared.');
-    });
+    
+    dom.clearButton.addEventListener('click', clearState);
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
 
     // Initialization
     showInputStep(0);
-    dom.generateButton.style.display = 'none';
     updateFileListDisplay();
+    loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
