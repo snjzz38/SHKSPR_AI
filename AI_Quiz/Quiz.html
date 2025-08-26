@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>AI Quiz Builder</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="/favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
@@ -44,13 +43,11 @@
             flex-direction: column;
             overflow-x: hidden;
         }
-        .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
-        .particle { position: absolute; border-radius: 50%; background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform; }
 
         /* --- Page-Specific Styles --- */
         .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
-        .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
+        .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent), 0 0 40px var(--accent), 0 0 50px var(--accent), 0 0 60px var(--accent); margin-bottom: 20px; }
         .hero p { font-size: 1.2rem; margin: 0 auto 30px; text-shadow: 0 0 8px var(--accent); max-width: 600px; }
         .container {
             max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
@@ -58,25 +55,11 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;
             gap: 20px; position: relative;
         }
-        .step-content { display: none; flex-direction: column; gap: 10px; animation: fadeIn 0.5s ease-in-out; }
-        .step-content.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .step-header .title { flex: 2 1 auto; text-align: center; font-size: 1.25rem; font-weight: 600; margin: 0 1rem; }
-        .step-header .btn-container { flex: 1 0 0; }
-        
-        .nav-button, .button, .generate-button, .clear-button, .start-quiz-button {
-            background-color: var(--accent); color: var(--bg-primary); border: none;
-            padding: 12px 25px; border-radius: 9999px; font-size: 1.1rem; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.5);
-        }
-        .nav-button:hover:not(:disabled), .button:hover, .generate-button:hover, .clear-button:hover, .start-quiz-button:hover {
-            transform: translateY(-3px); box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.7);
-        }
-        .clear-button { background-color: #4a5568; color: var(--text-primary); box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.2); }
-        .clear-button:hover { background-color: #2d3748; box-shadow: 0 6px 20px rgba(var(--accent-rgb), 0.3); }
-        .nav-button:disabled, .button:disabled { background-color: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
-        
+        .container h2 { font-size: 1.5rem; color: var(--text-primary); text-align: center; margin-bottom: 5px; }
+        .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+        .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
+        .input-step.active { display: flex; }
+        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -85,30 +68,72 @@
         textarea:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
         .file-upload-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; align-items: center; }
         .file-input-wrapper { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; max-width: 400px; }
-        .file-input-label { background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); padding: 10px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; white-space: nowrap; z-index: 1; }
+        .file-input-label {
+            background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
+            padding: 10px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+            transition: all 0.3s; white-space: nowrap; z-index: 1;
+        }
         .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
         #fileInput { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; z-index: 2; }
-        .file-name-display { flex-grow: 1; padding: 8px 10px; border: 1px solid var(--card-bg); border-radius: 8px; background-color: var(--bg-primary); color: rgba(var(--accent-rgb), 0.8); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-name-display {
+            flex-grow: 1; padding: 8px 10px; border: 1px solid var(--card-bg); border-radius: 8px;
+            background-color: var(--bg-primary); color: rgba(var(--accent-rgb), 0.8); font-size: 0.9rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
         .file-clear-button { background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; transition: color 0.3s; }
         .file-clear-button:hover { color: var(--text-primary); }
         .file-list-container { width: 100%; max-width: 400px; margin-top: 15px; }
-        .file-list-toggle-button { background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; margin-bottom: 10px; width: 100%; }
+        .file-list-toggle-button {
+            background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
+            padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
+            transition: all 0.3s; margin-bottom: 10px; width: 100%;
+        }
         .file-list-toggle-button:hover { background: var(--accent); color: var(--bg-primary); }
-        .file-list { list-style: none; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; border: 1px solid var(--card-bg); border-radius: 8px; background-color: var(--bg-primary); }
+        .file-list {
+            list-style: none; padding: 0; max-height: 0; overflow: hidden;
+            transition: max-height 0.5s ease-in-out; border: 1px solid var(--card-bg);
+            border-radius: 8px; background-color: var(--bg-primary);
+        }
         .file-list.expanded { max-height: 200px; overflow-y: auto; padding: 10px; }
         .file-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(var(--accent-rgb), 0.2); font-size: 0.9rem; }
         .file-list-item:last-child { border-bottom: none; }
         .file-list-item span { flex-grow: 1; margin-right: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .file-list-item button { background: none; border: none; color: #ff6666; font-size: 1.2rem; cursor: pointer; transition: color 0.3s; }
         .file-list-item button:hover { color: #ff0000; }
+        .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
+        .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .generate-button, .clear-button, .nav-button, .start-quiz-button {
+            background-color: var(--accent); color: var(--bg-primary); border: none;
+            padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
+        }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
+        #exitButton { width: 100%; margin-top: 1rem; } /* FIX: New ID for layout */
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
-        .quiz-question { background-color: var(--card-bg); border: 1px solid var(--accent); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .quiz-question {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
         .quiz-question h3 { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 10px; }
         .quiz-question p { margin-bottom: 0.5rem; }
-        .quiz-answer { margin-top: 10px; padding: 10px; background-color: var(--bg-primary); border-radius: 6px; border-left: 4px solid var(--accent); }
+        .quiz-answer {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: var(--bg-primary);
+            border-radius: 6px;
+            border-left: 4px solid var(--accent);
+        }
         .quiz-navigation { display: flex; justify-content: space-between; margin-top: 2rem; }
         .quiz-options-container { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
-        .quiz-option-btn { background-color: var(--card-bg); border: 1px solid var(--accent); color: var(--text-primary); padding: 10px 15px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 0.2s; }
+        .quiz-option-btn {
+            background-color: var(--card-bg); border: 1px solid var(--accent); color: var(--text-primary);
+            padding: 10px 15px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 0.2s;
+        }
         .quiz-option-btn:hover { background-color: rgba(var(--accent-rgb), 0.2); }
         .quiz-option-btn.selected { background-color: var(--accent); color: var(--bg-primary); font-weight: bold; }
         .quiz-results { text-align: left; }
@@ -117,22 +142,38 @@
         .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
         .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
         .start-quiz-area { text-align: center; }
-        .message-box { padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; text-align: left; border: 1px solid; }
-        .message-box.info { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
-        .message-box.error { --error-rgb: 239, 68, 68; background-color: rgba(var(--error-rgb), 0.1); border-color: rgb(var(--error-rgb)); color: #fecaca; }
+        .message-box {
+            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: left; border: 1px solid;
+        }
+        .message-box.info {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .message-box.error {
+            --error-rgb: 239, 68, 68;
+            background-color: rgba(var(--error-rgb), 0.1);
+            border-color: rgb(var(--error-rgb));
+            color: #fecaca;
+        }
         .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
         .hidden { display: none; }
-        footer.main-footer { width: 100%; text-align: center; padding: 20px; font-size: 0.9rem; background-color: var(--bg-secondary); position: relative; z-index: 10; }
+        footer.main-footer {
+            width: 100%; text-align: center; padding: 20px; font-size: 0.9rem;
+            background-color: var(--bg-secondary); position: relative; z-index: 10;
+        }
 
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button, .start-quiz-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
-            .action-buttons, .quiz-navigation { flex-direction: column; gap: 10px; }
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, #exitButton { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
     <script>
+        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -142,7 +183,7 @@
     </script>
 </head>
 <body>
-  <div class="particles-container" id="particles"></div>
+  <!-- Container for the dynamically loaded header -->
   <div id="header-container"></div>
 
   <main class="main-content animate-on-load">
@@ -152,66 +193,59 @@
     </section>
 
     <div id="generatorContainer" class="container">
-        <div id="step1" class="step-content">
-            <div class="step-header">
-                <div class="btn-container"></div>
-                <h2 class="title">Step 1: Provide Material</h2>
-                <div class="btn-container text-right"><button class="nav-button" onclick="nextStep()">Next</button></div>
-            </div>
-            <p class="subtitle">Provide the content from which the quiz questions will be generated.</p>
-            <textarea id="inputText" placeholder="Enter text here... or paste an image (Ctrl+V)"></textarea>
-            <div class="file-upload-container">
-                <div class="file-input-wrapper">
-                    <input type="file" id="fileInput" accept=".txt,.md,.pdf,image/*" multiple>
-                    <label for="fileInput" class="file-input-label">Upload Files</label>
-                    <span id="fileNameDisplay" class="file-name-display">No files chosen</span>
-                    <button id="clearFileButton" class="file-clear-button" style="display:none;">&times;</button>
+        <div class="input-step-container">
+            <!-- Step 1: Material Upload -->
+            <div id="inputStep1" class="input-step active">
+                <h2>Step 1: Upload Material</h2>
+                <p class="subtitle">Provide the content from which the quiz questions will be generated.</p>
+                <textarea id="inputText" placeholder="Enter text here... or paste an image (Ctrl+V)"></textarea>
+                <div class="file-upload-container">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" accept=".txt,.md,.pdf,image/*" multiple>
+                        <label for="fileInput" class="file-input-label">Upload Files</label>
+                        <span id="fileNameDisplay" class="file-name-display">No files chosen</span>
+                        <button id="clearFileButton" class="file-clear-button" style="display:none;">&times;</button>
+                    </div>
+                    <p class="subtitle">Supported: .txt, .md, images. PDFs extract text only.</p>
+                    <div class="file-list-container">
+                        <button id="toggleFileListButton" class="file-list-toggle-button" style="display:none;">Show Uploaded Files (0)</button>
+                        <ul id="fileList" class="file-list"></ul>
+                    </div>
                 </div>
-                <p class="subtitle">Supported: .txt, .md, images. PDFs extract text only.</p>
-                <div class="file-list-container">
-                    <button id="toggleFileListButton" class="file-list-toggle-button" style="display:none;">Show Uploaded Files (0)</button>
-                    <ul id="fileList" class="file-list"></ul>
-                </div>
+            </div>
+
+            <!-- Step 2: Custom Instructions -->
+            <div id="inputStep2" class="input-step">
+                <h2>Step 2: Custom Instructions (Optional)</h2>
+                <p class="subtitle">Guide the AI on the type and difficulty of the quiz.</p>
+                <textarea id="customInstructions" placeholder="e.g., 'Generate 10 multiple-choice questions with 4 options each', 'Focus on advanced concepts', 'Use a mix of true/false and short answer.'"></textarea>
+            </div>
+
+            <div class="input-navigation-buttons">
+                <button id="inputPrevButton" class="nav-button" disabled>Back</button>
+                <button id="inputNextButton" class="nav-button">Next</button>
             </div>
         </div>
 
-        <div id="step2" class="step-content">
-            <div class="step-header">
-                <div class="btn-container text-left"><button class="nav-button" onclick="prevStep()">Back</button></div>
-                <h2 class="title">Step 2: Customize Quiz</h2>
-                <div class="btn-container text-right"><button class="nav-button" onclick="nextStep()">Next</button></div>
-            </div>
-            <p class="subtitle">Guide the AI on the type and difficulty of the quiz.</p>
-            <textarea id="customInstructions" placeholder="e.g., 'Generate 10 multiple-choice questions with 4 options each', 'Focus on advanced concepts', 'Use a mix of true/false and short answer.'"></textarea>
+        <div class="action-buttons">
+          <button id="generateButton" class="generate-button">Generate Quiz</button>
+          <button id="clearButton" class="clear-button">Clear All</button>
         </div>
-
-        <div id="step3" class="step-content">
-            <div class="step-header">
-                <div class="btn-container text-left"><button class="nav-button" onclick="prevStep()">Back</button></div>
-                <h2 class="title">Step 3: Generate & Review</h2>
-                <div class="btn-container"></div>
-            </div>
-            <p class="subtitle">You're all set! Click the button below to generate your quiz.</p>
-        </div>
-
-        <div id="action-buttons-container" class="hidden">
-            <div class="action-buttons mt-4">
-              <button id="generateButton" class="generate-button">Generate Quiz</button>
-              <button id="clearButton" class="clear-button">Clear All & Reset</button>
-            </div>
-        </div>
-
         <div id="loadingBarContainer" class="loading-bar-container">
             <div id="loadingBar" class="loading-bar"></div>
         </div>
-        <div id="messageBox" class="message-box hidden"></div>
-        <div id="quizPreviewArea" class="quiz-preview-area hidden"></div>
+        <div id="messageBox" class="message-box"></div>
+        <div id="quizPreviewArea" class="quiz-preview-area hidden">
+            <!-- Quiz preview will be rendered here -->
+        </div>
         <div id="startQuizArea" class="start-quiz-area hidden mt-4">
             <button id="startQuizButton" class="start-quiz-button">Start Interactive Quiz</button>
         </div>
     </div>
 
-    <div id="interactiveQuizContainer" class="container hidden"></div>
+    <div id="interactiveQuizContainer" class="container hidden">
+        <!-- Interactive quiz content will be rendered here -->
+    </div>
   </main>
   
   <footer class="main-footer">
@@ -227,19 +261,10 @@ async function loadHeader() {
     if (!response.ok) throw new Error('Failed to load header');
     const text = await response.text();
     
+    document.getElementById('header-container').innerHTML = text;
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/html');
-    
-    const headElements = doc.querySelectorAll('head > *');
-    headElements.forEach(el => {
-        document.head.appendChild(el.cloneNode(true));
-    });
-
-    const headerContent = doc.querySelector('header.main-header');
-    if (headerContent) {
-        document.getElementById('header-container').appendChild(headerContent);
-    }
-
     const scriptElement = doc.querySelector('script');
     if (scriptElement) {
         const newScript = document.createElement('script');
@@ -279,11 +304,12 @@ function initializeQuizApp() {
         customInstructions: document.getElementById('customInstructions'),
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
-        actionButtonsContainer: document.getElementById('action-buttons-container'),
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
-        steps: [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')],
+        inputSteps: [document.getElementById('inputStep1'), document.getElementById('inputStep2')],
+        inputPrevButton: document.getElementById('inputPrevButton'),
+        inputNextButton: document.getElementById('inputNextButton'),
         fileInput: document.getElementById('fileInput'),
         fileNameDisplay: document.getElementById('fileNameDisplay'),
         clearFileButton: document.getElementById('clearFileButton'),
@@ -295,7 +321,7 @@ function initializeQuizApp() {
     let quizData = [];
     let userAnswers = [];
     let currentQuestionIndex = 0;
-    let currentStep = 0;
+    let currentInputStepIndex = 0;
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -312,14 +338,13 @@ function initializeQuizApp() {
         setTimeout(() => { dom.messageBox.style.display = 'none'; }, 5000);
     };
 
-    const showStep = (index) => {
-        dom.steps.forEach((step, i) => step.classList.toggle('active', i === index));
-        currentStep = index;
-        dom.actionButtonsContainer.classList.toggle('hidden', index !== dom.steps.length - 1);
+    const showInputStep = (index) => {
+        dom.inputSteps.forEach((step, i) => step.classList.toggle('active', i === index));
+        currentInputStepIndex = index;
+        dom.inputPrevButton.disabled = currentInputStepIndex === 0;
+        dom.inputNextButton.disabled = currentInputStepIndex === dom.inputSteps.length - 1;
+        dom.generateButton.style.display = (currentInputStepIndex === dom.inputSteps.length - 1) ? 'block' : 'none';
     };
-    
-    window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
-    window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
 
     const readFileContent = async (file) => {
         return new Promise(async (resolve, reject) => {
@@ -340,7 +365,7 @@ function initializeQuizApp() {
                     resolve({ type: 'text/plain', content: text });
                 } catch (e) { reject(e); }
             } else if (file.type.startsWith('text/')) {
-                reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
+                reader.onload = (e) => resolve({ type: file.type, content: e.target.result });
                 reader.readAsText(file);
             } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
         });
@@ -369,7 +394,7 @@ function initializeQuizApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/Quiz_API', {
+                const response = await fetch('/api/quiz', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
@@ -428,7 +453,7 @@ function initializeQuizApp() {
                 }
             });
             
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_answers' (an array of 5-8 different but correct full-sentence answers), 'keywords' (an array of essential keywords extracted from all answers), and 'not_contains' (an array of forbidden keywords that would make an answer incorrect).`;
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
@@ -558,8 +583,8 @@ function initializeQuizApp() {
         }
         
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button';
-        exitBtn.id = 'exitButton';
+        exitBtn.className = 'nav-button'; // Use the standard nav-button class for color
+        exitBtn.id = 'exitButton'; // Use an ID for specific layout styles
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
@@ -574,30 +599,13 @@ function initializeQuizApp() {
         try {
             const answerObj = JSON.parse(correctAnswer);
             
-            const requiredKeywords = (answerObj.keywords || []).map(k => k.toLowerCase());
+            const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
             const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
 
-            if (requiredKeywords.length > 0) {
-                const hasRequired = requiredKeywords.some(keyword => userAnswerLower.includes(keyword));
-                const hasForbidden = forbiddenKeywords.length > 0 ? forbiddenKeywords.some(keyword => userAnswerLower.includes(keyword)) : false;
-                if (hasRequired && !hasForbidden) return true;
-            }
-
-            const userWords = new Set(userAnswerLower.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").split(/\s+/));
-            const alternativeAnswers = answerObj.alternative_answers || [answerObj.primary_answer];
+            const hasRequired = allKeywords.some(keyword => userAnswerLower.includes(keyword));
+            const hasForbidden = forbiddenKeywords.length > 0 ? forbiddenKeywords.some(keyword => userAnswerLower.includes(keyword)) : false;
             
-            for (const altAnswer of alternativeAnswers) {
-                const altWords = new Set(altAnswer.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").split(/\s+/));
-                let matchCount = 0;
-                for (const word of userWords) {
-                    if (altWords.has(word)) matchCount++;
-                }
-                const similarity = (matchCount / userWords.size) * 100;
-                if (similarity >= 50) return true;
-            }
-            
-            return false;
-
+            return hasRequired && !hasForbidden;
         } catch (e) {
             return correctAnswer.toLowerCase().split(',').map(k => k.trim()).some(k => userAnswerLower.includes(k));
         }
@@ -640,8 +648,8 @@ function initializeQuizApp() {
         });
 
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button mt-4 mx-auto';
-        exitBtn.id = 'exitButton';
+        exitBtn.className = 'nav-button mt-4 mx-auto'; // Use standard nav-button for color
+        exitBtn.id = 'exitButton'; // Use ID for layout
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
         resultsDiv.appendChild(exitBtn);
@@ -687,6 +695,8 @@ function initializeQuizApp() {
         }
     });
 
+    dom.inputPrevButton.addEventListener('click', () => showInputStep(currentInputStepIndex - 1));
+    dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateQuiz);
     dom.startQuizButton.addEventListener('click', startQuiz);
     dom.clearButton.addEventListener('click', () => {
@@ -701,12 +711,13 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.classList.add('hidden');
         dom.generatorContainer.classList.remove('hidden');
         updateFileListDisplay();
-        showStep(0);
+        showInputStep(0);
         showMessage('All content cleared.');
     });
 
     // Initialization
-    showStep(0);
+    showInputStep(0);
+    dom.generateButton.style.display = 'none';
     updateFileListDisplay();
 }
 
