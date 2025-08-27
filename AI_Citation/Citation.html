@@ -11,18 +11,23 @@
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
+            /* --- FIX: Added theme-aware destructive colors --- */
+            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
             --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
             --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
+            --destructive-bg: #0e7490; --destructive-text: #a5f3fc; --destructive-glow-rgb: 6, 182, 212;
         }
         body.theme-purple {
             --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
             --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
+            --destructive-bg: #6b21a8; --destructive-text: #f3e8ff; --destructive-glow-rgb: 168, 85, 247;
         }
         body.theme-green {
             --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6;
             --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102;
+            --destructive-bg: #166534; --destructive-text: #dcfce7; --destructive-glow-rgb: 34, 197, 94;
         }
         body.theme-blackwhite {
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
@@ -101,10 +106,20 @@
 
         /* --- OUTPUT & STATUS STYLES --- */
         .message-box {
-            background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
-            color: var(--text-primary); padding: 15px; border-radius: 8px;
-            text-align: center; margin-top: 20px; font-size: 1rem; display: none;
+            padding: 15px; border-radius: 8px; text-align: center;
+            margin-top: 20px; font-size: 1rem; display: none; border: 1px solid;
         }
+        .message-box.info {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .message-box.error {
+            background-color: var(--destructive-bg);
+            border-color: var(--destructive-text);
+            color: var(--destructive-text);
+        }
+
         .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
         
@@ -325,7 +340,6 @@
                     outputType: document.querySelector('input[name="output-type"]:checked').value,
                 };
                 localStorage.setItem('citationState', JSON.stringify(state));
-                // Save output separately
                 const outputData = Array.from(outputArea.children).map(li => ({
                     formatted_citation: li.querySelector('p').innerHTML,
                     url: li.querySelector('a').href,
@@ -379,8 +393,8 @@
             };
 
             function showMessage(message, type = 'info') {
+                messageBox.className = `message-box ${type}`;
                 messageBox.textContent = message;
-                messageBox.style.borderColor = type === 'error' ? '#ff3333' : 'var(--accent)';
                 messageBox.style.display = 'block';
             }
 
@@ -392,7 +406,7 @@
 
             function stopLoadingBar(success = true) {
                 loadingBar.style.width = '100%';
-                if (!success) loadingBar.style.backgroundColor = '#ff3333';
+                loadingBar.style.backgroundColor = success ? 'var(--accent)' : 'var(--destructive-text)';
                 setTimeout(() => {
                     loadingBarContainer.style.display = 'none';
                     loadingBar.style.backgroundColor = 'var(--accent)';
@@ -427,7 +441,14 @@
                 outputArea.innerHTML = '';
                 outputHeading.textContent = (outputType === 'in-text') ? 'In-Text Citations' : 'Bibliography';
                 
-                const validCitations = citations.filter(c => c.title && c.url);
+                // --- FIX: Check if citations is an array before filtering ---
+                if (!Array.isArray(citations)) {
+                    if(fromGeneration) showMessage('The AI returned an invalid data format. Please try again.', 'error');
+                    console.error("Expected citations to be an array, but got:", citations);
+                    return;
+                }
+
+                const validCitations = citations.filter(c => c && c.title && c.url);
                 if (validCitations.length === 0) {
                     if(fromGeneration) showMessage('No valid citable claims were found in the provided text.');
                     return;
@@ -441,7 +462,6 @@
                     listItem.className = 'citation-item';
                     
                     const citationText = document.createElement('p');
-                    // If loading from storage, the HTML is already formatted
                     citationText.innerHTML = source.formatted_citation ? source.formatted_citation : 
                         (outputType === 'in-text' ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})` : formatter(source));
                     
@@ -470,7 +490,7 @@
                     const result = await callApiWithRetries({ contents });
                     
                     renderCitations(result.citations, citationStyle, outputType);
-                    saveState(); // Save everything after a successful generation
+                    saveState();
                     
                     stopLoadingBar(true);
                 } catch (error) {
@@ -554,7 +574,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadHeader();
             initializeCitationApp();
-            loadState(); // Load saved state on page load
+            loadState();
         });
     </script>
 </body>
