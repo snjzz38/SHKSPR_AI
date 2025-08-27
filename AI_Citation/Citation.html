@@ -62,23 +62,16 @@
         .container h2 { font-size: 1.5rem; color: var(--text-primary); text-align: center; margin-bottom: 5px; }
         
         /* --- FORM & INPUT STYLES --- */
-        .form-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
-        .form-group { flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.9rem; font-weight: bold; }
         
-        textarea, select, input[type="number"] {
+        textarea, select {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
             resize: vertical; min-height: 54px; transition: border-color 0.3s, background-color 0.3s;
         }
         textarea { min-height: 150px; }
-        textarea:focus, select:focus, input[type="number"]:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
-        
-        .radio-group {
-            display: flex; gap: 15px; background-color: var(--card-bg); border: 1px solid var(--accent);
-            padding: 10px 15px; border-radius: 8px; align-items: center; height: 54px;
-        }
-        .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        textarea:focus, select:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
 
         /* --- BUTTON STYLES --- */
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
@@ -165,42 +158,14 @@
         </section>
 
         <div class="container">
-            <div class="form-row">
-                <div class="form-group" style="flex: 2 1 200px;">
-                    <label for="citation-style">Citation Style</label>
-                    <select id="citation-style">
-                        <option value="apa7">APA 7th Edition</option>
-                        <option value="mla9">MLA 9th Edition</option>
-                        <option value="chicago">Chicago (Author-Date)</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex: 1 1 150px;">
-                    <label for="citation-count">Max Citations</label>
-                    <select id="citation-count">
-                        <option value="auto">Auto</option>
-                        <option value="custom">Custom...</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex: 2 1 200px;">
-                    <label>Output Type</label>
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="output-type" value="bibliography" checked>
-                            <span>Bibliography</span>
-                        </label>
-                        <label>
-                            <input type="radio" name="output-type" value="in-text">
-                            <span>In-text</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="custom-count-container" style="display: none; margin-top: -10px;">
-                <div class="form-group" id="custom-count-group">
-                    <label for="custom-citation-count">Custom Number of Citations</label>
-                    <input type="number" id="custom-citation-count" min="1" value="3" placeholder="Enter number...">
-                </div>
+            <div class="form-group">
+                <label for="citation-count">Max Sources</label>
+                <select id="citation-count">
+                    <option value="auto">Auto</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
             </div>
 
             <div class="form-group">
@@ -209,7 +174,7 @@
             </div>
 
             <div class="action-buttons">
-                <button id="generate-btn" class="generate-button">Generate Citations</button>
+                <button id="generate-btn" class="generate-button">Find Sources</button>
                 <button id="example-btn" class="secondary-button">Load Example</button>
                 <button id="clear-btn" class="secondary-button">Clear All</button>
             </div>
@@ -220,10 +185,10 @@
             <div id="messageBox" class="message-box"></div>
 
             <div id="output-section">
-                <h2 id="output-heading">Bibliography</h2>
+                <h2 id="output-heading">Relevant Sources</h2>
                 <ul id="output-area"></ul>
                 <div class="action-buttons" style="margin-top: 20px;">
-                    <button id="copy-btn" class="generate-button">Copy to Clipboard</button>
+                    <button id="copy-btn" class="generate-button">Copy URLs</button>
                     <button id="download-btn" class="secondary-button">Download as .txt</button>
                 </div>
             </div>
@@ -270,10 +235,7 @@
 
         function initializeCitationApp() {
             const essayInput = document.getElementById('essay-input');
-            const citationStyleSelect = document.getElementById('citation-style');
             const citationCountSelect = document.getElementById('citation-count');
-            const customCountContainer = document.getElementById('custom-count-container');
-            const customCitationCountInput = document.getElementById('custom-citation-count');
             const generateBtn = document.getElementById('generate-btn');
             const exampleBtn = document.getElementById('example-btn');
             const clearBtn = document.getElementById('clear-btn');
@@ -307,9 +269,8 @@
                 }, 500);
             }
 
-            function renderCitations(urls, outputType) {
+            function renderCitations(urls) {
                 outputArea.innerHTML = '';
-                outputHeading.textContent = (outputType === 'in-text') ? 'Relevant Sources' : 'Bibliography';
                 
                 if (!Array.isArray(urls) || urls.length === 0) {
                     showMessage('No relevant sources were found for the provided text.', 'info');
@@ -329,15 +290,15 @@
                     outputArea.appendChild(listItem);
                 });
                 outputSection.style.display = 'block';
-                showMessage('Citations generated successfully!', 'info');
+                showMessage('Sources found successfully!', 'info');
             }
 
-            async function processAndGenerate(essayText, citationStyle, outputType, citationCount) {
+            async function processAndGenerate(essayText, citationCount) {
                 try {
                     const response = await fetch('/api/citation', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ essayText, citationStyle, outputType, citationCount })
+                        body: JSON.stringify({ essayText, citationCount })
                     });
 
                     if (!response.ok) {
@@ -347,7 +308,7 @@
 
                     const result = await response.json();
                     
-                    renderCitations(result.urls, outputType);
+                    renderCitations(result.urls);
                     
                     stopLoadingBar(true);
                 } catch (error) {
@@ -359,29 +320,20 @@
                 }
             }
 
-            citationCountSelect.addEventListener('change', () => {
-                customCountContainer.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
-            });
-
             generateBtn.addEventListener('click', () => {
                 const essayText = essayInput.value.trim();
                 if (!essayText) {
                     showMessage('Please paste an essay into the input area.', 'error');
                     return;
                 }
-                const citationStyle = citationStyleSelect.value;
-                const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                let citationCount = citationCountSelect.value;
-                if (citationCount === 'custom') {
-                    citationCount = customCitationCountInput.value || 1;
-                }
+                const citationCount = citationCountSelect.value;
                 
                 outputSection.style.display = 'none';
                 messageBox.style.display = 'none';
                 generateBtn.disabled = true;
                 startLoadingBar();
                 
-                processAndGenerate(essayText, citationStyle, outputType, citationCount);
+                processAndGenerate(essayText, citationCount);
             });
 
             exampleBtn.addEventListener('click', () => {
@@ -416,7 +368,6 @@
                 URL.revokeObjectURL(url);
             });
             
-            // Dummy clear function for now
             clearBtn.addEventListener('click', () => {
                 essayInput.value = '';
                 outputSection.style.display = 'none';
