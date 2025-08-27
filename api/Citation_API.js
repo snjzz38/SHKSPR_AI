@@ -6,12 +6,8 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
     // Securely get API keys from environment variables
     const geminiApiKey = process.env.CITATION_1;
@@ -23,7 +19,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // The frontend now sends the model and the full 'contents' payload
+        // The frontend sends the model and the full 'contents' payload
         const { model, contents } = req.body;
         if (!model || !contents) {
             return res.status(400).json({ error: 'Missing "model" or "contents" in the request body.' });
@@ -31,7 +27,6 @@ module.exports = async (req, res) => {
 
         const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
 
-        // This is the initial payload, built by the client
         const initialPayload = {
             contents: contents,
             tools: [{
@@ -107,8 +102,9 @@ module.exports = async (req, res) => {
             throw new Error('The AI model did not return any text.');
         }
 
-        // The frontend expects a JSON object with a 'citations' key
-        res.status(200).json({ citations: JSON.parse(responseText) });
+        // The frontend expects a JSON object. We parse it here to ensure it's valid before sending.
+        const finalJson = JSON.parse(responseText);
+        res.status(200).json(finalJson);
 
     } catch (error) {
         console.error('Error in serverless function:', error);
