@@ -11,7 +11,6 @@
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
-            /* --- FIX: Added theme-aware destructive colors --- */
             --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
@@ -114,8 +113,9 @@
             border-color: var(--accent);
             color: var(--text-primary);
         }
+        /* --- FIX: Theme-aware error styling --- */
         .message-box.error {
-            background-color: var(--destructive-bg);
+            background-color: rgba(var(--destructive-glow-rgb), 0.1);
             border-color: var(--destructive-text);
             color: var(--destructive-text);
         }
@@ -275,7 +275,14 @@
         }
 
         function initializeCitationApp() {
-            const ALL_GEMINI_MODELS = [ 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest' ];
+            const ALL_GEMINI_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+];
 
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
@@ -441,7 +448,6 @@
                 outputArea.innerHTML = '';
                 outputHeading.textContent = (outputType === 'in-text') ? 'In-Text Citations' : 'Bibliography';
                 
-                // --- FIX: Check if citations is an array before filtering ---
                 if (!Array.isArray(citations)) {
                     if(fromGeneration) showMessage('The AI returned an invalid data format. Please try again.', 'error');
                     console.error("Expected citations to be an array, but got:", citations);
@@ -475,7 +481,7 @@
                     outputArea.appendChild(listItem);
                 });
                 outputSection.style.display = 'block';
-                if(fromGeneration) showMessage('Citations generated successfully!');
+                if(fromGeneration) showMessage('Citations generated successfully!', 'info');
             }
 
             async function processAndGenerate(essayText, citationStyle, outputType, citationCount) {
@@ -535,7 +541,7 @@
                 const citations = Array.from(outputArea.querySelectorAll('.citation-item p'));
                 const textToCopy = citations.map(p => p.textContent).join('\n\n');
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    showMessage('Citations copied to clipboard!');
+                    showMessage('Citations copied to clipboard!', 'info');
                 }).catch(err => {
                     showMessage('Failed to copy text.', 'error');
                 });
