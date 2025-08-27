@@ -19,92 +19,101 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // The frontend sends the model and the full 'contents' payload
-        const { model, contents } = req.body;
-        if (!model || !contents) {
-            return res.status(400).json({ error: 'Missing "model" or "contents" in the request body.' });
+        const { essayText, citationCount } = req.body;
+        if (!essayText) {
+            return res.status(400).json({ error: 'Missing required field: essayText.' });
         }
 
-        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+        const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiApiKey}`;
 
-        const initialPayload = {
-            contents: contents,
-            tools: [{
-                functionDeclarations: [{
-                    name: "google_search",
-                    description: "Search Google for reputable sources to verify claims.",
-                    parameters: {
-                        type: "OBJECT",
-                        properties: { "queries": { "type": "ARRAY", "items": { "type": "STRING" } } },
-                        required: ["queries"]
-                    }
-                }]
-            }],
+        // --- STEP 1: First AI call to summarize the text into a single, high-quality search query ---
+        const summaryPrompt = `Summarize the following text into a single, concise search query of about 10-15 words. This query will be used to find academic sources. Focus on the main thesis or subject. Text: "${essayText}"`;
+        
+        const summaryPayload = {
+            contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }]
+        };
+
+        const summaryResponse = await fetch(geminiApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(summaryPayload)
+        });
+        if (!summaryResponse.ok) throw new Error('Failed to generate a search query from the text.');
+        
+        const summaryData = await summaryResponse.json();
+        const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
+
+        if (!searchQuery) {
+            throw new Error("Could not generate a search query from the provided text.");
+        }
+
+        // --- STEP 2: Proactively perform a web search using the AI-generated summary ---
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
+        const searchApiResponse = await fetch(searchUrl);
+        const searchData = await searchApiResponse.json();
+
+        const uniqueUrls = new Set();
+        const allSearchResults = searchData.items ? searchData.items.slice(0, 10).map(item => ({
+            title: item.title,
+            snippet: item.snippet,
+            url: item.link
+        })).filter(item => {
+            if (!item.url || uniqueUrls.has(item.url)) return false;
+            uniqueUrls.add(item.url);
+            return true;
+        }) : [];
+
+        if (allSearchResults.length === 0) {
+            return res.status(200).json({ urls: [] });
+        }
+
+        // --- STEP 3: Second AI call to filter the search results and return only URLs ---
+        const countInstruction = (citationCount === 'auto')
+            ? `Return all relevant URLs.`
+            : `Return a maximum of ${citationCount} of the most relevant URLs.`;
+
+        const finalPrompt = `
+            You are an expert research filter. Your task is to analyze the provided "Web Search Results" and select the ones most relevant to the original "Essay Text".
+
+            PROCESS:
+            1.  Read the "Essay Text" to understand its core arguments.
+            2.  Review the "Web Search Results".
+            3.  Identify the most relevant and reputable sources from the list.
+            4.  ${countInstruction}
+            5.  Return ONLY a valid JSON array of URL strings for the relevant sources. For example: ["https://example.com/source1", "https://example.com/source2"]
+
+            Essay Text:
+            "${essayText}" 
+
+            Web Search Results:
+            ${JSON.stringify(allSearchResults, null, 2)}
+
+            Return ONLY a valid JSON array of URL strings.
+        `;
+
+        const finalPayload = {
+            contents: [{ role: 'user', parts: [{ text: finalPrompt }] }],
             generationConfig: { responseMimeType: "application/json" }
         };
 
-        // Step 1: First call to Gemini to see if it needs to use a tool
-        let geminiResponse = await fetch(geminiApiUrl, {
+        const finalResponse = await fetch(geminiApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(initialPayload)
+            body: JSON.stringify(finalPayload)
         });
-        
-        let geminiResult = await geminiResponse.json();
 
-        // Step 2: If the model requests a tool call, execute it
-        if (geminiResult?.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
-            const functionCall = geminiResult.candidates[0].content.parts[0].functionCall;
+        if (!finalResponse.ok) throw new Error('The AI failed to filter the search results.');
 
-            if (functionCall.name === 'google_search') {
-                const queries = functionCall.args.queries;
-                if (!queries || queries.length === 0) throw new Error('Search tool call failed: no queries provided.');
-                
-                const searchPromises = queries.map(query => {
-                    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}`;
-                    return fetch(searchUrl).then(res => res.json());
-                });
-
-                const searchApiResponses = await Promise.all(searchPromises);
-                
-                const allSearchResults = searchApiResponses.flatMap(searchData => 
-                    searchData.items ? searchData.items.slice(0, 3).map(item => ({
-                        title: item.title,
-                        snippet: item.snippet,
-                        url: item.link
-                    })) : []
-                );
-
-                // Step 3: Send the search results back to the model
-                const finalPayload = {
-                    contents: [
-                        ...initialPayload.contents,
-                        { role: 'model', parts: [{ functionCall }] },
-                        { role: 'tool', parts: [{ functionResponse: { name: 'google_search', response: { results: allSearchResults } } }] }
-                    ],
-                };
-                
-                let finalGeminiResponse = await fetch(geminiApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(finalPayload)
-                });
-                
-                geminiResult = await finalGeminiResponse.json();
-            }
-        }
-
-        // Step 4: Extract and return the final text content
-        let responseText = geminiResult?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const finalData = await finalResponse.json();
+        let responseText = finalData.candidates[0].content.parts[0].text;
         
         if (!responseText) {
-            console.error('Full Gemini response:', JSON.stringify(geminiResult, null, 2));
-            throw new Error('The AI model did not return any text.');
+            console.error('Full Gemini response:', JSON.stringify(finalData, null, 2));
+            throw new Error('The AI model did not return any text in the final step.');
         }
 
-        // The frontend expects a JSON object. We parse it here to ensure it's valid before sending.
-        const finalJson = JSON.parse(responseText);
-        res.status(200).json(finalJson);
+        const urls = JSON.parse(responseText);
+        res.status(200).json({ urls });
 
     } catch (error) {
         console.error('Error in serverless function:', error);
