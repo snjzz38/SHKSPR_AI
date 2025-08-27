@@ -65,7 +65,6 @@ module.exports = async (req, res) => {
                 const queries = functionCall.args.queries;
                 if (!queries || queries.length === 0) throw new Error('Search tool call failed: no queries provided.');
                 
-                // Perform all searches in parallel for speed
                 const searchPromises = queries.map(query => {
                     const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}`;
                     return fetch(searchUrl).then(res => res.json());
