@@ -59,20 +59,20 @@
         
         /* --- FORM & INPUT STYLES --- */
         .form-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
-        .form-group { flex: 1 1 300px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group { flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.9rem; font-weight: bold; }
         
-        textarea, select {
+        textarea, select, input[type="number"] {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
-            resize: vertical; min-height: 50px; transition: border-color 0.3s, background-color 0.3s;
+            resize: vertical; min-height: 54px; transition: border-color 0.3s, background-color 0.3s;
         }
         textarea { min-height: 150px; }
-        textarea:focus, select:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
+        textarea:focus, select:focus, input[type="number"]:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
         
         .radio-group {
             display: flex; gap: 15px; background-color: var(--card-bg); border: 1px solid var(--accent);
-            padding: 10px 15px; border-radius: 8px; align-items: center;
+            padding: 10px 15px; border-radius: 8px; align-items: center; height: 54px;
         }
         .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
 
@@ -157,16 +157,25 @@
 
         <div class="container">
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group" style="flex: 2 1 200px;">
                     <label for="citation-style">Citation Style</label>
                     <select id="citation-style">
                         <option value="apa7">APA 7th Edition</option>
                         <option value="mla9">MLA 9th Edition</option>
                         <option value="chicago">Chicago (Author-Date)</option>
-                        <option value="vancouver">Vancouver</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="flex: 1 1 150px;">
+                    <label for="citation-count">Max Citations</label>
+                    <select id="citation-count">
+                        <option value="auto">Auto</option>
+                        <option value="1">1</option>
+                        <option value="3">3</option>
+                        <option value="5">5</option>
+                        <option value="custom">Custom...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 2 1 200px;">
                     <label>Output Type</label>
                     <div class="radio-group">
                         <label>
@@ -179,6 +188,11 @@
                         </label>
                     </div>
                 </div>
+            </div>
+            
+            <div class="form-group" id="custom-count-group" style="display: none;">
+                <label for="custom-citation-count">Custom Number of Citations</label>
+                <input type="number" id="custom-citation-count" min="1" value="3" placeholder="Enter number...">
             </div>
 
             <div class="form-group">
@@ -247,7 +261,7 @@
 
         function initializeCitationApp() {
             const ALL_GEMINI_MODELS = [
-                'gemini-1.5-pro-latest', // Start with the most capable model for this complex task
+                'gemini-1.5-pro-latest',
                 'gemini-1.5-flash-latest',
                 'gemini-2.5-flash-lite',
                 'gemini-2.5-flash',
@@ -259,6 +273,9 @@
 
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
+            const citationCountSelect = document.getElementById('citation-count');
+            const customCountGroup = document.getElementById('custom-count-group');
+            const customCitationCountInput = document.getElementById('custom-citation-count');
             const generateBtn = document.getElementById('generate-btn');
             const exampleBtn = document.getElementById('example-btn');
             const outputSection = document.getElementById('output-section');
@@ -268,6 +285,32 @@
             const loadingBarContainer = document.getElementById('loading-bar-container');
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
+
+            const citationFormatter = {
+                apa7: (source) => {
+                    const author = source.author || 'N.A.';
+                    const year = source.year || 'n.d.';
+                    const title = source.title || 'Untitled';
+                    const journal = source.journal ? `<em>${source.journal}</em>` : '';
+                    const publisher = source.publisher || '';
+                    return `${author}. (${year}). ${title}. ${journal ? journal + '.' : ''} ${publisher ? publisher + '.' : ''}`;
+                },
+                mla9: (source) => {
+                    const author = source.author || 'N.A.';
+                    const title = source.title ? `"${source.title}."` : 'Untitled.';
+                    const journal = source.journal ? `<em>${source.journal}</em>,` : '';
+                    const publisher = source.publisher ? `${source.publisher},` : '';
+                    const year = source.year || 'n.d.';
+                    return `${author}. ${title} ${journal} ${publisher} ${year}.`;
+                },
+                chicago: (source) => {
+                    const author = source.author || 'N.A.';
+                    const year = source.year || 'n.d.';
+                    const title = source.title ? `"${source.title}."` : 'Untitled.';
+                    const journal = source.journal ? `<em>${source.journal}</em>` : '';
+                    return `${author}. ${year}. ${title} ${journal}.`;
+                }
+            };
 
             const shuffleArray = (array) => {
                 for (let i = array.length - 1; i > 0; i--) {
@@ -303,20 +346,17 @@
                 let lastError = null;
 
                 for (const model of modelsToTry) {
-                    console.log(`Attempting API call with model: ${model}`);
                     try {
                         const response = await fetch('/api/citation', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ model, ...payload })
                         });
-
                         if (!response.ok) {
                             const errorData = await response.json();
                             throw new Error(errorData.details || errorData.error || `Server error with model ${model}`);
                         }
-                        
-                        return await response.json(); // Success
+                        return await response.json();
                     } catch (error) {
                         console.warn(`Error with model ${model}:`, error.message);
                         lastError = error;
@@ -325,48 +365,32 @@
                 throw lastError || new Error("All AI models failed.");
             }
 
-            async function processAndGenerate(essayText, citationStyle, outputType) {
+            async function processAndGenerate(essayText, citationStyle, outputType, citationCount) {
                 try {
-                    // --- PROMPT ENGINEERING NOW HAPPENS ON THE FRONTEND ---
-                    const prompt = `
-                        You are an expert academic research assistant. Your task is to generate accurate citations for claims made in a provided text.
+                    const countInstruction = (citationCount === 'auto')
+                        ? `Extract the most important and citable topics or key phrases from the text.`
+                        : `Extract the ${citationCount} most important and citable topics or key phrases from the text.`;
 
-                        PROCESS:
-                        1.  Analyze the following "Essay Text" to identify key claims that require a citation.
-                        2.  For each claim, formulate a precise search query for the 'google_search' tool to find a reputable, verifiable source (e.g., academic journal, official report, university website, major news organization).
-                        3.  You MUST use the search results provided by the tool. Do NOT invent sources or create placeholders.
-                        4.  From the search results, extract the necessary information (author, year, title, URL, etc.).
-                        5.  Generate a list of citation objects. Each object in the list MUST contain:
-                            - "formatted_citation": A string with the full citation, meticulously formatted according to the requested "Citation Style".
-                            - "url": The direct, clickable URL from the search result.
-                            - "title": The title of the source.
-                        6.  If the "Output Type" is 'in-text', the "formatted_citation" should be the correctly formatted in-text citation.
-                        7.  If you cannot find a reputable source for a claim after searching, you MUST NOT include it in your response. If no sources are found for any claims, return an empty array.
-
-                        Essay Text:
-                        "${essayText}"
-
-                        Citation Style: ${citationStyle}
-                        Output Type: ${outputType}
-
-                        Return ONLY a valid JSON array of citation objects.
-                    `;
-
+                    const prompt = `Analyze the following text. ${countInstruction} Return them as a simple JSON array of strings. For example: ["Intergovernmental Panel on Climate Change reports", "rising global temperatures effects", "Paris Agreement goals"]. Text: "${essayText}"`;
+                    
                     const contents = [{ role: 'user', parts: [{ text: prompt }] }];
                     const result = await callApiWithRetries({ contents });
                     
-                    outputArea.innerHTML = ''; // Clear previous results
+                    outputArea.innerHTML = '';
                     if (result.citations && result.citations.length > 0) {
-                        result.citations.forEach(citation => {
+                        const formatter = citationFormatter[citationStyle] || citationFormatter.apa7;
+                        result.citations.forEach(source => {
                             const listItem = document.createElement('li');
                             listItem.className = 'citation-item';
                             
                             const citationText = document.createElement('p');
-                            citationText.textContent = citation.formatted_citation;
+                            citationText.innerHTML = (outputType === 'in-text') 
+                                ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})`
+                                : formatter(source);
                             
                             const citationLink = document.createElement('a');
-                            citationLink.href = citation.url;
-                            citationLink.textContent = citation.title || 'View Source';
+                            citationLink.href = source.url;
+                            citationLink.textContent = source.title || 'View Source';
                             citationLink.target = '_blank';
                             
                             listItem.appendChild(citationText);
@@ -389,6 +413,10 @@
                 }
             }
 
+            citationCountSelect.addEventListener('change', () => {
+                customCountGroup.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
+            });
+
             generateBtn.addEventListener('click', () => {
                 const essayText = essayInput.value.trim();
                 if (!essayText) {
@@ -397,13 +425,17 @@
                 }
                 const citationStyle = citationStyleSelect.value;
                 const outputType = document.querySelector('input[name="output-type"]:checked').value;
+                let citationCount = citationCountSelect.value;
+                if (citationCount === 'custom') {
+                    citationCount = customCitationCountInput.value || 1;
+                }
                 
                 outputSection.style.display = 'none';
                 messageBox.style.display = 'none';
                 generateBtn.disabled = true;
                 startLoadingBar();
 
-                processAndGenerate(essayText, citationStyle, outputType);
+                processAndGenerate(essayText, citationStyle, outputType, citationCount);
             });
 
             exampleBtn.addEventListener('click', () => {
