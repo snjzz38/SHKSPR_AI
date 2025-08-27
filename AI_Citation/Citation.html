@@ -109,7 +109,6 @@
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
         
         #output-section { margin-top: 20px; display: none; }
-        /* --- FIX: New styles for readable citation list --- */
         #output-area {
             list-style: none;
             padding: 0;
@@ -247,6 +246,17 @@
         }
 
         function initializeCitationApp() {
+            const ALL_GEMINI_MODELS = [
+                'gemini-1.5-pro-latest', // Start with the most capable model for this complex task
+                'gemini-1.5-flash-latest',
+                'gemini-2.5-flash-lite',
+                'gemini-2.5-flash',
+                'gemini-2.0-flash',
+                'gemini-2.0-flash-lite',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-8b',
+            ];
+
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
             const generateBtn = document.getElementById('generate-btn');
@@ -258,6 +268,14 @@
             const loadingBarContainer = document.getElementById('loading-bar-container');
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
+
+            const shuffleArray = (array) => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            };
 
             function showMessage(message, type = 'info') {
                 messageBox.textContent = message;
@@ -280,6 +298,97 @@
                 }, 500);
             }
 
+            async function callApiWithRetries(payload) {
+                let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
+                let lastError = null;
+
+                for (const model of modelsToTry) {
+                    console.log(`Attempting API call with model: ${model}`);
+                    try {
+                        const response = await fetch('/api/citation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ model, ...payload })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.details || errorData.error || `Server error with model ${model}`);
+                        }
+                        
+                        return await response.json(); // Success
+                    } catch (error) {
+                        console.warn(`Error with model ${model}:`, error.message);
+                        lastError = error;
+                    }
+                }
+                throw lastError || new Error("All AI models failed.");
+            }
+
+            async function processAndGenerate(essayText, citationStyle, outputType) {
+                try {
+                    // --- PROMPT ENGINEERING NOW HAPPENS ON THE FRONTEND ---
+                    const prompt = `
+                        You are an expert academic research assistant. Your task is to generate accurate citations for claims made in a provided text.
+
+                        PROCESS:
+                        1.  Analyze the following "Essay Text" to identify key claims that require a citation.
+                        2.  For each claim, formulate a precise search query for the 'google_search' tool to find a reputable, verifiable source (e.g., academic journal, official report, university website, major news organization).
+                        3.  You MUST use the search results provided by the tool. Do NOT invent sources or create placeholders.
+                        4.  From the search results, extract the necessary information (author, year, title, URL, etc.).
+                        5.  Generate a list of citation objects. Each object in the list MUST contain:
+                            - "formatted_citation": A string with the full citation, meticulously formatted according to the requested "Citation Style".
+                            - "url": The direct, clickable URL from the search result.
+                            - "title": The title of the source.
+                        6.  If the "Output Type" is 'in-text', the "formatted_citation" should be the correctly formatted in-text citation.
+                        7.  If you cannot find a reputable source for a claim after searching, you MUST NOT include it in your response. If no sources are found for any claims, return an empty array.
+
+                        Essay Text:
+                        "${essayText}"
+
+                        Citation Style: ${citationStyle}
+                        Output Type: ${outputType}
+
+                        Return ONLY a valid JSON array of citation objects.
+                    `;
+
+                    const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+                    const result = await callApiWithRetries({ contents });
+                    
+                    outputArea.innerHTML = ''; // Clear previous results
+                    if (result.citations && result.citations.length > 0) {
+                        result.citations.forEach(citation => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'citation-item';
+                            
+                            const citationText = document.createElement('p');
+                            citationText.textContent = citation.formatted_citation;
+                            
+                            const citationLink = document.createElement('a');
+                            citationLink.href = citation.url;
+                            citationLink.textContent = citation.title || 'View Source';
+                            citationLink.target = '_blank';
+                            
+                            listItem.appendChild(citationText);
+                            listItem.appendChild(citationLink);
+                            outputArea.appendChild(listItem);
+                        });
+                        outputSection.style.display = 'block';
+                        showMessage('Citations generated successfully!');
+                    } else {
+                        showMessage('No citable claims were found in the provided text.');
+                    }
+                    
+                    stopLoadingBar(true);
+                } catch (error) {
+                    console.error('An error occurred:', error);
+                    showMessage(`Error: ${error.message}`, 'error');
+                    stopLoadingBar(false);
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            }
+
             generateBtn.addEventListener('click', () => {
                 const essayText = essayInput.value.trim();
                 if (!essayText) {
@@ -289,7 +398,6 @@
                 const citationStyle = citationStyleSelect.value;
                 const outputType = document.querySelector('input[name="output-type"]:checked').value;
                 
-                outputArea.innerHTML = '';
                 outputSection.style.display = 'none';
                 messageBox.style.display = 'none';
                 generateBtn.disabled = true;
@@ -329,56 +437,6 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
-
-            async function processAndGenerate(essayText, citationStyle, outputType) {
-                try {
-                    const backendUrl = '/api/citation';
-                    const response = await fetch(backendUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ essayText, citationStyle, outputType }),
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'An unknown server error occurred.');
-                    }
-
-                    const result = await response.json();
-                    
-                    // --- FIX: Render the structured JSON into a readable list ---
-                    if (result.citations && result.citations.length > 0) {
-                        result.citations.forEach(citation => {
-                            const listItem = document.createElement('li');
-                            listItem.className = 'citation-item';
-                            
-                            const citationText = document.createElement('p');
-                            citationText.textContent = citation.formatted_citation;
-                            
-                            const citationLink = document.createElement('a');
-                            citationLink.href = citation.url;
-                            citationLink.textContent = citation.title || 'View Source';
-                            citationLink.target = '_blank'; // Open in new tab
-                            
-                            listItem.appendChild(citationText);
-                            listItem.appendChild(citationLink);
-                            outputArea.appendChild(listItem);
-                        });
-                        outputSection.style.display = 'block';
-                        showMessage('Citations generated successfully!');
-                    } else {
-                        showMessage('No citable claims were found in the provided text.');
-                    }
-                    
-                    stopLoadingBar(true);
-                } catch (error) {
-                    console.error('An error occurred:', error);
-                    showMessage(`Error: ${error.message}`, 'error');
-                    stopLoadingBar(false);
-                } finally {
-                    generateBtn.disabled = false;
-                }
-            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
