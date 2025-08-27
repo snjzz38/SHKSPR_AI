@@ -202,6 +202,7 @@
             <div class="action-buttons">
                 <button id="generate-btn" class="generate-button">Generate Citations</button>
                 <button id="example-btn" class="secondary-button">Load Example</button>
+                <button id="clear-btn" class="secondary-button">Clear All</button>
             </div>
 
             <div id="loading-bar-container" class="loading-bar-container">
@@ -210,7 +211,7 @@
             <div id="messageBox" class="message-box"></div>
 
             <div id="output-section">
-                <h2>Bibliography</h2>
+                <h2 id="output-heading">Bibliography</h2>
                 <ul id="output-area"></ul>
                 <div class="action-buttons" style="margin-top: 20px;">
                     <button id="copy-btn" class="generate-button">Copy to Clipboard</button>
@@ -268,6 +269,7 @@
             const customCitationCountInput = document.getElementById('custom-citation-count');
             const generateBtn = document.getElementById('generate-btn');
             const exampleBtn = document.getElementById('example-btn');
+            const clearBtn = document.getElementById('clear-btn');
             const outputSection = document.getElementById('output-section');
             const outputArea = document.getElementById('output-area');
             const copyBtn = document.getElementById('copy-btn');
@@ -275,7 +277,7 @@
             const loadingBarContainer = document.getElementById('loading-bar-container');
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
-            const outputHeading = outputSection.querySelector('h2');
+            const outputHeading = document.getElementById('output-heading');
 
             const citationFormatter = {
                 apa7: (source) => {
@@ -311,7 +313,7 @@
                         return authorA.localeCompare(authorB);
                     });
                 }
-                return citations; // Default: return in order of appearance
+                return citations;
             };
 
             const saveState = () => {
@@ -321,27 +323,37 @@
                     count: citationCountSelect.value,
                     customCount: customCitationCountInput.value,
                     outputType: document.querySelector('input[name="output-type"]:checked').value,
-                    citations: JSON.parse(localStorage.getItem('citationOutput')) || null
                 };
                 localStorage.setItem('citationState', JSON.stringify(state));
+                // Save output separately
+                const outputData = Array.from(outputArea.children).map(li => ({
+                    formatted_citation: li.querySelector('p').innerHTML,
+                    url: li.querySelector('a').href,
+                    title: li.querySelector('a').textContent
+                }));
+                if (outputData.length > 0) {
+                    localStorage.setItem('citationOutput', JSON.stringify(outputData));
+                } else {
+                    localStorage.removeItem('citationOutput');
+                }
             };
 
             const loadState = () => {
                 const state = JSON.parse(localStorage.getItem('citationState'));
-                if (!state) return;
-
-                essayInput.value = state.essay || '';
-                citationStyleSelect.value = state.style || 'apa7';
-                citationCountSelect.value = state.count || 'auto';
-                customCitationCountInput.value = state.customCount || '3';
-                document.querySelector(`input[name="output-type"][value="${state.outputType || 'bibliography'}"]`).checked = true;
-
-                if (state.count === 'custom') {
-                    customCountContainer.style.display = 'block';
+                if (state) {
+                    essayInput.value = state.essay || '';
+                    citationStyleSelect.value = state.style || 'apa7';
+                    citationCountSelect.value = state.count || 'auto';
+                    customCitationCountInput.value = state.customCount || '3';
+                    document.querySelector(`input[name="output-type"][value="${state.outputType || 'bibliography'}"]`).checked = true;
+                    if (state.count === 'custom') {
+                        customCountContainer.style.display = 'block';
+                    }
                 }
 
-                if (state.citations) {
-                    renderCitations(state.citations, state.style, state.outputType);
+                const savedCitations = JSON.parse(localStorage.getItem('citationOutput'));
+                if (savedCitations) {
+                    renderCitations(savedCitations, citationStyleSelect.value, document.querySelector('input[name="output-type"]:checked').value, false);
                 }
             };
 
@@ -411,13 +423,13 @@
                 throw lastError || new Error("All AI models failed.");
             }
 
-            function renderCitations(citations, style, outputType) {
+            function renderCitations(citations, style, outputType, fromGeneration = true) {
                 outputArea.innerHTML = '';
                 outputHeading.textContent = (outputType === 'in-text') ? 'In-Text Citations' : 'Bibliography';
                 
                 const validCitations = citations.filter(c => c.title && c.url);
                 if (validCitations.length === 0) {
-                    showMessage('No valid citable claims were found in the provided text.');
+                    if(fromGeneration) showMessage('No valid citable claims were found in the provided text.');
                     return;
                 }
 
@@ -429,9 +441,9 @@
                     listItem.className = 'citation-item';
                     
                     const citationText = document.createElement('p');
-                    citationText.innerHTML = (outputType === 'in-text') 
-                        ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})`
-                        : formatter(source);
+                    // If loading from storage, the HTML is already formatted
+                    citationText.innerHTML = source.formatted_citation ? source.formatted_citation : 
+                        (outputType === 'in-text' ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})` : formatter(source));
                     
                     const citationLink = document.createElement('a');
                     citationLink.href = source.url;
@@ -443,7 +455,7 @@
                     outputArea.appendChild(listItem);
                 });
                 outputSection.style.display = 'block';
-                showMessage('Citations generated successfully!');
+                if(fromGeneration) showMessage('Citations generated successfully!');
             }
 
             async function processAndGenerate(essayText, citationStyle, outputType, citationCount) {
@@ -457,8 +469,8 @@
                     const contents = [{ role: 'user', parts: [{ text: prompt }] }];
                     const result = await callApiWithRetries({ contents });
                     
-                    localStorage.setItem('citationOutput', JSON.stringify(result.citations));
                     renderCitations(result.citations, citationStyle, outputType);
+                    saveState(); // Save everything after a successful generation
                     
                     stopLoadingBar(true);
                 } catch (error) {
@@ -472,7 +484,6 @@
 
             citationCountSelect.addEventListener('change', () => {
                 customCountContainer.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
-                saveState();
             });
 
             generateBtn.addEventListener('click', () => {
@@ -492,8 +503,7 @@
                 messageBox.style.display = 'none';
                 generateBtn.disabled = true;
                 startLoadingBar();
-                saveState(); // Save inputs before generating
-
+                
                 processAndGenerate(essayText, citationStyle, outputType, citationCount);
             });
 
@@ -537,13 +547,14 @@
             document.querySelectorAll('input[name="output-type"]').forEach(radio => {
                 radio.addEventListener('change', saveState);
             });
-            document.getElementById('clear-btn').addEventListener('click', clearState); // Assuming you have a clear button
+            clearBtn.addEventListener('click', clearState);
 
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             loadHeader();
             initializeCitationApp();
+            loadState(); // Load saved state on page load
         });
     </script>
 </body>
