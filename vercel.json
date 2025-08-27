@@ -13,7 +13,7 @@
     "api/Quiz_API.js": {
       "maxDuration": 30
     },
-    "api/Study_Guide_API.js": {
+    "api/Citation_API.js": {
       "maxDuration": 30
     }
   },
@@ -39,8 +39,8 @@
       "destination": "/api/Quiz_API.js"
     },
     {
-      "source": "/api/study_guide",
-      "destination": "/api/Study_Guide_API.js"
+      "source": "/api/citation",
+      "destination": "/api/Citation_API.js"
     },
     {
       "source": "/",
