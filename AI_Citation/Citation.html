@@ -2,88 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>AI Citation Generator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Citation Generator with Real Sources</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS for utility classes -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <style>
-        /* --- Theme Variables from header.html --- */
+        /* --- THEME VARIABLES & GLOBAL STYLES --- */
         :root {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #fff;
-            --card-bg: #222;
-            --link-hover: #ffffff;
-            --input-bg: #333;
+            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+            --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
+            --accent-rgb: 255, 255, 255;
         }
         body.theme-cyan {
-            --bg-primary: #000;
-            --bg-secondary: #0b0b0b;
-            --text-primary: #e0ffff;
-            --accent: #00f6ff;
-            --card-bg: #072a2c;
-            --accent-rgb: 0, 246, 255;
-            --input-bg: #0e3b3e;
+            --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
+            --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
         }
         body.theme-purple {
-            --bg-primary: #0d001a;
-            --bg-secondary: #14002b;
-            --text-primary: #ffe6ff;
-            --accent: #cc66ff;
-            --card-bg: #1d0036;
-            --accent-rgb: 204, 102, 255;
-            --input-bg: #250040;
+            --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
+            --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
         }
         body.theme-green {
-            --bg-primary: #001a00;
-            --bg-secondary: #002b00;
-            --text-primary: #e6ffe6;
-            --accent: #66ff66;
-            --card-bg: #003600;
-            --accent-rgb: 102, 255, 102;
-            --input-bg: #004000;
+            --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6;
+            --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102;
         }
         body.theme-blackwhite {
-            --bg-primary: #000;
-            --bg-secondary: #111;
-            --text-primary: #fff;
-            --accent: #e0e0e0;
-            --card-bg: #222;
-            --accent-rgb: 224, 224, 224;
-            --input-bg: #333;
-        }
-        body.theme-blackwhite .logo,
-        body.theme-blackwhite h1 {
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
+            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+            --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
         }
         body.theme-red {
-            --bg-primary: #1a0000;
-            --bg-secondary: #2b0000;
-            --text-primary: #ffe6e6;
-            --accent: #ff3333;
-            --card-bg: #360000;
-            --accent-rgb: 255, 51, 51;
-            --input-bg: #400000;
+            --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
+            --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
         }
-
-        /* --- Global and Header-specific Styles from header.html --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -92,613 +43,309 @@
             flex-direction: column;
             overflow-x: hidden;
         }
-        .transition-all {
-            transition: all 0.6s ease;
+
+        /* --- LAYOUT & HERO STYLES --- */
+        .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
+        .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
+        .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
+        .hero p { font-size: 1.2rem; margin: 0 auto 30px; max-width: 600px; }
+        .container {
+            max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
+            background-color: var(--bg-secondary); border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;
+            gap: 20px; position: relative;
         }
-        .particles-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
+        .container h2 { font-size: 1.5rem; color: var(--text-primary); text-align: center; margin-bottom: 5px; }
+        
+        /* --- FORM & INPUT STYLES --- */
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+        .form-group { flex: 1 1 300px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 0.9rem; font-weight: bold; }
+        
+        textarea, select {
+            width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
+            background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
+            resize: vertical; min-height: 50px; transition: border-color 0.3s, background-color 0.3s;
         }
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            background: var(--accent);
-            opacity: 0.7;
-            pointer-events: none;
-            will-change: transform;
+        textarea { min-height: 150px; }
+        textarea:focus, select:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
+        
+        .radio-group {
+            display: flex; gap: 15px; background-color: var(--card-bg); border: 1px solid var(--accent);
+            padding: 10px 15px; border-radius: 8px; align-items: center;
         }
-        header.main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 10%;
-            background-color: var(--bg-secondary);
-            transition: background-color 0.6s, color 0.6s;
-            position: relative;
-            z-index: 10;
+        .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+        /* --- BUTTON STYLES --- */
+        .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .generate-button, .secondary-button {
+            background-color: var(--accent); color: var(--bg-primary); border: none;
+            padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
-            text-decoration: none;
-            transition: all 0.6s ease;
+        .generate-button:hover, .secondary-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .secondary-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
+        
+        .secondary-button {
+            background-color: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            box-shadow: none;
         }
-        .theme-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .dropdown-button {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--text-primary);
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-        .dropdown-button:hover {
-            background: var(--text-primary);
-            color: var(--bg-primary);
-        }
-        .dropdown-container {
-            position: relative;
-        }
-        .dropdown-container:hover .dropdown-options {
-            display: block;
-        }
-        .dropdown-options {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 10px;
-            min-width: 150px;
-            z-index: 10;
-        }
-        .dropdown-options button,
-        .dropdown-options a {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            padding: 8px;
-            cursor: pointer;
-            text-align: left;
-            width: 100%;
-            font-size: 0.9rem;
-            display: block;
-            text-decoration: none;
-        }
-        .dropdown-options button:hover,
-        .dropdown-options a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
-        /* --- App-specific Styles (adapted for the new theme) --- */
-        .card-bg {
-            background-color: var(--card-bg);
-            border-color: var(--text-primary);
-        }
-        .text-primary {
-            color: var(--text-primary);
-        }
-        .bg-secondary {
-            background-color: var(--bg-secondary);
-        }
-        .input-bg {
-            background-color: var(--input-bg);
-            color: var(--text-primary);
-            border-color: var(--text-primary);
-        }
-        .button-accent {
+        .secondary-button:hover {
             background-color: var(--accent);
             color: var(--bg-primary);
+            box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6);
         }
-        .button-accent:hover {
-            background-color: var(--link-hover);
-            color: var(--bg-primary);
+
+        /* --- OUTPUT & STATUS STYLES --- */
+        .message-box {
+            background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
+            color: var(--text-primary); padding: 15px; border-radius: 8px;
+            text-align: center; margin-top: 20px; font-size: 1rem; display: none;
         }
-        .button-outline {
-            border: 1px solid var(--accent);
-            color: var(--accent);
-        }
-        .button-outline:hover {
-            background-color: var(--accent);
-            color: var(--bg-primary);
-        }
-        .button-success {
-            background-color: #10B981; /* green-500 */
-            color: #fff;
-        }
-        .button-success:hover {
-            background-color: #059669; /* green-600 */
-        }
-        .button-success-outline {
-            border: 1px solid #10B981;
-            color: #10B981;
-        }
-        .button-success-outline:hover {
-            background-color: #10B981;
-            color: #fff;
-        }
-        .text-accent {
-            color: var(--accent);
-        }
-        .focus-ring {
-            outline: 2px solid transparent;
-            outline-offset: 2px;
-            box-shadow: 0 0 0 2px var(--accent);
-        }
-        .input-focus:focus {
-            border-color: var(--accent);
-        }
-        a {
-            color: var(--accent);
-            text-decoration: underline;
-        }
-        a:hover {
-            color: var(--link-hover);
-        }
+        .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
+        .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
+        
+        #output-section { margin-top: 20px; display: none; }
         #output-area {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 200px;
             white-space: pre-wrap;
             word-wrap: break-word;
+            font-family: 'Courier New', Courier, monospace;
         }
-        h1 {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            text-align: center;
-            text-shadow:
-                0 0 10px var(--accent),
-                0 0 20px var(--accent),
-                0 0 30px var(--accent),
-                0 0 40px var(--accent),
-                0 0 50px var(--accent),
-                0 0 60px var(--accent);
-            margin-bottom: 2rem;
-            transition: all 0.6s ease;
-        }
-        /* New Loading Bar Style */
-        .loading-bar-container {
-            width: 100%;
-            height: 8px;
-            background-color: var(--bg-secondary);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 1rem;
-        }
-        .loading-bar {
-            height: 100%;
-            background-color: var(--accent);
-            width: 0;
-            border-radius: 4px;
-            transition: width 2s ease-in-out;
-        }
-        /* Custom Modal (kept for error messages) */
-        #custom-modal {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            overflow-y-auto;
-            height: 100%;
-            width: 100%;
-            z-index: 101;
-            display: none;
-        }
-        #status-message {
-            min-height: 1.5rem;
-        }
-        .citation-item {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: var(--bg-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--card-bg);
-        }
-        .citation-item h3 {
-            font-weight: 600;
-            color: var(--accent);
-            margin-bottom: 5px;
-        }
-        .citation-item pre {
-            background-color: var(--input-bg);
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            white-space: pre-wrap;
-            word-break: break-word;
-            margin-top: 10px;
+
+        /* --- FOOTER --- */
+        footer.main-footer { width: 100%; text-align: center; padding: 20px; font-size: 0.9rem; background-color: var(--bg-secondary); position: relative; z-index: 10; }
+
+        @media (max-width: 768px) {
+            .container { width: 95%; padding: 15px; }
+            .hero h1 { font-size: 2.2rem; }
+            .generate-button, .secondary-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .action-buttons { flex-direction: column; }
         }
     </style>
 </head>
-<body class="theme-blackwhite transition-all flex flex-col min-h-screen">
-    <!-- Particles container from header.html -->
-    <div class="particles-container" id="particles"></div>
+<body>
+    <div id="header-container"></div>
 
-    <!-- Header from header.html -->
-    <header class="main-header transition-all">
-        <a href="#" class="logo">SHKSPR</a>
-        <div class="theme-controls">
-            <!-- New Tools Dropdown -->
-            <div class="dropdown-container">
-                <button class="dropdown-button" id="tools-button">🛠️ Tools</button>
-                <div class="dropdown-options">
-                    <a href="#" id="tool-app1-btn">Citation Generator</a>
-                    <a href="#" id="tool-app2-btn">Grammar Checker</a>
-                    <a href="#" id="tool-app3-btn">Plagiarism Detector</a>
-                </div>
-            </div>
-            <!-- Existing Themes Dropdown -->
-            <div class="dropdown-container">
-                <button class="dropdown-button" id="theme-button">🎨 Themes</button>
-                <div class="dropdown-options">
-                    <button id="theme-blackwhite-btn">Black & White</button>
-                    <button id="theme-cyan-btn">Cyan</button>
-                    <button id="theme-purple-btn">Purple</button>
-                    <button id="theme-green-btn">Green</button>
-                    <button id="theme-red-btn">Red</button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <main class="main-content animate-on-load">
+        <section class="hero">
+            <h1>AI Citation Generator</h1>
+            <p>Paste your essay, and this tool will find sources and generate citations for you.</p>
+        </section>
 
-    <div class="flex-grow flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-4xl w-full space-y-8 card-bg p-8 rounded-xl shadow-2xl transition-colors border">
-            <h1 class="text-center text-4xl font-extrabold text-accent">AI Citation Generator with Real Sources</h1>
-            <p class="text-center text-primary">This tool now uses a secure backend server to generate citations. This is more secure and helps keep your API key private.</p>
-            <div id="status-message" class="text-sm text-center font-medium text-primary hidden"></div>
-
-            <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-                <div class="w-full md:w-1/2">
-                    <label for="citation-style" class="block text-sm font-medium text-primary">Citation Style</label>
-                    <select id="citation-style" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border input-bg input-focus sm:text-sm rounded-md">
+        <div class="container">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="citation-style">Citation Style</label>
+                    <select id="citation-style">
                         <option value="apa7">APA 7th Edition</option>
                         <option value="mla9">MLA 9th Edition</option>
                         <option value="chicago">Chicago (Author-Date)</option>
                         <option value="vancouver">Vancouver</option>
                     </select>
                 </div>
-                <div class="w-full md:w-1/2 flex items-end">
-                    <div class="flex items-center space-x-4 p-2 bg-secondary rounded-md border input-bg w-full justify-between">
-                        <label class="text-sm font-medium text-primary">Output Type:</label>
-                        <div class="flex items-center space-x-4">
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="output-type" value="bibliography" checked class="h-4 w-4 text-accent transition duration-150 ease-in-out">
-                                <span class="ml-2 text-primary text-sm">Bibliography</span>
-                            </label>
-                            <label class="inline-flex items-center">
-                                <input type="radio" name="output-type" value="in-text" class="h-4 w-4 text-accent transition duration-150 ease-in-out">
-                                <span class="ml-2 text-primary text-sm">In-text</span>
-                            </label>
-                        </div>
+                <div class="form-group">
+                    <label>Output Type</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="output-type" value="bibliography" checked>
+                            <span>Bibliography</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="output-type" value="in-text">
+                            <span>In-text</span>
+                        </label>
                     </div>
                 </div>
             </div>
 
-            <div>
-                <label for="essay-input" class="block text-sm font-medium text-primary">Paste your essay here</label>
-                <textarea id="essay-input" rows="10" class="mt-1 block w-full shadow-sm sm:text-sm border input-bg input-focus rounded-md p-3" placeholder="Paste your text here..."></textarea>
+            <div class="form-group">
+                <label for="essay-input">Paste your essay here</label>
+                <textarea id="essay-input" rows="10" placeholder="Paste your text here..."></textarea>
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <button id="generate-btn" class="w-full sm:w-auto flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium button-accent">
-                    Generate Citations
-                </button>
-                <button id="example-btn" class="w-full sm:w-auto flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium button-outline">
-                    Load Example Essay
-                </button>
+            <div class="action-buttons">
+                <button id="generate-btn" class="generate-button">Generate Citations</button>
+                <button id="example-btn" class="secondary-button">Load Example</button>
             </div>
 
-            <div id="loading-bar-container" class="loading-bar-container hidden">
+            <div id="loading-bar-container" class="loading-bar-container">
                 <div id="loading-bar" class="loading-bar"></div>
             </div>
+            <div id="messageBox" class="message-box"></div>
 
-            <div id="output-section" class="hidden">
-                <label for="output-area" class="block text-sm font-medium text-primary mb-2">Generated Output</label>
-                <div id="output-area" class="w-full min-h-64 sm:text-sm bg-transparent border-none focus:outline-none text-primary"></div>
-                <div class="mt-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
-                    <button id="copy-btn" class="w-full sm:w-auto flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium button-success">
-                        Copy to Clipboard
-                    </button>
-                    <button id="download-btn" class="w-full sm:w-auto flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium button-success-outline">
-                        Download as .txt
-                    </button>
+            <div id="output-section">
+                <h2>Generated Output</h2>
+                <div id="output-area"></div>
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button id="copy-btn" class="generate-button">Copy to Clipboard</button>
+                    <button id="download-btn" class="secondary-button">Download as .txt</button>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     
-    <!-- Modal for custom alerts -->
-    <div id="custom-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-[101]">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md card-bg">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-primary" id="modal-title"></h3>
-                <div class="mt-2 px-7 py-3">
-                    <p class="text-sm text-primary" id="modal-body"></p>
-                </div>
-                <div class="items-center px-4 py-3">
-                    <button id="modal-close-btn" class="px-4 py-2 button-accent text-base font-medium rounded-md w-full shadow-sm focus-ring">
-                        OK
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <footer class="main-footer">
+        <p>&copy; 2025 Shkspr. All rights reserved.</p>
+    </footer>
 
     <script>
-        // --- UI Elements ---
-        const essayInput = document.getElementById('essay-input');
-        const citationStyleSelect = document.getElementById('citation-style');
-        const generateBtn = document.getElementById('generate-btn');
-        const exampleBtn = document.getElementById('example-btn');
-        const outputSection = document.getElementById('output-section');
-        const outputArea = document.getElementById('output-area');
-        const copyBtn = document.getElementById('copy-btn');
-        const downloadBtn = document.getElementById('download-btn');
-        const loadingBarContainer = document.getElementById('loading-bar-container');
-        const loadingBar = document.getElementById('loading-bar');
-        const statusMessage = document.getElementById('status-message');
-        const modal = document.getElementById('custom-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalBody = document.getElementById('modal-body');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
+        async function loadHeader() {
+            try {
+                const response = await fetch('../Structure/header.html');
+                if (!response.ok) throw new Error('Failed to load header');
+                const text = await response.text();
+                
+                document.getElementById('header-container').innerHTML = text;
 
-        // --- Theme and Particle-related JS from header.html ---
-        window.setTheme = function(theme) {
-            document.body.className = document.body.className.replace(/theme-\w+/g, '') + ' ' + theme + ' transition-all';
-            localStorage.setItem('shkspr-theme', theme);
-            window.initParticles();
-        }
-
-        window.Particle = class Particle {
-            constructor(container, colors) {
-                this.container = container;
-                this.element = document.createElement('div');
-                this.element.classList.add('particle');
-                this.container.appendChild(this.element);
-                this.size = Math.random() * 6 + 2;
-                this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.x = Math.random() * window.innerWidth;
-                this.y = Math.random() * window.innerHeight;
-                this.vx = (Math.random() - 0.5) * 4;
-                this.vy = (Math.random() - 0.5) * 4;
-                this.opacity = Math.random() * 0.5 + 0.3;
-                this.element.style.width = `${this.size}px`;
-                this.element.style.height = `${this.size}px`;
-                this.element.style.backgroundColor = this.color;
-                this.element.style.opacity = this.opacity;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                if (this.x <= 0 || this.x >= window.innerWidth - this.size) {
-                    this.vx *= -1;
-                    this.x = this.x <= 0 ? 0 : window.innerWidth - this.size;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const scriptElement = doc.querySelector('script');
+                if (scriptElement) {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = scriptElement.textContent;
+                    document.body.appendChild(newScript);
                 }
-                if (this.y <= 0 || this.y >= window.innerHeight - this.size) {
-                    this.vy *= -1;
-                    this.y = this.y <= 0 ? 0 : window.innerHeight - this.size;
+                
+                if (window.setTheme && window.initParticles) {
+                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                    window.setTheme(savedTheme);
+
+                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
                 }
-                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
-            }
-            remove() {
-                this.container.removeChild(this.element);
+            } catch (error) {
+                console.error('Error loading header:', error);
+                document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
             }
         }
 
-        let particles = [];
-        let animationId;
+        function initializeCitationApp() {
+            const essayInput = document.getElementById('essay-input');
+            const citationStyleSelect = document.getElementById('citation-style');
+            const generateBtn = document.getElementById('generate-btn');
+            const exampleBtn = document.getElementById('example-btn');
+            const outputSection = document.getElementById('output-section');
+            const outputArea = document.getElementById('output-area');
+            const copyBtn = document.getElementById('copy-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const loadingBarContainer = document.getElementById('loading-bar-container');
+            const loadingBar = document.getElementById('loading-bar');
+            const messageBox = document.getElementById('messageBox');
 
-        window.initParticles = function() {
-            const container = document.getElementById('particles');
-            if (!container) return;
-            particles.forEach(p => p.remove());
-            particles = [];
-            if (animationId) {
-                cancelAnimationFrame(animationId);
+            function showMessage(message, type = 'info') {
+                messageBox.textContent = message;
+                messageBox.style.borderColor = type === 'error' ? '#ff3333' : 'var(--accent)';
+                messageBox.style.display = 'block';
             }
-            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-            let colors = [accentColor];
-            if (document.body.classList.contains('theme-blackwhite')) {
-                colors = [accentColor, '#f0f0f0', '#c0c0c0', '#909090'];
-            } else if (document.body.classList.contains('theme-cyan')) {
-                colors = [accentColor, '#00e6e6', '#00cccc', '#66ffff'];
-            } else if (document.body.classList.contains('theme-purple')) {
-                colors = [accentColor, '#ffe6ff', '#cc66ff', '#9933ff'];
-            } else if (document.body.classList.contains('theme-green')) {
-                colors = [accentColor, '#e6ffe6', '#66ff66', '#33cc33'];
-            } else if (document.body.classList.contains('theme-red')) {
-                colors = [accentColor, '#ff6666', '#cc0000', '#990000'];
-            }
-            for (let i = 0; i < 60; i++) {
-                particles.push(new window.Particle(container, colors));
-            }
-            window.animateParticles();
-        }
 
-        window.animateParticles = function() {
-            particles.forEach(p => p.update());
-            animationId = requestAnimationFrame(window.animateParticles);
+            function startLoadingBar() {
+                loadingBarContainer.style.display = 'block';
+                loadingBar.style.width = '0%';
+                setTimeout(() => { loadingBar.style.width = '90%'; }, 100);
+            }
+
+            function stopLoadingBar(success = true) {
+                loadingBar.style.width = '100%';
+                if (!success) loadingBar.style.backgroundColor = '#ff3333';
+                setTimeout(() => {
+                    loadingBarContainer.style.display = 'none';
+                    loadingBar.style.backgroundColor = 'var(--accent)';
+                }, 500);
+            }
+
+            generateBtn.addEventListener('click', () => {
+                const essayText = essayInput.value.trim();
+                if (!essayText) {
+                    showMessage('Please paste an essay into the input area.', 'error');
+                    return;
+                }
+                const citationStyle = citationStyleSelect.value;
+                const outputType = document.querySelector('input[name="output-type"]:checked').value;
+                
+                outputArea.innerHTML = '';
+                outputSection.style.display = 'none';
+                messageBox.style.display = 'none';
+                generateBtn.disabled = true;
+                startLoadingBar();
+
+                processAndGenerate(essayText, citationStyle, outputType);
+            });
+
+            exampleBtn.addEventListener('click', () => {
+                essayInput.value = `Climate change is largely driven by anthropogenic activities, particularly the emission of greenhouse gases from industrial processes, transportation, and deforestation. The Intergovernmental Panel on Climate Change (IPCC) reports that global CO₂ levels have reached their highest concentration in over 800,000 years. Rising global temperatures have led to more frequent and intense heatwaves, droughts, and extreme weather events like hurricanes and floods.`;
+            });
+
+            copyBtn.addEventListener('click', () => {
+                const textToCopy = outputArea.textContent;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showMessage('Output copied to clipboard!');
+                }).catch(err => {
+                    showMessage('Failed to copy text.', 'error');
+                });
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                const outputText = outputArea.textContent;
+                if (!outputText) {
+                    showMessage('Nothing to download.', 'error');
+                    return;
+                }
+                const blob = new Blob([outputText], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'citations.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            async function processAndGenerate(essayText, citationStyle, outputType) {
+                try {
+                    const backendUrl = '/api/citation';
+                    const response = await fetch(backendUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ essayText, citationStyle, outputType }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'An unknown server error occurred.');
+                    }
+
+                    const result = await response.json();
+                    
+                    outputArea.textContent = result.citation;
+                    outputSection.style.display = 'block';
+                    stopLoadingBar(true);
+                    showMessage('Citations generated successfully!');
+                } catch (error) {
+                    console.error('An error occurred:', error);
+                    showMessage(`Error: ${error.message}`, 'error');
+                    stopLoadingBar(false);
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-            document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-            document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-            document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-            document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-            const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-            window.setTheme(savedTheme);
+            loadHeader();
+            initializeCitationApp();
         });
-
-        // --- Custom Alert/Modal ---
-        function showAlert(title, message) {
-            modalTitle.textContent = title;
-            modalBody.textContent = message;
-            modal.classList.remove('hidden');
-        }
-        modalCloseBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-
-        // --- Loading Bar & UI Status Functions ---
-        function startLoadingBar() {
-            loadingBarContainer.classList.remove('hidden');
-            loadingBar.style.width = '0%';
-            setTimeout(() => {
-                loadingBar.style.width = '90%';
-            }, 10);
-        }
-
-        function stopLoadingBar() {
-            loadingBar.style.width = '100%';
-            setTimeout(() => {
-                loadingBarContainer.classList.add('hidden');
-            }, 500);
-        }
-
-        function setStatus(message, isError = false) {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden');
-            if (isError) {
-                statusMessage.classList.add('text-red-600');
-            } else {
-                statusMessage.classList.remove('text-red-600');
-            }
-        }
-
-        // --- Main Logic ---
-        generateBtn.addEventListener('click', () => {
-            const essayText = essayInput.value.trim();
-            if (!essayText) {
-                showAlert('Input Required', 'Please paste an essay or body of text into the input area.');
-                return;
-            }
-
-            const citationStyle = citationStyleSelect.value;
-            const outputType = document.querySelector('input[name="output-type"]:checked').value;
-            
-            outputArea.innerHTML = '';
-            outputSection.classList.add('hidden');
-            generateBtn.disabled = true;
-            startLoadingBar();
-            setStatus('Generating citations...');
-
-            processAndGenerate(essayText, citationStyle, outputType);
-        });
-
-        exampleBtn.addEventListener('click', () => {
-            essayInput.value = `Climate change is largely driven by anthropogenic activities, particularly the emission of greenhouse gases from industrial processes, transportation, and deforestation. The Intergovernmental Panel on Climate Change (IPCC) reports that global CO₂ levels have reached their highest concentration in over 800,000 years. Rising global temperatures have led to more frequent and intense heatwaves, droughts, and extreme weather events like hurricanes and floods.`;
-        });
-
-        copyBtn.addEventListener('click', () => {
-            const textToCopy = outputArea.textContent;
-            // Use execCommand for better compatibility in iframes
-            const tempTextarea = document.createElement('textarea');
-            tempTextarea.value = textToCopy;
-            document.body.appendChild(tempTextarea);
-            tempTextarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempTextarea);
-            showAlert('Success!', 'Output copied to clipboard.');
-        });
-
-        downloadBtn.addEventListener('click', () => {
-            const outputText = outputArea.textContent;
-            if (!outputText) {
-                showAlert('Nothing to Download', 'The output area is empty.');
-                return;
-            }
-            const blob = new Blob([outputText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'citations.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-
-        async function processAndGenerate(essayText, citationStyle, outputType) {
-            try {
-                // The API URL now points to your Vercel serverless function.
-                const backendUrl = '/api/citation';
-
-                // Construct the prompt on the client side
-                const prompt = `
-                    You are a helpful AI that generates academic citations based on provided text.
-                    
-                    Task:
-                    1. Analyze the following essay text to identify claims or facts that require an external source.
-                    2. Use the 'google_search' tool to find a reputable source (e.g., academic journal, official report, book, or major news site) that supports each claim.
-                    3. Based on the information found, generate a citation for each source in the requested style.
-                    4. If the output type is 'bibliography', list the full citations. If the output type is 'in-text', generate only the in-text citations.
-                    5. If no sources are found or the text doesn't contain citable information, respond with "No citations found."
-
-                    Essay Text:
-                    "${essayText}"
-
-                    Citation Style: ${citationStyle}
-                    Output Type: ${outputType}
-
-                    Ensure each citation is properly formatted according to the specified style.
-                `;
-
-                const response = await fetch(backendUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    // Send the prompt along with other data
-                    body: JSON.stringify({ essayText, citationStyle, outputType, prompt }),
-                });
-
-                if (!response.ok) {
-                    let errorDetails = 'Unknown server error';
-                    try {
-                        const errorData = await response.json();
-                        errorDetails = errorData.error || JSON.stringify(errorData);
-                    } catch (e) {
-                        errorDetails = await response.text();
-                    }
-                    throw new Error(errorDetails);
-                }
-
-                const result = await response.json();
-                
-                // Display results from the backend.
-                outputArea.innerHTML = `<pre>${result.citation}</pre>`;
-                outputSection.classList.remove('hidden');
-                stopLoadingBar();
-                setStatus('Citations generated successfully.', false);
-            } catch (error) {
-                console.error('An error occurred during the process:', error);
-                showAlert('Error', `An unexpected error occurred: ${error.message}`);
-                stopLoadingBar();
-                setStatus('An error occurred.', true);
-            } finally {
-                generateBtn.disabled = false;
-            }
-        }
     </script>
 </body>
 </html>
