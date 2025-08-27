@@ -187,7 +187,6 @@
                 </div>
             </div>
             
-            <!-- --- FIX: Spacing issue corrected --- -->
             <div id="custom-count-container" style="display: none; margin-top: -10px;">
                 <div class="form-group" id="custom-count-group">
                     <label for="custom-citation-count">Custom Number of Citations</label>
@@ -211,7 +210,7 @@
             <div id="messageBox" class="message-box"></div>
 
             <div id="output-section">
-                <h2>Generated Output</h2>
+                <h2>Bibliography</h2>
                 <ul id="output-area"></ul>
                 <div class="action-buttons" style="margin-top: 20px;">
                     <button id="copy-btn" class="generate-button">Copy to Clipboard</button>
@@ -276,6 +275,7 @@
             const loadingBarContainer = document.getElementById('loading-bar-container');
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
+            const outputHeading = outputSection.querySelector('h2');
 
             const citationFormatter = {
                 apa7: (source) => {
@@ -301,6 +301,61 @@
                     const journal = source.journal ? `<em>${source.journal}</em>` : '';
                     return `${author}. ${year}. ${title} ${journal}.`;
                 }
+            };
+
+            const sortCitations = (citations, style) => {
+                if (style === 'apa7' || style === 'mla9' || style === 'chicago') {
+                    return citations.sort((a, b) => {
+                        const authorA = (a.author || 'Z').toLowerCase();
+                        const authorB = (b.author || 'Z').toLowerCase();
+                        return authorA.localeCompare(authorB);
+                    });
+                }
+                return citations; // Default: return in order of appearance
+            };
+
+            const saveState = () => {
+                const state = {
+                    essay: essayInput.value,
+                    style: citationStyleSelect.value,
+                    count: citationCountSelect.value,
+                    customCount: customCitationCountInput.value,
+                    outputType: document.querySelector('input[name="output-type"]:checked').value,
+                    citations: JSON.parse(localStorage.getItem('citationOutput')) || null
+                };
+                localStorage.setItem('citationState', JSON.stringify(state));
+            };
+
+            const loadState = () => {
+                const state = JSON.parse(localStorage.getItem('citationState'));
+                if (!state) return;
+
+                essayInput.value = state.essay || '';
+                citationStyleSelect.value = state.style || 'apa7';
+                citationCountSelect.value = state.count || 'auto';
+                customCitationCountInput.value = state.customCount || '3';
+                document.querySelector(`input[name="output-type"][value="${state.outputType || 'bibliography'}"]`).checked = true;
+
+                if (state.count === 'custom') {
+                    customCountContainer.style.display = 'block';
+                }
+
+                if (state.citations) {
+                    renderCitations(state.citations, state.style, state.outputType);
+                }
+            };
+
+            const clearState = () => {
+                localStorage.removeItem('citationState');
+                localStorage.removeItem('citationOutput');
+                essayInput.value = '';
+                citationStyleSelect.value = 'apa7';
+                citationCountSelect.value = 'auto';
+                customCitationCountInput.value = '3';
+                document.querySelector('input[name="output-type"][value="bibliography"]').checked = true;
+                outputSection.style.display = 'none';
+                messageBox.style.display = 'none';
+                customCountContainer.style.display = 'none';
             };
 
             const shuffleArray = (array) => {
@@ -356,6 +411,41 @@
                 throw lastError || new Error("All AI models failed.");
             }
 
+            function renderCitations(citations, style, outputType) {
+                outputArea.innerHTML = '';
+                outputHeading.textContent = (outputType === 'in-text') ? 'In-Text Citations' : 'Bibliography';
+                
+                const validCitations = citations.filter(c => c.title && c.url);
+                if (validCitations.length === 0) {
+                    showMessage('No valid citable claims were found in the provided text.');
+                    return;
+                }
+
+                const sortedCitations = sortCitations(validCitations, style);
+                const formatter = citationFormatter[style] || citationFormatter.apa7;
+
+                sortedCitations.forEach(source => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'citation-item';
+                    
+                    const citationText = document.createElement('p');
+                    citationText.innerHTML = (outputType === 'in-text') 
+                        ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})`
+                        : formatter(source);
+                    
+                    const citationLink = document.createElement('a');
+                    citationLink.href = source.url;
+                    citationLink.textContent = source.title || 'View Source';
+                    citationLink.target = '_blank';
+                    
+                    listItem.appendChild(citationText);
+                    listItem.appendChild(citationLink);
+                    outputArea.appendChild(listItem);
+                });
+                outputSection.style.display = 'block';
+                showMessage('Citations generated successfully!');
+            }
+
             async function processAndGenerate(essayText, citationStyle, outputType, citationCount) {
                 try {
                     const countInstruction = (citationCount === 'auto')
@@ -367,32 +457,8 @@
                     const contents = [{ role: 'user', parts: [{ text: prompt }] }];
                     const result = await callApiWithRetries({ contents });
                     
-                    outputArea.innerHTML = '';
-                    if (result.citations && result.citations.length > 0) {
-                        const formatter = citationFormatter[citationStyle] || citationFormatter.apa7;
-                        result.citations.forEach(source => {
-                            const listItem = document.createElement('li');
-                            listItem.className = 'citation-item';
-                            
-                            const citationText = document.createElement('p');
-                            citationText.innerHTML = (outputType === 'in-text') 
-                                ? `(${source.author || 'N.A.'}, ${source.year || 'n.d.'})`
-                                : formatter(source);
-                            
-                            const citationLink = document.createElement('a');
-                            citationLink.href = source.url;
-                            citationLink.textContent = source.title || 'View Source';
-                            citationLink.target = '_blank';
-                            
-                            listItem.appendChild(citationText);
-                            listItem.appendChild(citationLink);
-                            outputArea.appendChild(listItem);
-                        });
-                        outputSection.style.display = 'block';
-                        showMessage('Citations generated successfully!');
-                    } else {
-                        showMessage('No citable claims were found in the provided text.');
-                    }
+                    localStorage.setItem('citationOutput', JSON.stringify(result.citations));
+                    renderCitations(result.citations, citationStyle, outputType);
                     
                     stopLoadingBar(true);
                 } catch (error) {
@@ -406,6 +472,7 @@
 
             citationCountSelect.addEventListener('change', () => {
                 customCountContainer.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
+                saveState();
             });
 
             generateBtn.addEventListener('click', () => {
@@ -425,6 +492,7 @@
                 messageBox.style.display = 'none';
                 generateBtn.disabled = true;
                 startLoadingBar();
+                saveState(); // Save inputs before generating
 
                 processAndGenerate(essayText, citationStyle, outputType, citationCount);
             });
@@ -460,6 +528,17 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
+
+            // Add event listeners for auto-saving
+            essayInput.addEventListener('input', saveState);
+            citationStyleSelect.addEventListener('change', saveState);
+            citationCountSelect.addEventListener('change', saveState);
+            customCitationCountInput.addEventListener('input', saveState);
+            document.querySelectorAll('input[name="output-type"]').forEach(radio => {
+                radio.addEventListener('change', saveState);
+            });
+            document.getElementById('clear-btn').addEventListener('click', clearState); // Assuming you have a clear button
+
         }
 
         document.addEventListener('DOMContentLoaded', () => {
