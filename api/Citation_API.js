@@ -19,15 +19,30 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const { essayText, citationCount } = req.body;
+        const { essayText, citationStyle, outputType, citationCount } = req.body;
         if (!essayText) {
             return res.status(400).json({ error: 'Missing required field: essayText.' });
         }
 
         const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiApiKey}`;
 
-        // --- STEP 1: First AI call to summarize the text into a single, high-quality search query ---
-        const summaryPrompt = `Summarize the following text into a single, concise search query of about 10-15 words. This query will be used to find academic sources. Focus on the main thesis or subject. Text: "${essayText}"`;
+        // --- FIX: Made the initial prompt extremely strict to ensure a clean output ---
+        const summaryPrompt = `
+            You are a search query generator. Your sole task is to summarize the following text into a single, concise search query of 10-15 words. This query will be used in a search engine to find academic sources.
+
+            RULES:
+            - Return ONLY the search query string.
+            - Do NOT include any introductory text, conversational phrases, or JSON formatting.
+            - Focus on the main thesis or subject of the text.
+
+            EXAMPLE:
+            Text: "The Industrial Revolution led to significant urbanization and social changes in 19th-century Europe."
+            Your Output:
+            Industrial Revolution urbanization social changes 19th-century Europe
+
+            Text to analyze:
+            "${essayText}"
+        `;
         
         const summaryPayload = {
             contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }]
