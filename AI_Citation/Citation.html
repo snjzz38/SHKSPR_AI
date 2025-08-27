@@ -169,9 +169,6 @@
                     <label for="citation-count">Max Citations</label>
                     <select id="citation-count">
                         <option value="auto">Auto</option>
-                        <option value="1">1</option>
-                        <option value="3">3</option>
-                        <option value="5">5</option>
                         <option value="custom">Custom...</option>
                     </select>
                 </div>
@@ -190,9 +187,12 @@
                 </div>
             </div>
             
-            <div class="form-group" id="custom-count-group" style="display: none;">
-                <label for="custom-citation-count">Custom Number of Citations</label>
-                <input type="number" id="custom-citation-count" min="1" value="3" placeholder="Enter number...">
+            <!-- --- FIX: Spacing issue corrected --- -->
+            <div id="custom-count-container" style="display: none; margin-top: -10px;">
+                <div class="form-group" id="custom-count-group">
+                    <label for="custom-citation-count">Custom Number of Citations</label>
+                    <input type="number" id="custom-citation-count" min="1" value="3" placeholder="Enter number...">
+                </div>
             </div>
 
             <div class="form-group">
@@ -260,21 +260,12 @@
         }
 
         function initializeCitationApp() {
-            const ALL_GEMINI_MODELS = [
-                'gemini-1.5-pro-latest',
-                'gemini-1.5-flash-latest',
-                'gemini-2.5-flash-lite',
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-lite',
-                'gemini-1.5-flash',
-                'gemini-1.5-flash-8b',
-            ];
+            const ALL_GEMINI_MODELS = [ 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest' ];
 
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
             const citationCountSelect = document.getElementById('citation-count');
-            const customCountGroup = document.getElementById('custom-count-group');
+            const customCountContainer = document.getElementById('custom-count-container');
             const customCitationCountInput = document.getElementById('custom-citation-count');
             const generateBtn = document.getElementById('generate-btn');
             const exampleBtn = document.getElementById('example-btn');
@@ -414,7 +405,7 @@
             }
 
             citationCountSelect.addEventListener('change', () => {
-                customCountGroup.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
+                customCountContainer.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
             });
 
             generateBtn.addEventListener('click', () => {
