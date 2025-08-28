@@ -239,7 +239,7 @@
 
     <script>
         // --- CORRECTED loadHeader FUNCTION ---
-        async function loadHeader() {
+        function loadHeader() {
             return new Promise(async (resolve, reject) => {
                 try {
                     const response = await fetch('../Structure/header.html');
@@ -254,7 +254,8 @@
 
                     // Inject body elements (particles div, header) before the main content
                     const mainContent = document.querySelector('.main-content');
-                    doc.querySelectorAll('body > *').forEach(el => {
+                    const bodyElements = doc.querySelectorAll('body > *');
+                    bodyElements.forEach(el => {
                         if (el.tagName.toLowerCase() !== 'script') {
                             document.body.insertBefore(el.cloneNode(true), mainContent);
                         }
