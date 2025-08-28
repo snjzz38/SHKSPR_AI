@@ -14,22 +14,17 @@ const shuffleArray = (array) => {
     return array;
 };
 
-// --- NEW: Helper function to fetch and clean webpage content ---
 async function fetchAndCleanContent(url) {
     try {
         const response = await fetch(url, {
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
-            timeout: 5000 // 5-second timeout per fetch
+            timeout: 5000
         });
         if (!response.ok) return `Could not fetch content (status: ${response.status}).`;
         
         const html = await response.text();
-        
-        // Extract key metadata from the <head> for accuracy
         const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
         const metaDescriptionMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-
-        // Clean the body text
         const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
         const cleanText = (bodyMatch ? bodyMatch[1] : html)
             .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -41,7 +36,7 @@ async function fetchAndCleanContent(url) {
         return {
             title: titleMatch ? titleMatch[1] : 'No title found',
             meta_description: metaDescriptionMatch ? metaDescriptionMatch[1] : '',
-            body_snippet: cleanText.substring(0, 2000) // Limit to first 2000 chars for efficiency
+            body_snippet: cleanText.substring(0, 2000)
         };
     } catch (error) {
         console.warn(`Failed to fetch ${url}: ${error.message}`);
@@ -102,17 +97,18 @@ module.exports = async (req, res) => {
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
         if (!searchQuery) throw new Error("AI failed to generate a search query.");
 
-        // Step 2: Google Search
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
+        // --- MODIFIED: Widen the search pool ---
+        // Step 2: Google Search - Fetch up to 10 results to create a larger pool.
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
-        const searchResults = searchData.items ? searchData.items.slice(0, 5).map(item => item.link) : []; // Get top 5 URLs
+        const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
 
         if (searchResults.length === 0) {
             return res.status(200).json({ citations: ["No relevant sources were found."] });
         }
 
-        // --- NEW Step 3: Fetch Content from URLs ---
+        // Step 3: Fetch Content from URLs
         const fetchedContents = await Promise.all(
             searchResults.map(async (url) => ({
                 url: url,
@@ -120,21 +116,21 @@ module.exports = async (req, res) => {
             }))
         );
 
-        // --- NEW Step 4: Generate Final Citations from Full Context ---
+        // --- MODIFIED: Refined final prompt ---
+        // Step 4: Generate Final Citations with clearer instructions
         const countInstruction = (citationCount === 'auto')
-            ? `Return citations for all the most relevant sources.`
-            : `Return a maximum of ${citationCount} of the most relevant citations.`;
+            ? `Return citations for all the most relevant sources found.`
+            : `Prioritize returning exactly ${citationCount} citations. If you cannot find enough high-quality, relevant sources to meet this number, return as many as you can find. Do not invent sources.`;
 
         const finalPrompt = `
             You are an expert academic librarian. Your task is to generate a complete bibliography from the provided webpage content.
-
             RULES:
-            1.  For each "Webpage Data" object, meticulously analyze its "content" to find the true author(s), the exact publication date, and the full article title. The content includes the page title, meta description, and a snippet of the body text.
+            1.  For each "Webpage Data" object, meticulously analyze its content to find the true author(s), exact publication date, and full article title.
             2.  If an author is not listed, use the organization or website name. If a date is not found, use "n.d.".
             3.  Format ALL citations in the **${citationStyle.toUpperCase()}** style.
             4.  Order the final list of citations **alphabetically**.
             5.  ${countInstruction}
-            6.  Return ONLY a valid JSON array of strings. Each string is a single, fully formatted citation. Do not include sources that are irrelevant to the original essay topic.
+            6.  Return ONLY a valid JSON array of strings. Each string is a single, fully formatted citation.
 
             Original Essay Topic (for context): "${searchQuery}"
 
