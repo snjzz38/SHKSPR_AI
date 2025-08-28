@@ -14,26 +14,17 @@ const shuffleArray = (array) => {
     return array;
 };
 
-async function fetchAndCleanContent(url) {
-    try {
-        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 });
-        if (!response.ok) return `Could not fetch content.`;
-        const html = await response.text();
-        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const metaDescriptionMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        const cleanText = (bodyMatch ? bodyMatch[1] : html).replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-        return { title: titleMatch ? titleMatch[1] : 'No title', meta_description: metaDescriptionMatch ? metaDescriptionMatch[1] : '', body_snippet: cleanText.substring(0, 2000) };
-    } catch (error) { return `Content fetch failed.`; }
-}
-
 async function callGeminiApi(payload, apiKey) {
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
     for (const currentModel of modelsToTry) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(`API call with ${currentModel} failed: ${errorData.error?.message || response.statusText}`);
@@ -66,61 +57,61 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const { essayText, citationStyle, outputType, citationCount } = req.body;
-        if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
+        const { essayText, citationCount } = req.body;
+        if (!essayText) {
+            return res.status(400).json({ error: 'Missing required field: essayText.' });
+        }
 
-        // Step 1 & 2: Summarize and Search
-        const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
+        // Step 1: Generate Search Query
+        const summaryPrompt = `
+            You are a search query generator. Your sole task is to summarize the following text into a single, concise search query of 10-15 words. This query will be used in a search engine to find academic sources.
+            RULES:
+            - Return ONLY the search query string.
+            - Do NOT include any introductory text, conversational phrases, or JSON formatting.
+            Text to analyze:
+            "${essayText}"
+        `;
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
         const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
-        if (!searchQuery) throw new Error("AI failed to generate a search query.");
+        if (!searchQuery) throw new Error("Could not generate a search query from the provided text.");
 
-        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
+        // Step 2: Google Search
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
-        const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
-        if (searchResults.length === 0) return res.status(200).json({ citations: ["No relevant sources were found."] });
+        const allSearchResults = searchData.items ? searchData.items.slice(0, 10).map(item => ({ title: item.title, snippet: item.snippet, url: item.link })) : [];
+        if (allSearchResults.length === 0) return res.status(200).json({ urls: [] });
 
-        // Step 3: Fetch Content
-        const fetchedContents = await Promise.all(searchResults.map(url => fetchAndCleanContent(url)));
+        // Step 3: Filter Search Results
+        const countInstruction = (citationCount === 'auto') ? `Return all relevant URLs.` : `Return a maximum of ${citationCount} of the most relevant URLs.`;
+        const finalPrompt = `
+            You are an expert research filter. Your task is to analyze the provided "Web Search Results" and select the ones most relevant to the "Original Topic Summary".
+            PROCESS:
+            1.  Read the "Original Topic Summary" to understand the core arguments.
+            2.  Review the "Web Search Results".
+            3.  Identify the most relevant and reputable sources from the list.
+            4.  ${countInstruction}
+            5.  Return ONLY a valid JSON array of URL strings for the relevant sources. For example: ["https://example.com/source1", "https://example.com/source2"]
+            Original Topic Summary:
+            "${searchQuery}" 
+            Web Search Results:
+            ${JSON.stringify(allSearchResults, null, 2)}
+            Return ONLY a valid JSON array of URL strings.
+        `;
+        
+        const finalPayload = {
+            contents: [{ role: 'user', parts: [{ text: finalPrompt }] }],
+            // --- THIS IS THE CRITICAL FIX ---
+            generationConfig: { responseMimeType: "application/json" }
+        };
 
-        // Step 4: Generate Bibliography
-        const countInstruction = citationCount === 'auto' ? `Return citations for all the most relevant sources.` : `Prioritize returning exactly ${citationCount} citations. If you cannot find enough high-quality, relevant sources, return as many as you can find.`;
-        const bibliographyPrompt = `You are an expert academic librarian. Generate a complete bibliography. RULES: 1. Analyze the "Webpage Data" to find author, date, and title. 2. If info is missing, estimate (e.g., "n.d."). 3. Format ALL citations in **${citationStyle.toUpperCase()}** style. 4. Order citations **alphabetically**. 5. ${countInstruction} 6. Return ONLY a valid JSON array of strings. Webpage Data: ${JSON.stringify(fetchedContents, null, 2)}`;
-        const bibliographyPayload = { contents: [{ role: 'user', parts: [{ text: bibliographyPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
-        const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
+        const finalData = await callGeminiApi(finalPayload, geminiApiKey);
+        const responseText = finalData.candidates[0].content.parts[0].text;
+        if (!responseText) throw new Error('The AI model did not return any text in the final step.');
 
-        // If user only wants bibliography, we are done.
-        if (outputType === 'bibliography') {
-            return res.status(200).json({ citations });
-        }
-
-        // --- NEW Step 5: Generate In-text Citations ---
-        if (outputType === 'in-text') {
-            const inTextPrompt = `
-                You are an expert academic editor. Your task is to insert in-text citations into the provided essay.
-                RULES:
-                1.  Read the "Original Essay" and the "Bibliography".
-                2.  Insert in-text citations (e.g., (Author, Year)) into the essay where the information from a source is likely used.
-                3.  The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
-                4.  You MUST ONLY use sources from the provided "Bibliography".
-                5.  **CRITICAL:** Do NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly.
-                6.  Return ONLY the modified essay text as a single string.
-
-                Bibliography:
-                ${JSON.stringify(citations, null, 2)}
-
-                Original Essay:
-                "${essayText}"
-            `;
-            const inTextPayload = { contents: [{ role: 'user', parts: [{ text: inTextPrompt }] }] };
-            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey);
-            const inTextCitedEssay = inTextData.candidates[0].content.parts[0].text;
-
-            return res.status(200).json({ citations, inTextCitedEssay });
-        }
+        const urls = JSON.parse(responseText);
+        res.status(200).json({ urls });
 
     } catch (error) {
         console.error('Error in serverless function:', error);
