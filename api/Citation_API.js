@@ -14,39 +14,27 @@ const shuffleArray = (array) => {
     return array;
 };
 
-// MODIFIED: This function is now enhanced to find more specific metadata.
 async function fetchAndCleanContent(url) {
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 });
         if (!response.ok) return `Could not fetch content.`;
         const html = await response.text();
-
-        // Helper to find content from meta tags
         const getMetaContent = (name) => {
             const metaMatch = html.match(new RegExp(`<meta\\s+(?:name|property)="${name}"\\s+content="([^"]*)"`, 'i'));
             return metaMatch ? metaMatch[1] : '';
         };
-
         const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
         const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
         const cleanText = (bodyMatch ? bodyMatch[1] : html).replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-
-        // ADDED: Extract more specific data for better citation quality
         const author = getMetaContent('author') || getMetaContent('og:author');
         const site_name = getMetaContent('og:site_name');
         const published_date = getMetaContent('article:published_time') || getMetaContent('publish_date') || getMetaContent('date');
-
         return {
-            url: url,
-            title: titleMatch ? titleMatch[1] : 'No title found',
-            author: author,
-            site_name: site_name,
-            published_date: published_date,
-            body_snippet: cleanText.substring(0, 2500)
+            url: url, title: titleMatch ? titleMatch[1] : 'No title found', author: author,
+            site_name: site_name, published_date: published_date, body_snippet: cleanText.substring(0, 2500)
         };
     } catch (error) { return `Content fetch failed.`; }
 }
-
 
 async function callGeminiApi(payload, apiKey) {
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
@@ -90,7 +78,6 @@ module.exports = async (req, res) => {
         const { essayText, citationStyle, outputType, citationCount } = req.body;
         if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
 
-        // Step 1 & 2: Summarize and Search
         const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
         const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
@@ -103,47 +90,40 @@ module.exports = async (req, res) => {
         const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
         if (searchResults.length === 0) return res.status(200).json({ citations: ["No relevant sources were found."] });
 
-        // Step 3: Fetch Content
         const fetchedContents = await Promise.all(searchResults.map(url => fetchAndCleanContent(url)));
 
-        // Step 4: Generate Bibliography
         const countInstruction = citationCount === 'auto' ? `Return citations for all the most relevant sources.` : `Prioritize returning exactly ${citationCount} citations. If you cannot find enough high-quality, relevant sources, return as many as you can find.`;
-        
-        // MODIFIED: The prompt is now much stricter to prevent placeholder citations.
         const bibliographyPrompt = `
             You are an expert academic librarian. Your task is to generate a high-quality bibliography.
             RULES:
-            1.  Analyze the "Webpage Data" to find the author, publication date, and title for each source. The author can be a person or a credible organization.
-            2.  **CRITICAL QUALITY RULE:** If a source is missing a clear author (person or organization) OR a title, you MUST DISCARD it. Do not include low-quality or incomplete sources in the bibliography.
-            3.  For the date, use the 'published_date' field if available. If not, find a date in the text. If no date can be found, you may use 'n.d.' as a last resort, but only for otherwise high-quality sources.
-            4.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
-            5.  Order the final citations **alphabetically**.
-            6.  ${countInstruction}
-            7.  Return ONLY a valid JSON array of strings. Do not return empty strings in the array.
-
-            Webpage Data:
-            ${JSON.stringify(fetchedContents.filter(c => typeof c === 'object'), null, 2)}
-        `;
+            1. Analyze the "Webpage Data" to find the author, publication date, and title for each source. The author can be a person or a credible organization.
+            2. **CRITICAL QUALITY RULE:** If a source is missing a clear author (person or organization) OR a title, you MUST DISCARD it. Do not include low-quality or incomplete sources.
+            3. For the date, use the 'published_date' field if available. If not, find a date in the text. If no date can be found, you may use 'n.d.' as a last resort, but only for otherwise high-quality sources.
+            4. Format ALL citations in **${citationStyle.toUpperCase()}** style.
+            5. Order the final citations **alphabetically**.
+            6. ${countInstruction}
+            7. Return ONLY a valid JSON array of strings.
+            Webpage Data: ${JSON.stringify(fetchedContents.filter(c => typeof c === 'object'), null, 2)}`;
         const bibliographyPayload = { contents: [{ role: 'user', parts: [{ text: bibliographyPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
         const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
-        // If user only wants bibliography, we are done.
         if (outputType === 'bibliography') {
             return res.status(200).json({ citations });
         }
 
-        // --- Step 5: Generate In-text Citations ---
         if (outputType === 'in-text') {
+            // --- MODIFIED: This prompt is now stricter to ensure all citations are added. ---
             const inTextPrompt = `
-                You are an expert academic editor. Your task is to insert in-text citations into the provided essay.
+                You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
                 RULES:
-                1.  Read the "Original Essay" and the "Bibliography".
-                2.  Insert in-text citations (e.g., (Author, Year)) into the essay where the information from a source is likely used.
-                3.  The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
-                4.  You MUST ONLY use sources from the provided "Bibliography".
-                5.  **CRITICAL:** Do NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly.
-                6.  Return ONLY the modified essay text as a single string.
+                1.  Carefully read the "Original Essay" and the "Bibliography" provided.
+                2.  Your main task is to connect the claims in the essay to the sources in the bibliography.
+                3.  You MUST insert an in-text citation (e.g., (Author, Year)) for **EVERY** source in the bibliography that is relevant to the essay's content. Be comprehensive.
+                4.  The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
+                5.  **CRITICAL:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
+                6.  Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
+                7.  Return ONLY the modified essay text as a single string.
 
                 Bibliography:
                 ${JSON.stringify(citations, null, 2)}
