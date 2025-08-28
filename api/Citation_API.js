@@ -14,18 +14,39 @@ const shuffleArray = (array) => {
     return array;
 };
 
+// MODIFIED: This function is now enhanced to find more specific metadata.
 async function fetchAndCleanContent(url) {
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 });
         if (!response.ok) return `Could not fetch content.`;
         const html = await response.text();
+
+        // Helper to find content from meta tags
+        const getMetaContent = (name) => {
+            const metaMatch = html.match(new RegExp(`<meta\\s+(?:name|property)="${name}"\\s+content="([^"]*)"`, 'i'));
+            return metaMatch ? metaMatch[1] : '';
+        };
+
         const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const metaDescriptionMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
         const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
         const cleanText = (bodyMatch ? bodyMatch[1] : html).replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-        return { title: titleMatch ? titleMatch[1] : 'No title', meta_description: metaDescriptionMatch ? metaDescriptionMatch[1] : '', body_snippet: cleanText.substring(0, 2000) };
+
+        // ADDED: Extract more specific data for better citation quality
+        const author = getMetaContent('author') || getMetaContent('og:author');
+        const site_name = getMetaContent('og:site_name');
+        const published_date = getMetaContent('article:published_time') || getMetaContent('publish_date') || getMetaContent('date');
+
+        return {
+            url: url,
+            title: titleMatch ? titleMatch[1] : 'No title found',
+            author: author,
+            site_name: site_name,
+            published_date: published_date,
+            body_snippet: cleanText.substring(0, 2500)
+        };
     } catch (error) { return `Content fetch failed.`; }
 }
+
 
 async function callGeminiApi(payload, apiKey) {
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
@@ -87,16 +108,32 @@ module.exports = async (req, res) => {
 
         // Step 4: Generate Bibliography
         const countInstruction = citationCount === 'auto' ? `Return citations for all the most relevant sources.` : `Prioritize returning exactly ${citationCount} citations. If you cannot find enough high-quality, relevant sources, return as many as you can find.`;
-        const bibliographyPrompt = `You are an expert academic librarian. Generate a complete bibliography. RULES: 1. Analyze the "Webpage Data" to find author, date, and title. 2. If info is missing, estimate (e.g., "n.d."). 3. Format ALL citations in **${citationStyle.toUpperCase()}** style. 4. Order citations **alphabetically**. 5. ${countInstruction} 6. Return ONLY a valid JSON array of strings. Webpage Data: ${JSON.stringify(fetchedContents, null, 2)}`;
+        
+        // MODIFIED: The prompt is now much stricter to prevent placeholder citations.
+        const bibliographyPrompt = `
+            You are an expert academic librarian. Your task is to generate a high-quality bibliography.
+            RULES:
+            1.  Analyze the "Webpage Data" to find the author, publication date, and title for each source. The author can be a person or a credible organization.
+            2.  **CRITICAL QUALITY RULE:** If a source is missing a clear author (person or organization) OR a title, you MUST DISCARD it. Do not include low-quality or incomplete sources in the bibliography.
+            3.  For the date, use the 'published_date' field if available. If not, find a date in the text. If no date can be found, you may use 'n.d.' as a last resort, but only for otherwise high-quality sources.
+            4.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
+            5.  Order the final citations **alphabetically**.
+            6.  ${countInstruction}
+            7.  Return ONLY a valid JSON array of strings. Do not return empty strings in the array.
+
+            Webpage Data:
+            ${JSON.stringify(fetchedContents.filter(c => typeof c === 'object'), null, 2)}
+        `;
         const bibliographyPayload = { contents: [{ role: 'user', parts: [{ text: bibliographyPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
         const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
+        // If user only wants bibliography, we are done.
         if (outputType === 'bibliography') {
             return res.status(200).json({ citations });
         }
 
-        // Step 5: Generate In-text Citations
+        // --- Step 5: Generate In-text Citations ---
         if (outputType === 'in-text') {
             const inTextPrompt = `
                 You are an expert academic editor. Your task is to insert in-text citations into the provided essay.
