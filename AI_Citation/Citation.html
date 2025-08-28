@@ -135,15 +135,8 @@
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
-        }
-        .citation-item a {
             font-size: 0.9rem;
-            color: var(--accent);
-            text-decoration: none;
-            word-break: break-all;
-        }
-        .citation-item a:hover {
-            text-decoration: underline;
+            line-height: 1.6;
         }
 
         /* --- FOOTER --- */
@@ -158,10 +151,10 @@
     </style>
 </head>
 <body>
-    <!-- This div is now only a placeholder -->
+    <div class="particles-container" id="particles"></div>
     <div id="header-container"></div>
 
-    <main class="main-content">
+    <main class="main-content animate-on-load">
         <section class="hero">
             <h1>AI Citation Generator</h1>
             <p>Paste your essay, and this tool will find sources and generate citations for you.</p>
@@ -238,47 +231,46 @@
     </footer>
 
     <script>
-        // --- CORRECTED loadHeader FUNCTION ---
-        function loadHeader() {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    const response = await fetch('../Structure/header.html');
-                    if (!response.ok) throw new Error('Failed to load header');
-                    const text = await response.text();
-                    
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    
-                    // Move head elements (style, link, meta)
-                    doc.querySelectorAll('head > *').forEach(el => document.head.appendChild(el.cloneNode(true)));
+        async function loadHeader() {
+            try {
+                const response = await fetch('../Structure/header.html');
+                if (!response.ok) throw new Error('Failed to load header');
+                const text = await response.text();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                
+                const headElements = doc.querySelectorAll('head > *');
+                headElements.forEach(el => {
+                    document.head.appendChild(el.cloneNode(true));
+                });
 
-                    // Inject body elements (particles div, header) before the main content
-                    const mainContent = document.querySelector('.main-content');
-                    const bodyElements = doc.querySelectorAll('body > *');
-                    bodyElements.forEach(el => {
-                        if (el.tagName.toLowerCase() !== 'script') {
-                            document.body.insertBefore(el.cloneNode(true), mainContent);
-                        }
-                    });
-                    
-                    document.getElementById('header-container').innerHTML = '';
-
-                    // Execute the script from the header and wait for it to finish
-                    const scriptElement = doc.querySelector('script');
-                    if (scriptElement) {
-                        const newScript = document.createElement('script');
-                        newScript.textContent = scriptElement.textContent;
-                        newScript.onload = () => resolve(); // Resolve the promise ONLY after the script has loaded
-                        newScript.onerror = () => reject(new Error('Header script failed to load.'));
-                        document.body.appendChild(newScript);
-                    } else {
-                        resolve(); // Resolve immediately if there's no script
-                    }
-                } catch (error) {
-                    console.error('Error loading header:', error);
-                    reject(error);
+                const headerContent = doc.querySelector('header.main-header');
+                if (headerContent) {
+                    document.getElementById('header-container').appendChild(headerContent);
                 }
-            });
+
+                const scriptElement = doc.querySelector('script');
+                if (scriptElement) {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = scriptElement.textContent;
+                    document.body.appendChild(newScript);
+                }
+                
+                if (window.setTheme && window.initParticles) {
+                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                    window.setTheme(savedTheme);
+
+                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+                }
+            } catch (error) {
+                console.error('Error loading header:', error);
+                document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
+            }
         }
 
         function initializeCitationApp() {
@@ -298,19 +290,6 @@
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
             const outputHeading = document.getElementById('output-heading');
-
-            // Initialize theme from localStorage now that setTheme is guaranteed to exist
-            if (window.setTheme) {
-                const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                window.setTheme(savedTheme);
-
-                // Attach theme button listeners
-                document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-                document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-                document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-                document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-                document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-            }
 
             function showMessage(message, type = 'info') {
                 messageBox.className = `message-box ${type}`;
@@ -333,25 +312,19 @@
                 }, 500);
             }
 
-            function renderCitations(urls, outputType) {
+            function renderCitations(citations, outputType) {
                 outputArea.innerHTML = '';
                 outputHeading.textContent = (outputType === 'in-text') ? 'Relevant Sources' : 'Bibliography';
                 
-                if (!Array.isArray(urls) || urls.length === 0) {
+                if (!Array.isArray(citations) || citations.length === 0) {
                     showMessage('No relevant sources were found for the provided text.', 'info');
                     return;
                 }
 
-                urls.forEach(url => {
+                citations.forEach(citationText => {
                     const listItem = document.createElement('li');
                     listItem.className = 'citation-item';
-                    
-                    const citationLink = document.createElement('a');
-                    citationLink.href = url;
-                    citationLink.textContent = url;
-                    citationLink.target = '_blank';
-                    
-                    listItem.appendChild(citationLink);
+                    listItem.textContent = citationText;
                     outputArea.appendChild(listItem);
                 });
                 outputSection.style.display = 'block';
@@ -373,7 +346,7 @@
 
                     const result = await response.json();
                     
-                    renderCitations(result.urls, outputType);
+                    renderCitations(result.citations, outputType);
                     
                     stopLoadingBar(true);
                 } catch (error) {
@@ -415,18 +388,18 @@
             });
 
             copyBtn.addEventListener('click', () => {
-                const links = Array.from(outputArea.querySelectorAll('.citation-item a'));
-                const textToCopy = links.map(a => a.href).join('\n');
+                const citations = Array.from(outputArea.querySelectorAll('.citation-item'));
+                const textToCopy = citations.map(item => item.textContent).join('\n\n');
                 navigator.clipboard.writeText(textToCopy).then(() => {
-                    showMessage('URLs copied to clipboard!', 'info');
+                    showMessage('Bibliography copied to clipboard!', 'info');
                 }).catch(err => {
                     showMessage('Failed to copy text.', 'error');
                 });
             });
 
             downloadBtn.addEventListener('click', () => {
-                const links = Array.from(outputArea.querySelectorAll('.citation-item a'));
-                const outputText = links.map(a => a.href).join('\n');
+                const citations = Array.from(outputArea.querySelectorAll('.citation-item'));
+                const outputText = citations.map(item => item.textContent).join('\n\n');
                 if (!outputText) {
                     showMessage('Nothing to download.', 'error');
                     return;
@@ -435,7 +408,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'sources.txt';
+                a.download = 'bibliography.txt';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -449,13 +422,10 @@
             });
         }
 
-        // --- CORRECTED INITIALIZATION ORDER ---
-        async function main() {
-            await loadHeader(); // Wait for the header to be fully loaded and its script to execute
-            initializeApp();    // Then initialize the page-specific logic
-        }
-
-        document.addEventListener('DOMContentLoaded', main);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHeader();
+            initializeCitationApp();
+        });
     </script>
 </body>
 </html>
