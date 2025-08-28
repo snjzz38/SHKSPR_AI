@@ -214,7 +214,6 @@
             </div>
             <div id="messageBox" class="message-box"></div>
 
-            <!-- MODIFIED: Output section now has individual copy buttons -->
             <div id="output-section">
                 <div id="in-text-output-container" style="display: none; margin-bottom: 30px;">
                     <h2>Essay with In-Text Citations</h2>
@@ -287,7 +286,6 @@
                 outputHeading: document.getElementById('output-heading'),
                 inTextOutputContainer: document.getElementById('in-text-output-container'),
                 inTextOutputArea: document.getElementById('in-text-output-area'),
-                // MODIFIED: Added new button IDs
                 copyEssayBtn: document.getElementById('copy-essay-btn'),
                 copyBiblioBtn: document.getElementById('copy-biblio-btn'),
             };
@@ -314,6 +312,7 @@
                 }, 500);
             }
 
+            // --- MODIFIED: This function now handles both string and object citation formats ---
             function renderOutput(result, outputType) {
                 dom.outputArea.innerHTML = '';
                 dom.inTextOutputArea.textContent = '';
@@ -333,11 +332,26 @@
                     dom.outputHeading.textContent = 'Bibliography';
                 }
 
-                result.citations.forEach(citationText => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'citation-item';
-                    listItem.textContent = citationText;
-                    dom.outputArea.appendChild(listItem);
+                result.citations.forEach(item => {
+                    let citationText = '';
+                    // Check if the item from the API is a string or an object
+                    if (typeof item === 'string') {
+                        citationText = item;
+                    } else if (typeof item === 'object' && item !== null) {
+                        // If it's an object, extract the value from the first key (e.g., from {"citation": "..."})
+                        const keys = Object.keys(item);
+                        if (keys.length > 0) {
+                            citationText = item[keys[0]];
+                        }
+                    }
+
+                    // Only create and append the element if we successfully got some text
+                    if (citationText && typeof citationText === 'string' && citationText.trim() !== '') {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'citation-item';
+                        listItem.textContent = citationText;
+                        dom.outputArea.appendChild(listItem);
+                    }
                 });
 
                 dom.outputSection.style.display = 'block';
@@ -398,7 +412,6 @@
                 dom.inTextOutputContainer.style.display = 'none';
             });
 
-            // MODIFIED: New event listeners for the individual copy buttons
             dom.copyEssayBtn.addEventListener('click', () => {
                 const essayText = dom.inTextOutputArea.textContent;
                 if (essayText) {
