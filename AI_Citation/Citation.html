@@ -240,45 +240,47 @@
     <script>
         // --- CORRECTED loadHeader FUNCTION ---
         async function loadHeader() {
-            try {
-                const response = await fetch('../Structure/header.html');
-                if (!response.ok) throw new Error('Failed to load header');
-                const text = await response.text();
-                
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                
-                // Move head elements (style, link, meta)
-                const headElements = doc.querySelectorAll('head > *');
-                headElements.forEach(el => document.head.appendChild(el.cloneNode(true)));
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const response = await fetch('../Structure/header.html');
+                    if (!response.ok) throw new Error('Failed to load header');
+                    const text = await response.text();
+                    
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    
+                    // Move head elements (style, link, meta)
+                    doc.querySelectorAll('head > *').forEach(el => document.head.appendChild(el.cloneNode(true)));
 
-                // Inject body elements (particles div, header) before the main content
-                const mainContent = document.querySelector('.main-content');
-                const bodyElements = doc.querySelectorAll('body > *');
-                bodyElements.forEach(el => {
-                    // This ensures the header and particles are at the top of the body
-                    document.body.insertBefore(el.cloneNode(true), mainContent);
-                });
-                
-                // Clear the now-redundant placeholder
-                document.getElementById('header-container').innerHTML = '';
+                    // Inject body elements (particles div, header) before the main content
+                    const mainContent = document.querySelector('.main-content');
+                    doc.querySelectorAll('body > *').forEach(el => {
+                        if (el.tagName.toLowerCase() !== 'script') {
+                            document.body.insertBefore(el.cloneNode(true), mainContent);
+                        }
+                    });
+                    
+                    document.getElementById('header-container').innerHTML = '';
 
-                // Execute the script from the header
-                const scriptElement = doc.querySelector('script');
-                if (scriptElement) {
-                    const newScript = document.createElement('script');
-                    newScript.textContent = scriptElement.textContent;
-                    document.body.appendChild(newScript);
+                    // Execute the script from the header and wait for it to finish
+                    const scriptElement = doc.querySelector('script');
+                    if (scriptElement) {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = scriptElement.textContent;
+                        newScript.onload = () => resolve(); // Resolve the promise ONLY after the script has loaded
+                        newScript.onerror = () => reject(new Error('Header script failed to load.'));
+                        document.body.appendChild(newScript);
+                    } else {
+                        resolve(); // Resolve immediately if there's no script
+                    }
+                } catch (error) {
+                    console.error('Error loading header:', error);
+                    reject(error);
                 }
-                
-            } catch (error) {
-                console.error('Error loading header:', error);
-                document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
-            }
+            });
         }
 
         function initializeCitationApp() {
-            // This function now correctly finds all elements because it runs after loadHeader is complete.
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
             const citationCountSelect = document.getElementById('citation-count');
@@ -448,7 +450,7 @@
 
         // --- CORRECTED INITIALIZATION ORDER ---
         async function main() {
-            await loadHeader(); // Wait for the header to be fully loaded and injected
+            await loadHeader(); // Wait for the header to be fully loaded and its script to execute
             initializeApp();    // Then initialize the page-specific logic
         }
 
