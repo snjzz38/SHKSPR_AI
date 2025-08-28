@@ -17,7 +17,7 @@ const shuffleArray = (array) => {
 async function fetchAndCleanContent(url) {
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 });
-        if (!response.ok) return `Could not fetch content.`;
+        if (!response.ok) return null; // Return null on failure
         const html = await response.text();
         const getMetaContent = (name) => {
             const metaMatch = html.match(new RegExp(`<meta\\s+(?:name|property)="${name}"\\s+content="([^"]*)"`, 'i'));
@@ -33,7 +33,7 @@ async function fetchAndCleanContent(url) {
             url: url, title: titleMatch ? titleMatch[1] : 'No title found', author: author,
             site_name: site_name, published_date: published_date, body_snippet: cleanText.substring(0, 2500)
         };
-    } catch (error) { return `Content fetch failed.`; }
+    } catch (error) { return null; }
 }
 
 async function callGeminiApi(payload, apiKey) {
@@ -90,22 +90,45 @@ module.exports = async (req, res) => {
         const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
         if (searchResults.length === 0) return res.status(200).json({ citations: ["No relevant sources were found."] });
 
-        const fetchedContents = await Promise.all(searchResults.map(url => fetchAndCleanContent(url)));
+        const fetchedContents = (await Promise.all(searchResults.map(url => fetchAndCleanContent(url)))).filter(Boolean);
+        if (fetchedContents.length === 0) return res.status(200).json({ citations: ["Could not fetch content from any relevant sources."] });
 
-        const countInstruction = citationCount === 'auto' ? `Return citations for all the most relevant sources.` : `Prioritize returning exactly ${citationCount} citations. If you cannot find enough high-quality, relevant sources, return as many as you can find.`;
-        const bibliographyPrompt = `
-            You are an expert academic librarian. Your task is to generate a high-quality bibliography.
+        // --- NEW STEP 4A: Structured Data Extraction ---
+        const extractionPrompt = `
+            You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
             RULES:
-            1. Analyze the "Webpage Data" to find the author, publication date, and title for each source. The author can be a person or a credible organization.
-            2. **CRITICAL QUALITY RULE:** If a source is missing a clear author (person or organization) OR a title, you MUST DISCARD it. Do not include low-quality or incomplete sources.
-            3. For the date, use the 'published_date' field if available. If not, find a date in the text. If no date can be found, you may use 'n.d.' as a last resort, but only for otherwise high-quality sources.
-            4. Format ALL citations in **${citationStyle.toUpperCase()}** style.
-            5. Order the final citations **alphabetically**.
-            6. ${countInstruction}
-            7. Return ONLY a valid JSON array of strings.
-            Webpage Data: ${JSON.stringify(fetchedContents.filter(c => typeof c === 'object'), null, 2)}`;
-        const bibliographyPayload = { contents: [{ role: 'user', parts: [{ text: bibliographyPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
+            1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
+            2.  The 'author' can be a person or a credible organization (use 'site_name' if a person's name is not available).
+            3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
+            4.  **CRITICAL QUALITY RULE:** If a source is missing a clear author OR a title, you MUST DISCARD it. Do not include incomplete sources.
+            5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
+
+            Webpage Data:
+            ${JSON.stringify(fetchedContents, null, 2)}
+        `;
+        const extractionPayload = { contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey);
+        const structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
+
+        if (!structuredCitations || structuredCitations.length === 0) {
+            return res.status(200).json({ citations: ["No high-quality, citable sources were found."] });
+        }
+
+        // --- NEW STEP 4B: High-Quality Formatting ---
+        const countInstruction = citationCount === 'auto' ? `Return citations for all the provided sources.` : `Return exactly ${citationCount} citations. If there are fewer sources than requested, return all of them.`;
+        const formattingPrompt = `
+            You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
+            RULES:
+            1.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
+            2.  Order the final citations **alphabetically** by author.
+            3.  ${countInstruction}
+            4.  Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
+
+            Source Data:
+            ${JSON.stringify(structuredCitations, null, 2)}
+        `;
+        const formattingPayload = { contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
         if (outputType === 'bibliography') {
@@ -113,7 +136,6 @@ module.exports = async (req, res) => {
         }
 
         if (outputType === 'in-text') {
-            // --- MODIFIED: This prompt is now stricter to ensure all citations are added. ---
             const inTextPrompt = `
                 You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
                 RULES:
