@@ -282,10 +282,16 @@
             font-size: 1rem;
         }
         
+        /* --- MODIFIED DROPDOWN STYLES --- */
         .dropdown-options {
             min-width: auto;
             width: 80vw;
             max-width: 250px;
+            
+            /* ADD THESE LINES TO CENTER THE DROPDOWN */
+            left: 50%;
+            right: auto; /* Override the default 'right: 0' */
+            transform: translateX(-50%); /* Pull the element back by half its width */
         }
     }
 </style>
