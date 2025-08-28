@@ -92,12 +92,11 @@ module.exports = async (req, res) => {
         const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
-        // If user only wants bibliography, we are done.
         if (outputType === 'bibliography') {
             return res.status(200).json({ citations });
         }
 
-        // --- NEW Step 5: Generate In-text Citations ---
+        // Step 5: Generate In-text Citations
         if (outputType === 'in-text') {
             const inTextPrompt = `
                 You are an expert academic editor. Your task is to insert in-text citations into the provided essay.
