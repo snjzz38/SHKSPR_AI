@@ -158,7 +158,7 @@
     </style>
 </head>
 <body>
-    <!-- This div is now only a placeholder for the header's visible content -->
+    <!-- This div is now only a placeholder -->
     <div id="header-container"></div>
 
     <main class="main-content">
@@ -248,23 +248,19 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
                 
-                // Move head elements (style, link, meta) to the main document's head
+                // Move head elements (style, link, meta)
                 const headElements = doc.querySelectorAll('head > *');
-                headElements.forEach(el => {
-                    document.head.appendChild(el.cloneNode(true));
-                });
+                headElements.forEach(el => document.head.appendChild(el.cloneNode(true)));
 
-                // Find the main content area of the current page
+                // Inject body elements (particles div, header) before the main content
                 const mainContent = document.querySelector('.main-content');
-                
-                // Inject body elements from header.html (particles, header) BEFORE the main content
                 const bodyElements = doc.querySelectorAll('body > *');
                 bodyElements.forEach(el => {
                     // This ensures the header and particles are at the top of the body
                     document.body.insertBefore(el.cloneNode(true), mainContent);
                 });
                 
-                // The old header-container div is no longer needed for injection, but we'll clear it
+                // Clear the now-redundant placeholder
                 document.getElementById('header-container').innerHTML = '';
 
                 // Execute the script from the header
@@ -282,6 +278,7 @@
         }
 
         function initializeCitationApp() {
+            // This function now correctly finds all elements because it runs after loadHeader is complete.
             const essayInput = document.getElementById('essay-input');
             const citationStyleSelect = document.getElementById('citation-style');
             const citationCountSelect = document.getElementById('citation-count');
@@ -298,6 +295,19 @@
             const loadingBar = document.getElementById('loading-bar');
             const messageBox = document.getElementById('messageBox');
             const outputHeading = document.getElementById('output-heading');
+
+            // Initialize theme from localStorage now that setTheme is guaranteed to exist
+            if (window.setTheme) {
+                const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                window.setTheme(savedTheme);
+
+                // Attach theme button listeners
+                document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+            }
 
             function showMessage(message, type = 'info') {
                 messageBox.className = `message-box ${type}`;
