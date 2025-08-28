@@ -206,7 +206,6 @@
 
             <div class="action-buttons">
                 <button id="generate-btn" class="generate-button">Generate Citations</button>
-                <button id="example-btn" class="secondary-button">Load Example</button>
                 <button id="clear-btn" class="secondary-button">Clear All</button>
             </div>
 
@@ -215,18 +214,20 @@
             </div>
             <div id="messageBox" class="message-box"></div>
 
+            <!-- MODIFIED: Output section now has individual copy buttons -->
             <div id="output-section">
-                <!-- ADDED: Container for the in-text cited essay -->
                 <div id="in-text-output-container" style="display: none; margin-bottom: 30px;">
                     <h2>Essay with In-Text Citations</h2>
                     <div id="in-text-output-area" class="citation-item" style="white-space: pre-wrap; line-height: 1.8; text-align: left;"></div>
+                    <div class="action-buttons" style="margin-top: 15px;">
+                        <button id="copy-essay-btn" class="secondary-button">Copy Essay</button>
+                    </div>
                 </div>
 
                 <h2 id="output-heading">Bibliography</h2>
                 <ul id="output-area"></ul>
-                <div class="action-buttons" style="margin-top: 20px;">
-                    <button id="copy-btn" class="generate-button">Copy to Clipboard</button>
-                    <button id="download-btn" class="secondary-button">Download as .txt</button>
+                <div class="action-buttons" style="margin-top: 15px;">
+                    <button id="copy-biblio-btn" class="secondary-button">Copy Bibliography</button>
                 </div>
             </div>
         </div>
@@ -242,31 +243,21 @@
                 const response = await fetch('../Structure/header.html');
                 if (!response.ok) throw new Error('Failed to load header');
                 const text = await response.text();
-                
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
-                
                 const headElements = doc.querySelectorAll('head > *');
-                headElements.forEach(el => {
-                    document.head.appendChild(el.cloneNode(true));
-                });
-
+                headElements.forEach(el => { document.head.appendChild(el.cloneNode(true)); });
                 const headerContent = doc.querySelector('header.main-header');
-                if (headerContent) {
-                    document.getElementById('header-container').appendChild(headerContent);
-                }
-
+                if (headerContent) { document.getElementById('header-container').appendChild(headerContent); }
                 const scriptElement = doc.querySelector('script');
                 if (scriptElement) {
                     const newScript = document.createElement('script');
                     newScript.textContent = scriptElement.textContent;
                     document.body.appendChild(newScript);
                 }
-                
                 if (window.setTheme && window.initParticles) {
                     const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
                     window.setTheme(savedTheme);
-
                     document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
                     document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
                     document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
@@ -280,79 +271,76 @@
         }
 
         function initializeCitationApp() {
-            const essayInput = document.getElementById('essay-input');
-            const citationStyleSelect = document.getElementById('citation-style');
-            const citationCountSelect = document.getElementById('citation-count');
-            const customCountContainer = document.getElementById('custom-count-container');
-            const customCitationCountInput = document.getElementById('custom-citation-count');
-            const generateBtn = document.getElementById('generate-btn');
-            const exampleBtn = document.getElementById('example-btn');
-            const clearBtn = document.getElementById('clear-btn');
-            const outputSection = document.getElementById('output-section');
-            const outputArea = document.getElementById('output-area');
-            const copyBtn = document.getElementById('copy-btn');
-            const downloadBtn = document.getElementById('download-btn');
-            const loadingBarContainer = document.getElementById('loading-bar-container');
-            const loadingBar = document.getElementById('loading-bar');
-            const messageBox = document.getElementById('messageBox');
-            const outputHeading = document.getElementById('output-heading');
-            // ADDED: Get the new elements
-            const inTextOutputContainer = document.getElementById('in-text-output-container');
-            const inTextOutputArea = document.getElementById('in-text-output-area');
+            const dom = {
+                essayInput: document.getElementById('essay-input'),
+                citationStyleSelect: document.getElementById('citation-style'),
+                citationCountSelect: document.getElementById('citation-count'),
+                customCountContainer: document.getElementById('custom-count-container'),
+                customCitationCountInput: document.getElementById('custom-citation-count'),
+                generateBtn: document.getElementById('generate-btn'),
+                clearBtn: document.getElementById('clear-btn'),
+                outputSection: document.getElementById('output-section'),
+                outputArea: document.getElementById('output-area'),
+                loadingBarContainer: document.getElementById('loading-bar-container'),
+                loadingBar: document.getElementById('loading-bar'),
+                messageBox: document.getElementById('messageBox'),
+                outputHeading: document.getElementById('output-heading'),
+                inTextOutputContainer: document.getElementById('in-text-output-container'),
+                inTextOutputArea: document.getElementById('in-text-output-area'),
+                // MODIFIED: Added new button IDs
+                copyEssayBtn: document.getElementById('copy-essay-btn'),
+                copyBiblioBtn: document.getElementById('copy-biblio-btn'),
+            };
 
             function showMessage(message, type = 'info') {
-                messageBox.className = `message-box ${type}`;
-                messageBox.textContent = message;
-                messageBox.style.display = 'block';
+                dom.messageBox.className = `message-box ${type}`;
+                dom.messageBox.textContent = message;
+                dom.messageBox.style.display = 'block';
+                setTimeout(() => { dom.messageBox.style.display = 'none'; }, 3000);
             }
 
             function startLoadingBar() {
-                loadingBarContainer.style.display = 'block';
-                loadingBar.style.width = '0%';
-                setTimeout(() => { loadingBar.style.width = '90%'; }, 100);
+                dom.loadingBarContainer.style.display = 'block';
+                dom.loadingBar.style.width = '0%';
+                setTimeout(() => { dom.loadingBar.style.width = '90%'; }, 100);
             }
 
             function stopLoadingBar(success = true) {
-                loadingBar.style.width = '100%';
-                loadingBar.style.backgroundColor = success ? 'var(--accent)' : 'var(--destructive-text)';
+                dom.loadingBar.style.width = '100%';
+                dom.loadingBar.style.backgroundColor = success ? 'var(--accent)' : 'var(--destructive-text)';
                 setTimeout(() => {
-                    loadingBarContainer.style.display = 'none';
-                    loadingBar.style.backgroundColor = 'var(--accent)';
+                    dom.loadingBarContainer.style.display = 'none';
+                    dom.loadingBar.style.backgroundColor = 'var(--accent)';
                 }, 500);
             }
 
-            // MODIFIED: Renamed function to renderOutput and updated logic
             function renderOutput(result, outputType) {
-                // Clear previous results
-                outputArea.innerHTML = '';
-                inTextOutputArea.textContent = '';
-                inTextOutputContainer.style.display = 'none';
+                dom.outputArea.innerHTML = '';
+                dom.inTextOutputArea.textContent = '';
+                dom.inTextOutputContainer.style.display = 'none';
 
-                // Handle no citations found
                 if (!Array.isArray(result.citations) || result.citations.length === 0) {
                     showMessage('No relevant sources were found for the provided text.', 'info');
-                    outputSection.style.display = 'none';
+                    dom.outputSection.style.display = 'none';
                     return;
                 }
 
-                // If in-text mode, display the cited essay
                 if (outputType === 'in-text' && result.inTextCitedEssay) {
-                    inTextOutputArea.textContent = result.inTextCitedEssay;
-                    inTextOutputContainer.style.display = 'block';
-                    outputHeading.textContent = 'Bibliography'; // Change heading for clarity
+                    dom.inTextOutputArea.textContent = result.inTextCitedEssay;
+                    dom.inTextOutputContainer.style.display = 'block';
+                    dom.outputHeading.textContent = 'Bibliography';
                 } else {
-                    outputHeading.textContent = 'Bibliography';
+                    dom.outputHeading.textContent = 'Bibliography';
                 }
 
-                // Always render the bibliography
                 result.citations.forEach(citationText => {
                     const listItem = document.createElement('li');
                     listItem.className = 'citation-item';
                     listItem.textContent = citationText;
-                    outputArea.appendChild(listItem);
+                    dom.outputArea.appendChild(listItem);
                 });
 
-                outputSection.style.display = 'block';
+                dom.outputSection.style.display = 'block';
                 showMessage('Citations generated successfully!', 'info');
             }
 
@@ -363,123 +351,75 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ essayText, citationStyle, outputType, citationCount })
                     });
-
                     if (!response.ok) {
                         const errorData = await response.json();
                         throw new Error(errorData.details || errorData.error || 'An unknown server error occurred.');
                     }
-
                     const result = await response.json();
-                    
-                    // MODIFIED: Pass the entire result object to the new render function
                     renderOutput(result, outputType);
-                    
                     stopLoadingBar(true);
                 } catch (error) {
                     console.error('An error occurred:', error);
                     showMessage(`Error: ${error.message}`, 'error');
                     stopLoadingBar(false);
                 } finally {
-                    generateBtn.disabled = false;
+                    dom.generateBtn.disabled = false;
                 }
             }
 
-            citationCountSelect.addEventListener('change', () => {
-                customCountContainer.style.display = (citationCountSelect.value === 'custom') ? 'block' : 'none';
+            dom.citationCountSelect.addEventListener('change', () => {
+                dom.customCountContainer.style.display = (dom.citationCountSelect.value === 'custom') ? 'block' : 'none';
             });
 
-            generateBtn.addEventListener('click', () => {
-                const essayText = essayInput.value.trim();
+            dom.generateBtn.addEventListener('click', () => {
+                const essayText = dom.essayInput.value.trim();
                 if (!essayText) {
                     showMessage('Please paste an essay into the input area.', 'error');
                     return;
                 }
-                const citationStyle = citationStyleSelect.value;
+                const citationStyle = dom.citationStyleSelect.value;
                 const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                let citationCount = citationCountSelect.value;
+                let citationCount = dom.citationCountSelect.value;
                 if (citationCount === 'custom') {
-                    citationCount = customCitationCountInput.value || 1;
+                    citationCount = dom.customCitationCountInput.value || 1;
                 }
-                
-                outputSection.style.display = 'none';
-                messageBox.style.display = 'none';
-                generateBtn.disabled = true;
+                dom.outputSection.style.display = 'none';
+                dom.messageBox.style.display = 'none';
+                dom.generateBtn.disabled = true;
                 startLoadingBar();
-                
                 processAndGenerate(essayText, citationStyle, outputType, citationCount);
             });
 
-            exampleBtn.addEventListener('click', () => {
-                essayInput.value = `Climate change is largely driven by anthropogenic activities, particularly the emission of greenhouse gases from industrial processes, transportation, and deforestation. The Intergovernmental Panel on Climate Change (IPCC) reports that global CO₂ levels have reached their highest concentration in over 800,000 years. Rising global temperatures have led to more frequent and intense heatwaves, droughts, and extreme weather events like hurricanes and floods.`;
+            dom.clearBtn.addEventListener('click', () => {
+                dom.essayInput.value = '';
+                dom.outputSection.style.display = 'none';
+                dom.messageBox.style.display = 'none';
+                dom.inTextOutputArea.textContent = '';
+                dom.inTextOutputContainer.style.display = 'none';
             });
 
-            // MODIFIED: Updated copy logic
-            copyBtn.addEventListener('click', () => {
-                const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                const citations = Array.from(outputArea.querySelectorAll('.citation-item'));
-                const bibliographyText = citations.map(item => item.textContent).join('\n\n');
-                let textToCopy = '';
-
-                if (outputType === 'in-text' && inTextOutputArea.textContent) {
-                    textToCopy += "ESSAY WITH IN-TEXT CITATIONS\n";
-                    textToCopy += "--------------------------------\n\n";
-                    textToCopy += inTextOutputArea.textContent;
-                    textToCopy += "\n\n\n";
-                    textToCopy += "BIBLIOGRAPHY\n";
-                    textToCopy += "--------------------------------\n\n";
-                    textToCopy += bibliographyText;
-                } else {
-                    textToCopy = bibliographyText;
+            // MODIFIED: New event listeners for the individual copy buttons
+            dom.copyEssayBtn.addEventListener('click', () => {
+                const essayText = dom.inTextOutputArea.textContent;
+                if (essayText) {
+                    navigator.clipboard.writeText(essayText).then(() => {
+                        showMessage('Essay copied to clipboard!', 'info');
+                    }).catch(err => {
+                        showMessage('Failed to copy essay.', 'error');
+                    });
                 }
-
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    showMessage('Content copied to clipboard!', 'info');
-                }).catch(err => {
-                    showMessage('Failed to copy text.', 'error');
-                });
             });
 
-            // MODIFIED: Updated download logic
-            downloadBtn.addEventListener('click', () => {
-                const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                const citations = Array.from(outputArea.querySelectorAll('.citation-item'));
-                const bibliographyText = citations.map(item => item.textContent).join('\n\n');
-                let outputText = '';
-
-                if (outputType === 'in-text' && inTextOutputArea.textContent) {
-                    outputText += "ESSAY WITH IN-TEXT CITATIONS\n";
-                    outputText += "--------------------------------\n\n";
-                    outputText += inTextOutputArea.textContent;
-                    outputText += "\n\n\n";
-                    outputText += "BIBLIOGRAPHY\n";
-                    outputText += "--------------------------------\n\n";
-                    outputText += bibliographyText;
-                } else {
-                    outputText = bibliographyText;
+            dom.copyBiblioBtn.addEventListener('click', () => {
+                const citations = Array.from(dom.outputArea.querySelectorAll('.citation-item'));
+                const textToCopy = citations.map(item => item.textContent).join('\n\n');
+                if (textToCopy) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        showMessage('Bibliography copied to clipboard!', 'info');
+                    }).catch(err => {
+                        showMessage('Failed to copy bibliography.', 'error');
+                    });
                 }
-
-                if (!outputText.trim()) {
-                    showMessage('Nothing to download.', 'error');
-                    return;
-                }
-                const blob = new Blob([outputText], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'citations_and_essay.txt';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            });
-            
-            // MODIFIED: Updated clear logic
-            clearBtn.addEventListener('click', () => {
-                essayInput.value = '';
-                outputSection.style.display = 'none';
-                messageBox.style.display = 'none';
-                inTextOutputArea.textContent = '';
-                inTextOutputContainer.style.display = 'none';
             });
         }
 
