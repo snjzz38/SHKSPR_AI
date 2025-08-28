@@ -92,6 +92,7 @@ module.exports = async (req, res) => {
         const bibliographyData = await callGeminiApi(bibliographyPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
+        // If user only wants bibliography, we are done.
         if (outputType === 'bibliography') {
             return res.status(200).json({ citations });
         }
