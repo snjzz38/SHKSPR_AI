@@ -14,14 +14,46 @@ const shuffleArray = (array) => {
     return array;
 };
 
+// --- NEW: Helper function to fetch and clean webpage content ---
+async function fetchAndCleanContent(url) {
+    try {
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
+            timeout: 5000 // 5-second timeout per fetch
+        });
+        if (!response.ok) return `Could not fetch content (status: ${response.status}).`;
+        
+        const html = await response.text();
+        
+        // Extract key metadata from the <head> for accuracy
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const metaDescriptionMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+
+        // Clean the body text
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+        const cleanText = (bodyMatch ? bodyMatch[1] : html)
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s\s+/g, ' ')
+            .trim();
+
+        return {
+            title: titleMatch ? titleMatch[1] : 'No title found',
+            meta_description: metaDescriptionMatch ? metaDescriptionMatch[1] : '',
+            body_snippet: cleanText.substring(0, 2000) // Limit to first 2000 chars for efficiency
+        };
+    } catch (error) {
+        console.warn(`Failed to fetch ${url}: ${error.message}`);
+        return `Content fetch failed for this URL.`;
+    }
+}
+
 async function callGeminiApi(payload, apiKey) {
-    if (!apiKey) throw new Error("API Key is not configured.");
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
-
     for (const currentModel of modelsToTry) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
-        console.log(`Attempting API call with model: ${currentModel}`);
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -30,23 +62,18 @@ async function callGeminiApi(payload, apiKey) {
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const errorMessage = errorData.error?.message || response.statusText;
-                throw new Error(`API call with ${currentModel} failed (Status: ${response.status}): ${errorMessage}`);
+                throw new Error(`API call with ${currentModel} failed: ${errorData.error?.message || response.statusText}`);
             }
             const result = await response.json();
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text && text.trim() !== '') {
-                console.log(`Success with model: ${currentModel}`);
-                return result;
-            } else {
-                throw new Error(`Model ${currentModel} returned an empty or invalid response.`);
-            }
+            if (text && text.trim() !== '') return result;
+            throw new Error(`Model ${currentModel} returned an empty response.`);
         } catch (error) {
             console.warn(error.message);
             lastError = error;
         }
     }
-    throw lastError || new Error("All available models have been tried and failed.");
+    throw lastError || new Error("All API models failed.");
 }
 
 module.exports = async (req, res) => {
@@ -66,9 +93,7 @@ module.exports = async (req, res) => {
 
     try {
         const { essayText, citationStyle, outputType, citationCount } = req.body;
-        if (!essayText) {
-            return res.status(400).json({ error: 'Missing required field: essayText.' });
-        }
+        if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
 
         // Step 1: Generate Search Query
         const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
@@ -81,29 +106,40 @@ module.exports = async (req, res) => {
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
-        const searchResults = searchData.items ? searchData.items.slice(0, 10).map(item => ({ title: item.title, snippet: item.snippet, url: item.link })) : [];
+        const searchResults = searchData.items ? searchData.items.slice(0, 5).map(item => item.link) : []; // Get top 5 URLs
 
         if (searchResults.length === 0) {
             return res.status(200).json({ citations: ["No relevant sources were found."] });
         }
 
-        // Step 3: Generate Final Citations with Correct Count Logic
+        // --- NEW Step 3: Fetch Content from URLs ---
+        const fetchedContents = await Promise.all(
+            searchResults.map(async (url) => ({
+                url: url,
+                content: await fetchAndCleanContent(url)
+            }))
+        );
+
+        // --- NEW Step 4: Generate Final Citations from Full Context ---
         const countInstruction = (citationCount === 'auto')
             ? `Return citations for all the most relevant sources.`
             : `Return a maximum of ${citationCount} of the most relevant citations.`;
 
         const finalPrompt = `
-            You are an expert academic librarian. Your task is to generate a complete bibliography.
-            RULES:
-            1. Analyze the provided "Web Search Results" to find the author, title, and publication date for each source.
-            2. If information is missing, use your knowledge to find it or make a reasonable estimation (e.g., use "n.d." for no date).
-            3. Format ALL citations in the **${citationStyle.toUpperCase()}** style.
-            4. Order the final list of citations **alphabetically** by author's last name.
-            5. ${countInstruction}
-            6. Return ONLY a valid JSON array of strings. Each string is a single, fully formatted citation.
+            You are an expert academic librarian. Your task is to generate a complete bibliography from the provided webpage content.
 
-            Web Search Results:
-            ${JSON.stringify(searchResults, null, 2)}
+            RULES:
+            1.  For each "Webpage Data" object, meticulously analyze its "content" to find the true author(s), the exact publication date, and the full article title. The content includes the page title, meta description, and a snippet of the body text.
+            2.  If an author is not listed, use the organization or website name. If a date is not found, use "n.d.".
+            3.  Format ALL citations in the **${citationStyle.toUpperCase()}** style.
+            4.  Order the final list of citations **alphabetically**.
+            5.  ${countInstruction}
+            6.  Return ONLY a valid JSON array of strings. Each string is a single, fully formatted citation. Do not include sources that are irrelevant to the original essay topic.
+
+            Original Essay Topic (for context): "${searchQuery}"
+
+            Webpage Data:
+            ${JSON.stringify(fetchedContents, null, 2)}
 
             Return ONLY a valid JSON array of formatted citation strings.
         `;
