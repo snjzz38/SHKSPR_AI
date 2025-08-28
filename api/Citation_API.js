@@ -1,17 +1,11 @@
 // api/Citation_API.js
 const fetch = require('node-fetch');
 
-// --- ADDED: The list of models to try ---
 const ALL_GEMINI_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+  'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
+  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
 ];
 
-// --- ADDED: Helper function to randomize the model list ---
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -20,36 +14,30 @@ const shuffleArray = (array) => {
     return array;
 };
 
-// --- ADDED: New resilient function to call the API ---
 async function callGeminiApi(payload, apiKey) {
     if (!apiKey) throw new Error("API Key is not configured.");
-
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
 
     for (const currentModel of modelsToTry) {
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         console.log(`Attempting API call with model: ${currentModel}`);
-        
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMessage = errorData.error?.message || response.statusText;
                 throw new Error(`API call with ${currentModel} failed (Status: ${response.status}): ${errorMessage}`);
             }
-
             const result = await response.json();
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
             if (text && text.trim() !== '') {
                 console.log(`Success with model: ${currentModel}`);
-                return result; // Success!
+                return result;
             } else {
                 throw new Error(`Model ${currentModel} returned an empty or invalid response.`);
             }
@@ -61,9 +49,7 @@ async function callGeminiApi(payload, apiKey) {
     throw lastError || new Error("All available models have been tried and failed.");
 }
 
-
 module.exports = async (req, res) => {
-    // Standard CORS and method handling
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -84,16 +70,14 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'Missing required field: essayText.' });
         }
 
-        // --- STEP 1: Generate Search Query ---
+        // Step 1: Generate Search Query
         const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
-        
-        // MODIFIED: Use the new resilient function
         const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
         if (!searchQuery) throw new Error("AI failed to generate a search query.");
 
-        // --- STEP 2: Google Search ---
+        // Step 2: Google Search
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
@@ -103,7 +87,11 @@ module.exports = async (req, res) => {
             return res.status(200).json({ citations: ["No relevant sources were found."] });
         }
 
-        // --- STEP 3: AI Generates Final Citations ---
+        // Step 3: Generate Final Citations with Correct Count Logic
+        const countInstruction = (citationCount === 'auto')
+            ? `Return citations for all the most relevant sources.`
+            : `Return a maximum of ${citationCount} of the most relevant citations.`;
+
         const finalPrompt = `
             You are an expert academic librarian. Your task is to generate a complete bibliography.
             RULES:
@@ -111,10 +99,12 @@ module.exports = async (req, res) => {
             2. If information is missing, use your knowledge to find it or make a reasonable estimation (e.g., use "n.d." for no date).
             3. Format ALL citations in the **${citationStyle.toUpperCase()}** style.
             4. Order the final list of citations **alphabetically** by author's last name.
-            5. Return a maximum of ${citationCount === 'auto' ? 5 : citationCount} citations.
+            5. ${countInstruction}
             6. Return ONLY a valid JSON array of strings. Each string is a single, fully formatted citation.
+
             Web Search Results:
             ${JSON.stringify(searchResults, null, 2)}
+
             Return ONLY a valid JSON array of formatted citation strings.
         `;
         
@@ -123,7 +113,6 @@ module.exports = async (req, res) => {
             generationConfig: { responseMimeType: "application/json" }
         };
 
-        // MODIFIED: Use the new resilient function again
         const finalData = await callGeminiApi(finalPayload, geminiApiKey);
         const citations = JSON.parse(finalData.candidates[0].content.parts[0].text);
 
