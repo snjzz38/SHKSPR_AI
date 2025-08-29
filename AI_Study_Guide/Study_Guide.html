@@ -63,7 +63,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -209,7 +209,6 @@
         }
     </style>
     <script>
-        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -219,7 +218,6 @@
     </script>
 </head>
 <body>
-  <!-- Container for the dynamically loaded header -->
   <div id="header-container"></div>
 
   <main class="main-content animate-on-load">
@@ -230,7 +228,6 @@
 
     <div id="generatorContainer" class="container">
         <div class="input-step-container">
-            <!-- Step 1: Material Upload -->
             <div id="inputStep1" class="input-step active">
                 <h2>Step 1: Upload Material</h2>
                 <p class="subtitle">Provide the content to be turned into a study guide.</p>
@@ -250,7 +247,6 @@
                 </div>
             </div>
 
-            <!-- Step 2: Custom Instructions -->
             <div id="inputStep2" class="input-step">
                 <h2>Step 2: Custom Instructions (Optional)</h2>
                 <p class="subtitle">Guide the AI on how to create your study guide and quiz.</p>
@@ -325,13 +321,10 @@ async function loadHeader() {
 }
 
 function initializeStudyGuideApp() {
+    // --- FIX #1: Use a valid and reliable list of models ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest', // Fastest model first
+      'gemini-1.5-pro-latest'    // Reliable backup
     ];
     
     const dom = {
@@ -407,6 +400,7 @@ function initializeStudyGuideApp() {
         }
     };
 
+    // --- FIX #3: Robust clearState function ---
     const clearState = () => {
         dom.inputText.value = '';
         dom.customInstructions.value = '';
@@ -423,15 +417,16 @@ function initializeStudyGuideApp() {
         dom.studyGuideContent.innerHTML = '';
         dom.studyGuideArea.classList.add('hidden');
         dom.startQuizArea.classList.add('hidden');
+        
+        // Ensure quiz view is hidden and main view is shown
+        dom.interactiveQuizContainer.innerHTML = '';
         dom.interactiveQuizContainer.classList.add('hidden');
         dom.generatorContainer.classList.remove('hidden');
+        
         updateFileListDisplay();
-        
         showInputStep(0);
-        
         showMessage('All content cleared.');
     };
-
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -475,7 +470,7 @@ function initializeStudyGuideApp() {
                     resolve({ type: 'text/plain', content: text });
                 } catch (e) { reject(e); }
             } else if (file.type.startsWith('text/')) {
-                reader.onload = (e) => resolve({ type: file.type, content: e.target.result });
+                reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
                 reader.readAsText(file);
             } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
         });
@@ -498,6 +493,7 @@ function initializeStudyGuideApp() {
         });
     };
     
+    // --- FIX #2: Secure and reliable API call to the backend ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -505,29 +501,32 @@ function initializeStudyGuideApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/study_guide', {
+                // The body now includes the model name for the backend to use
+                const response = await fetch('/api/Study_Guide_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
-                
+
                 const result = await response.json();
                 
-                if (result.studyGuide !== null && result.quizQuestions && result.quizQuestions.length > 0) {
+                // The backend now handles validation, so we can trust the result
+                if (result.studyGuide !== null && result.quizQuestions) {
                     return result;
                 }
-                lastError = new Error(`Model ${model} returned an invalid response structure.`);
+                
+                lastError = new Error(`Model ${model} returned an unexpected structure.`);
             } catch (error) {
-                console.warn(error.message);
+                console.warn(`Error with model ${model}:`, error.message);
                 lastError = error;
             }
         }
-        throw lastError || new Error("All API models failed.");
+        throw lastError || new Error("All API models failed to return a valid response.");
     };
 
     const generateStudyGuide = async () => {
@@ -811,3 +810,105 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+```
+
+### `Study_Guide_API.js` (No Changes Needed, Confirmed Correct)
+
+Your backend code is already well-structured and does not need any changes. The issue was entirely on the frontend.
+
+```javascript
+// api/Study_Guide_API.js
+
+// Helper function to find and validate the structure from the AI's response
+const findAndValidateStructure = (data) => {
+    if (typeof data !== 'object' || data === null) return null;
+
+    let studyGuide = null;
+    let quizQuestions = null;
+
+    // Find keys flexibly, ignoring case and looking for partial matches
+    for (const key in data) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('study') && lowerKey.includes('guide')) {
+            if (typeof data[key] === 'string') {
+                studyGuide = data[key];
+            }
+        }
+        if (lowerKey.includes('quiz') && lowerKey.includes('question')) {
+            if (Array.isArray(data[key]) && data[key].length > 0) {
+                quizQuestions = data[key];
+            }
+        }
+    }
+
+    // The guide can be an empty string, but the questions must exist
+    if (studyGuide !== null && quizQuestions !== null) {
+        return { studyGuide, quizQuestions };
+    }
+    return null;
+};
+
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    const apiKey = process.env.STUDY_GUIDE_1;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'API key is not configured.' });
+    }
+
+    const { model, contents } = req.body;
+
+    if (!model || !contents) {
+        return res.status(400).json({ error: 'Missing model or contents in the request body.' });
+    }
+
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const payload = {
+        contents,
+        generationConfig: {
+            response_mime_type: "application/json",
+        },
+    };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.json();
+            console.error('Google API Error:', errorBody);
+            return res.status(response.status).json({ error: `Google API Error: ${errorBody.error.message}` });
+        }
+
+        const data = await response.json();
+        
+        // Extract and clean the response text
+        let responseText = data.candidates[0].content.parts[0].text;
+        if (responseText.startsWith("```json")) {
+            responseText = responseText.substring(7, responseText.length - 3).trim();
+        } else if (responseText.startsWith("```")) {
+            responseText = responseText.substring(3, responseText.length - 3).trim();
+        }
+
+        const parsedResult = JSON.parse(responseText);
+        const validatedData = findAndValidateStructure(parsedResult);
+
+        if (validatedData) {
+            return res.status(200).json(validatedData);
+        } else {
+            return res.status(500).json({ error: 'AI returned valid JSON but with an unexpected structure.' });
+        }
+
+    } catch (error) {
+        console.error('Server-side Error:', error);
+        return res.status(500).json({ error: `An internal server error occurred: ${error.message}` });
+    }
+}
