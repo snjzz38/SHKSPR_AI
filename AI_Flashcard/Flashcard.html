@@ -128,23 +128,33 @@
             transition: transform 0.6s; transform-style: preserve-3d;
         }
         .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+        
+        /* --- MODIFIED: Flashcard Text and Scrollbar Styles --- */
         .flashcard-front, .flashcard-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 20px; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
+            display: flex; justify-content: center; 
+            align-items: flex-start; /* Align text to top for better scrolling */
+            padding: 20px; /* Increased padding */
+            font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
             word-wrap: break-word; overflow-y: auto; box-sizing: border-box; border-radius: 12px;
-            text-align: center;
+            text-align: center; /* Keep text horizontally centered */
         }
         .flashcard-front { background-color: var(--card-bg); border: 2px solid var(--accent); }
         .flashcard-back { background-color: var(--accent); color: var(--bg-primary); transform: rotateY(180deg); border: 2px solid var(--accent); }
+        
+        /* --- NEW: Custom Scrollbar Styles --- */
         .flashcard-front::-webkit-scrollbar, .flashcard-back::-webkit-scrollbar { width: 8px; }
         .flashcard-front::-webkit-scrollbar-track, .flashcard-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
         .flashcard-front::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
         .flashcard-back::-webkit-scrollbar-thumb { background-color: var(--bg-primary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+
+        /* --- NEW: Flashcard Counter Style --- */
         .flashcard-counter {
             font-size: 1rem; font-weight: 600; color: var(--accent);
-            margin-bottom: -5px; text-align: center;
+            margin-bottom: -5px; /* Adjusted to be closer to the card */
+            text-align: center;
         }
+
         .message-box {
             background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
             color: var(--text-primary); padding: 15px; border-radius: 8px;
@@ -230,6 +240,7 @@
         <div id="messageBox" class="message-box"></div>
 
         <div id="flashcardDisplayArea" class="flashcard-display-area">
+            <!-- NEW: Flashcard Counter Element -->
             <div id="flashcardCounter" class="flashcard-counter" style="display: none;"></div>
             <div id="flashcardWrapper" class="flashcard-wrapper"></div>
             <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
@@ -297,7 +308,7 @@ function initializeFlashcardApp() {
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
         flashcardWrapper: document.getElementById('flashcardWrapper'),
-        flashcardCounter: document.getElementById('flashcardCounter'),
+        flashcardCounter: document.getElementById('flashcardCounter'), // NEW
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
@@ -395,6 +406,7 @@ function initializeFlashcardApp() {
         return flashcard;
     };
     
+    // --- MODIFIED: displayFlashcard function ---
     const displayFlashcard = (index) => {
         dom.flashcardWrapper.innerHTML = '';
         if (flashcardsData.length > 0) {
@@ -402,10 +414,12 @@ function initializeFlashcardApp() {
             const card = flashcardsData[currentFlashcardIndex];
             dom.flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
             dom.flashcardNavigation.style.display = flashcardsData.length > 1 ? 'flex' : 'none';
+            // Update and show the counter
             dom.flashcardCounter.textContent = `Flashcard ${currentFlashcardIndex + 1} of ${flashcardsData.length}`;
             dom.flashcardCounter.style.display = 'block';
         } else {
              dom.flashcardNavigation.style.display = 'none';
+             // Hide the counter if no cards
              dom.flashcardCounter.style.display = 'none';
         }
         dom.prevButton.disabled = currentFlashcardIndex === 0;
@@ -462,6 +476,7 @@ function initializeFlashcardApp() {
         });
     };
     
+    // --- MODIFIED: More robust API call with JSON extraction ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -483,6 +498,7 @@ function initializeFlashcardApp() {
                     throw new Error(`Model ${model} returned an empty response.`);
                 }
 
+                // --- NEW: JSON Extraction Logic ---
                 const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
                 const jsonString = jsonMatch ? jsonMatch[1] : responseText;
 
@@ -510,6 +526,7 @@ function initializeFlashcardApp() {
         throw lastError || new Error("All API models failed.");
     };
 
+    // --- MODIFIED: generateFlashcards function with new prompt ---
     const generateFlashcards = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
@@ -651,9 +668,3 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
-```
-70.2s
-Use Arrow Up and Arrow Down to select a turn, Enter to jump to it, and Escape to return to the chat.
-m
-
-Run
