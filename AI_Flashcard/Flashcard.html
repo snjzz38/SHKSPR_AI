@@ -281,7 +281,7 @@ async function loadHeader() {
 }
 
 function initializeFlashcardApp() {
-    // --- FIX #1: SPEED - Prioritize the fastest models ---
+    // --- FIX #1: Using your specified model list ---
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-flash-lite',
       'gemini-2.5-flash',
@@ -361,6 +361,14 @@ function initializeFlashcardApp() {
         displayFlashcard(0);
         showInputStep(0);
         showMessage('All content cleared.');
+    };
+
+    const shuffleArray = (array) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     };
 
     const showMessage = (message, type = 'info') => {
@@ -456,7 +464,7 @@ function initializeFlashcardApp() {
     
     // --- FIX #2: RELIABILITY - More robust API call with intelligent JSON extraction ---
     const callApiWithRetries = async (payload) => {
-        let modelsToTry = [...ALL_GEMINI_MODELS]; // Use a copy to not modify the original
+        let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]); // Randomizes your model list
         let lastError = null;
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
@@ -482,7 +490,6 @@ function initializeFlashcardApp() {
                 if (markdownMatch) {
                     jsonString = markdownMatch[1];
                 } else {
-                    // Fallback for raw JSON that might be surrounded by text
                     const startIndex = jsonString.indexOf('[');
                     const endIndex = jsonString.lastIndexOf(']');
                     if (startIndex !== -1 && endIndex !== -1) {
@@ -541,17 +548,18 @@ function initializeFlashcardApp() {
             });
 
             // --- Stricter, more reliable prompt ---
-            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects.
+            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
             
 Each object in the array must have two keys: "front" (the question or term) and "back" (the answer or definition).
             
-Example:
+Example: \`\`\`json
 [
   {"front": "What is the capital of France?", "back": "Paris"},
   {"front": "What is 2 + 2?", "back": "4"}
 ]
+\`\`\`
 
-Do NOT include any commentary, explanations, or introductory text. Your entire response must be only the raw JSON array.
+Do NOT include any commentary, explanations, or introductory text outside of the JSON code block. Your entire response must be the raw JSON within the markdown block.
 
 Based on the following content, generate the flashcards:
 ---
