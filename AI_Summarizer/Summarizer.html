@@ -138,6 +138,7 @@
         .prompt-input-group .label-header label { font-weight: 600; margin-bottom: 0; }
         .prompt-input-group .copy-btn { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
         .prompt-input-group .copy-btn:hover { background-color: var(--accent); color: var(--bg-primary); }
+        .prompt-input-group .copy-btn:disabled { background-color: #555; color: #999; cursor: not-allowed; }
         .output-content { background: var(--bg-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 1rem; min-height: 250px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; }
         .prose { color: var(--text-primary); }
         .prose h1, .prose h2, .prose h3 { color: var(--accent); }
@@ -360,8 +361,8 @@
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
             };
             
-            let currentStep = parseInt(localStorage.getItem('summarizerStep'), 10) || 0;
-            let currentMode = localStorage.getItem('summarizerMode') || 'text';
+            let currentStep = 0;
+            let currentMode = 'text';
             let uploadedFilesData = [];
 
             const hideElement = (el) => el.classList.add('hidden');
@@ -608,7 +609,6 @@
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 currentStep = index;
-                localStorage.setItem('summarizerStep', currentStep);
                 dom.actionButtonsContainer.classList.toggle('hidden', index !== dom.steps.length - 1);
             }
 
@@ -617,7 +617,6 @@
 
             function setMode(mode) {
                 currentMode = mode;
-                localStorage.setItem('summarizerMode', currentMode);
                 clearMessages();
                 uploadedFilesData = [];
                 updateFileListDisplay();
@@ -675,8 +674,6 @@
                 localStorage.removeItem('summarizerYoutubeInput');
                 localStorage.removeItem('summarizerTranscript');
                 localStorage.removeItem('summarizerSummary');
-                localStorage.removeItem('summarizerMode');
-                localStorage.removeItem('summarizerStep');
                 showStep(0);
             }
 
@@ -702,35 +699,26 @@
                     showElement(dom.summaryContainer);
                 }
             }
-            
-            function initializeUIFromState() {
-                Object.values(dom.modeButtons).forEach(btn => btn.classList.remove('active'));
-                if (dom.modeButtons[currentMode]) {
-                    dom.modeButtons[currentMode].classList.add('active');
+
+            // --- ADDED THIS FUNCTION ---
+            function copyToClipboard(text, buttonElement) {
+                if (!navigator.clipboard) {
+                    console.error('Clipboard API not available.');
+                    alert('Copying to clipboard is not supported on your browser.');
+                    return;
                 }
-
-                hideElement(dom.inputContainers.text);
-                hideElement(dom.inputContainers.youtube);
-                hideElement(dom.inputContainers.file);
-
-                if (currentMode === 'text') {
-                    showElement(dom.inputContainers.text);
-                    showElement(dom.inputContainers.file);
-                    dom.step2Title.textContent = "Step 2: Provide Text";
-                } else if (currentMode === 'youtube') {
-                    showElement(dom.inputContainers.youtube);
-                    dom.step2Title.textContent = "Step 2: Provide YouTube URL";
-                } else {
-                    showElement(dom.inputContainers.file);
-                    dom.step2Title.textContent = `Step 2: Upload ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}(s)`;
-                }
-                
-                const fileInput = dom.inputs.file;
-                if (currentMode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
-                else if (currentMode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
-                else if (currentMode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
-
-                showStep(currentStep);
+                navigator.clipboard.writeText(text).then(() => {
+                    const originalText = buttonElement.textContent;
+                    buttonElement.textContent = 'Copied!';
+                    buttonElement.disabled = true;
+                    setTimeout(() => {
+                        buttonElement.textContent = originalText;
+                        buttonElement.disabled = false;
+                    }, 2000); // Revert after 2 seconds
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy text.');
+                });
             }
 
             // Event Listeners
@@ -765,15 +753,12 @@
 
             // Initial setup
             updateSummarizationPrompt();
+            showStep(0);
             loadSavedResults();
-            initializeUIFromState();
-            
             (async () => {
+                displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
-                if (GEMINI_API_KEY) { 
-                    clearMessages(); 
-                    updateButtonState(); 
-                }
+                if (GEMINI_API_KEY) { clearMessages(); updateButtonState(); }
                 else { displayMessage("Failed to load API key. Application cannot function.", true); }
             })();
         }
@@ -785,3 +770,4 @@
     </script>
 </body>
 </html>
+```
