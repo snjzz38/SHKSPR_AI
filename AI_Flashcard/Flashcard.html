@@ -51,7 +51,7 @@
         .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
         .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
-        .hero p { font-size: 1.2rem; margin: 0 auto 30px; max-width: 600px; }
+        .hero p { font-size: 1.2rem; margin: 0 auto 30px; /*text-shadow: 0 0 8px var(--accent); */ max-width: 600px; }
         .container {
             max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
             background-color: var(--bg-secondary); border-radius: 12px;
@@ -130,21 +130,12 @@
         .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
         .flashcard-front, .flashcard-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 20px; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
+            display: flex; justify-content: center; align-items: center; padding: 15px;
+            font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
             word-wrap: break-word; overflow-y: auto; box-sizing: border-box; border-radius: 12px;
-            text-align: center;
         }
         .flashcard-front { background-color: var(--card-bg); border: 2px solid var(--accent); }
         .flashcard-back { background-color: var(--accent); color: var(--bg-primary); transform: rotateY(180deg); border: 2px solid var(--accent); }
-        .flashcard-front::-webkit-scrollbar, .flashcard-back::-webkit-scrollbar { width: 8px; }
-        .flashcard-front::-webkit-scrollbar-track, .flashcard-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
-        .flashcard-front::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-        .flashcard-back::-webkit-scrollbar-thumb { background-color: var(--bg-primary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-        .flashcard-counter {
-            font-size: 1rem; font-weight: 600; color: var(--accent);
-            margin-bottom: -5px; text-align: center;
-        }
         .message-box {
             background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
             color: var(--text-primary); padding: 15px; border-radius: 8px;
@@ -162,14 +153,15 @@
             .flashcard-front, .flashcard-back { font-size: 1rem; }
         }
 
-        .flashcard-navigation {
+    .flashcard-navigation {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 20px; /* FIX: Increased gap for better button spacing */
             margin-top: 10px;    
-        }
+    }
     </style>
     <script>
+        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -179,6 +171,7 @@
     </script>
 </head>
 <body>
+  <!-- Container for the dynamically loaded header -->
   <div id="header-container"></div>
 
   <main class="main-content animate-on-load">
@@ -230,7 +223,6 @@
         <div id="messageBox" class="message-box"></div>
 
         <div id="flashcardDisplayArea" class="flashcard-display-area">
-            <div id="flashcardCounter" class="flashcard-counter" style="display: none;"></div>
             <div id="flashcardWrapper" class="flashcard-wrapper"></div>
             <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
                 <button id="prevButton" class="nav-button" disabled>Previous</button>
@@ -281,14 +273,9 @@ async function loadHeader() {
 }
 
 function initializeFlashcardApp() {
-    // --- FIX #1: Using your specified model list ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
+      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
+      'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
     ];
     
     const dom = {
@@ -297,7 +284,6 @@ function initializeFlashcardApp() {
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
         flashcardWrapper: document.getElementById('flashcardWrapper'),
-        flashcardCounter: document.getElementById('flashcardCounter'),
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
@@ -319,9 +305,11 @@ function initializeFlashcardApp() {
     let currentFlashcardIndex = 0;
     let currentInputStepIndex = 0;
 
+    // --- NEW: LocalStorage Functions ---
     const saveState = () => {
         localStorage.setItem('flashcardInput', dom.inputText.value);
         localStorage.setItem('flashcardInstructions', dom.customInstructions.value);
+        // Only save flashcards if there are any
         if (flashcardsData && flashcardsData.length > 0) {
             localStorage.setItem('flashcardsData', JSON.stringify(flashcardsData));
         } else {
@@ -334,14 +322,20 @@ function initializeFlashcardApp() {
         const savedInstructions = localStorage.getItem('flashcardInstructions');
         const savedFlashcards = localStorage.getItem('flashcardsData');
 
-        if (savedInput) dom.inputText.value = savedInput;
-        if (savedInstructions) dom.customInstructions.value = savedInstructions;
+        if (savedInput) {
+            dom.inputText.value = savedInput;
+        }
+        if (savedInstructions) {
+            dom.customInstructions.value = savedInstructions;
+        }
         if (savedFlashcards) {
             try {
                 flashcardsData = JSON.parse(savedFlashcards);
                 if (Array.isArray(flashcardsData) && flashcardsData.length > 0) {
                     displayFlashcard(0);
-                } else { flashcardsData = []; }
+                } else {
+                    flashcardsData = []; // Reset if data is invalid
+                }
             } catch (e) {
                 console.error("Failed to parse saved flashcards:", e);
                 flashcardsData = [];
@@ -402,11 +396,8 @@ function initializeFlashcardApp() {
             const card = flashcardsData[currentFlashcardIndex];
             dom.flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
             dom.flashcardNavigation.style.display = flashcardsData.length > 1 ? 'flex' : 'none';
-            dom.flashcardCounter.textContent = `Flashcard ${currentFlashcardIndex + 1} of ${flashcardsData.length}`;
-            dom.flashcardCounter.style.display = 'block';
         } else {
              dom.flashcardNavigation.style.display = 'none';
-             dom.flashcardCounter.style.display = 'none';
         }
         dom.prevButton.disabled = currentFlashcardIndex === 0;
         dom.nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
@@ -439,7 +430,7 @@ function initializeFlashcardApp() {
                     resolve({ type: 'text/plain', content: text });
                 } catch (e) { reject(e); }
             } else if (file.type.startsWith('text/')) {
-                reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
+                reader.onload = (e) => resolve({ type: file.type, content: e.target.result });
                 reader.readAsText(file);
             } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
         });
@@ -462,9 +453,8 @@ function initializeFlashcardApp() {
         });
     };
     
-    // --- FIX #2: RELIABILITY - More robust API call with intelligent JSON extraction ---
     const callApiWithRetries = async (payload) => {
-        let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]); // Randomizes your model list
+        let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
@@ -479,37 +469,11 @@ function initializeFlashcardApp() {
                     throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
                 }
                 const result = await response.json();
-                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!responseText) {
-                    throw new Error(`Model ${model} returned an empty response.`);
-                }
-
-                // --- Intelligent JSON Extraction Logic ---
-                let jsonString = responseText;
-                const markdownMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-                if (markdownMatch) {
-                    jsonString = markdownMatch[1];
-                } else {
-                    const startIndex = jsonString.indexOf('[');
-                    const endIndex = jsonString.lastIndexOf(']');
-                    if (startIndex !== -1 && endIndex !== -1) {
-                        jsonString = jsonString.substring(startIndex, endIndex + 1);
-                    }
-                }
-
-                let parsedFlashcards;
-                try {
-                    parsedFlashcards = JSON.parse(jsonString);
-                } catch (e) {
-                    throw new Error(`Model ${model} returned invalid JSON. Retrying...`);
-                }
-
-                if (Array.isArray(parsedFlashcards) && parsedFlashcards.length > 0) {
-                    const validFlashcards = parsedFlashcards.filter(card =>
+                if (result.flashcards && result.flashcards.length > 0) {
+                    const validFlashcards = result.flashcards.filter(card =>
                         card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
                     );
                     if (validFlashcards.length > 0) {
-                        console.log(`Success with model: ${model}`);
                         return { flashcards: validFlashcards };
                     }
                 }
@@ -519,7 +483,7 @@ function initializeFlashcardApp() {
                 lastError = error;
             }
         }
-        throw lastError || new Error("All API models failed after multiple retries.");
+        throw lastError || new Error("All API models failed.");
     };
 
     const generateFlashcards = async () => {
@@ -539,50 +503,25 @@ function initializeFlashcardApp() {
         }, 200);
 
         try {
-            let sourceContent = "";
-            if (text) sourceContent += `Text Content:\n${text}\n\n`;
-            uploadedFilesData.forEach(file => {
-                if (file.type.startsWith('text/')) {
-                    sourceContent += `From File (${file.name}):\n${file.content}\n\n`;
-                }
-            });
-
-            // --- Stricter, more reliable prompt ---
-            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
-            
-Each object in the array must have two keys: "front" (the question or term) and "back" (the answer or definition).
-            
-Example: \`\`\`json
-[
-  {"front": "What is the capital of France?", "back": "Paris"},
-  {"front": "What is 2 + 2?", "back": "4"}
-]
-\`\`\`
-
-Do NOT include any commentary, explanations, or introductory text outside of the JSON code block. Your entire response must be the raw JSON within the markdown block.
-
-Based on the following content, generate the flashcards:
----
-${sourceContent}
----
-`;
-
-            if (instructions) {
-                prompt += `\nFollow these additional user instructions carefully: "${instructions}"`;
-            }
-
-            let promptParts = [{ text: prompt }];
+            let promptParts = [];
+            if (text) promptParts.push({ text: `From this text: "${text}"` });
             uploadedFilesData.forEach(file => {
                 if (file.type.startsWith('image/')) {
                     promptParts.push({ text: `From image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
+                } else {
+                    promptParts.push({ text: `From text file (${file.name}): "${file.content}"` });
                 }
             });
-
+            promptParts.push({ text: `\n\nGenerate a list of flashcards from ALL provided content. Ensure at least one flashcard per source. The 'front' is a question/term, 'back' is the answer/definition.` });
+            if (instructions) promptParts.push({ text: `\n\nFollow these instructions: "${instructions}"` });
+            
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
             flashcardsData = result.flashcards;
             displayFlashcard(0);
             showMessage('Flashcards generated successfully!', 'success');
+            
+            // NEW: Save state after successful generation
             saveState();
 
         } catch (error) {
@@ -595,6 +534,7 @@ ${sourceContent}
         }
     };
 
+    // NEW: Add event listeners to save input text as user types
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
 
@@ -641,11 +581,15 @@ ${sourceContent}
     dom.prevButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex - 1));
     dom.nextButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex + 1));
     dom.generateButton.addEventListener('click', generateFlashcards);
+    
+    // UPDATED: Clear button now calls clearState
     dom.clearButton.addEventListener('click', clearState);
 
     showInputStep(0);
-    dom.generateButton.style.display = 'none';
+    dom.generateButton.style.display = 'none'; // Hide generate button initially
     updateFileListDisplay();
+    
+    // NEW: Load saved state on initial page load
     loadState();
 }
 
@@ -655,12 +599,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
 <!-- Vercel Analytics -->
 <script>
   window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
   window.va('set', 'mode', 'auto');
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
+    
     
 </body>
 </html>
