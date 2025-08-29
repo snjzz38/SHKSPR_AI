@@ -129,29 +129,28 @@
         }
         .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
         
-        /* --- MODIFIED: Flashcard Text and Scrollbar Styles --- */
+        /* --- MODIFIED: Flashcard Text Centering --- */
         .flashcard-front, .flashcard-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; justify-content: center; 
-            align-items: flex-start; /* Align text to top for better scrolling */
-            padding: 20px; /* Increased padding */
+            display: flex; 
+            justify-content: center; /* Horizontal centering */
+            align-items: center;   /* Vertical centering */
+            padding: 20px;
             font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
             word-wrap: break-word; overflow-y: auto; box-sizing: border-box; border-radius: 12px;
-            text-align: center; /* Keep text horizontally centered */
+            text-align: center;
         }
         .flashcard-front { background-color: var(--card-bg); border: 2px solid var(--accent); }
         .flashcard-back { background-color: var(--accent); color: var(--bg-primary); transform: rotateY(180deg); border: 2px solid var(--accent); }
         
-        /* --- NEW: Custom Scrollbar Styles --- */
         .flashcard-front::-webkit-scrollbar, .flashcard-back::-webkit-scrollbar { width: 8px; }
         .flashcard-front::-webkit-scrollbar-track, .flashcard-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
         .flashcard-front::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
         .flashcard-back::-webkit-scrollbar-thumb { background-color: var(--bg-primary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
 
-        /* --- NEW: Flashcard Counter Style --- */
         .flashcard-counter {
             font-size: 1rem; font-weight: 600; color: var(--accent);
-            margin-bottom: -5px; /* Adjusted to be closer to the card */
+            margin-bottom: -5px;
             text-align: center;
         }
 
@@ -240,7 +239,6 @@
         <div id="messageBox" class="message-box"></div>
 
         <div id="flashcardDisplayArea" class="flashcard-display-area">
-            <!-- NEW: Flashcard Counter Element -->
             <div id="flashcardCounter" class="flashcard-counter" style="display: none;"></div>
             <div id="flashcardWrapper" class="flashcard-wrapper"></div>
             <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
@@ -303,7 +301,7 @@ function initializeFlashcardApp() {
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
         flashcardWrapper: document.getElementById('flashcardWrapper'),
-        flashcardCounter: document.getElementById('flashcardCounter'), // NEW
+        flashcardCounter: document.getElementById('flashcardCounter'),
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
@@ -401,7 +399,6 @@ function initializeFlashcardApp() {
         return flashcard;
     };
     
-    // --- MODIFIED: displayFlashcard function ---
     const displayFlashcard = (index) => {
         dom.flashcardWrapper.innerHTML = '';
         if (flashcardsData.length > 0) {
@@ -409,12 +406,10 @@ function initializeFlashcardApp() {
             const card = flashcardsData[currentFlashcardIndex];
             dom.flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
             dom.flashcardNavigation.style.display = flashcardsData.length > 1 ? 'flex' : 'none';
-            // Update and show the counter
             dom.flashcardCounter.textContent = `Flashcard ${currentFlashcardIndex + 1} of ${flashcardsData.length}`;
             dom.flashcardCounter.style.display = 'block';
         } else {
              dom.flashcardNavigation.style.display = 'none';
-             // Hide the counter if no cards
              dom.flashcardCounter.style.display = 'none';
         }
         dom.prevButton.disabled = currentFlashcardIndex === 0;
