@@ -196,6 +196,11 @@
         color: var(--bg-primary);
         box-shadow: 0 0 8px var(--accent);
     }
+    /* --- NEW STYLE FOR BUTTON WRAPPER --- */
+    .output-buttons-wrapper {
+        display: flex;
+        gap: 10px;
+    }
     textarea {
         width: 100%;
         height: 100%;
@@ -263,7 +268,7 @@
   <!-- Added 'animate-on-load' class to trigger the animation -->
   <main class="main-content animate-on-load">
     <section class="hero">
-        <h1>AI Humanizer</h1>
+        <h1>AI HUMANIZER</h1>
         <p class="disclaimer"><b>Humanize any AI-generated text.</b> <br>
              Still in beta development, expect lots of mistakes.
              <br>May change/destroy facts, omit random information, make grammatical mistakes, etc. <br><br><b>ALWAYS CHECK!!!</b>
@@ -296,7 +301,10 @@
             <div class="area">
                 <div class="area-header" id="area-header-output">
                     <label for="output">Humanized Output</label>
-                    <button id="copy">Copy</button>
+                    <!-- MODIFIED: ADDED WRAPPER DIV -->
+                    <div class="output-buttons-wrapper">
+                        <button id="copy">Copy</button>
+                    </div>
                 </div>
                 <textarea id="output" readonly></textarea>
                 <div class="word-count" id="output-count">0 words</div>
@@ -451,12 +459,18 @@
 
         const outputHeaderEl = $('area-header-output');
         if (outputHeaderEl) {
+            // MODIFIED: Find the new wrapper for the buttons
+            const buttonWrapper = outputHeaderEl.querySelector('.output-buttons-wrapper');
             const copyJsonButton = document.createElement('button');
             copyJsonButton.id = 'copyJson';
             copyJsonButton.textContent = 'Copy JSON';
-            copyJsonButton.style.marginLeft = '10px';
             copyJsonButton.style.display = 'none';
-            outputHeaderEl.appendChild(copyJsonButton);
+            
+            // MODIFIED: Append the new button to the wrapper
+            if (buttonWrapper) {
+                buttonWrapper.appendChild(copyJsonButton);
+            }
+
             copyJsonButton.addEventListener('click', async () => {
                 const jsonOutputEl = $('jsonOutput');
                 if (!jsonOutputEl.textContent) return;
