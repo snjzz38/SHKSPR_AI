@@ -281,9 +281,14 @@ async function loadHeader() {
 }
 
 function initializeFlashcardApp() {
+    // --- MODIFIED: Using your specified model list ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
-      'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
     ];
     
     const dom = {
@@ -473,8 +478,23 @@ function initializeFlashcardApp() {
                     throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
                 }
                 const result = await response.json();
-                if (result.flashcards && result.flashcards.length > 0) {
-                    const validFlashcards = result.flashcards.filter(card =>
+                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!responseText) {
+                    throw new Error(`Model ${model} returned an empty response.`);
+                }
+
+                const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+                const jsonString = jsonMatch ? jsonMatch[1] : responseText;
+
+                let parsedFlashcards;
+                try {
+                    parsedFlashcards = JSON.parse(jsonString);
+                } catch (e) {
+                    throw new Error(`Model ${model} returned invalid JSON. Please try rephrasing your input.`);
+                }
+
+                if (parsedFlashcards && parsedFlashcards.length > 0) {
+                    const validFlashcards = parsedFlashcards.filter(card =>
                         card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
                     );
                     if (validFlashcards.length > 0) {
@@ -490,7 +510,6 @@ function initializeFlashcardApp() {
         throw lastError || new Error("All API models failed.");
     };
 
-    // --- MODIFIED: generateFlashcards function with new prompt ---
     const generateFlashcards = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
@@ -516,11 +535,18 @@ function initializeFlashcardApp() {
                 }
             });
 
-            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects, and nothing else. Each object in the array must have two keys: "front" (the question or term) and "back" (the answer or definition).
+            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
             
-Example: [{"front": "What is the capital of France?", "back": "Paris"}]
+Each object in the array must have two keys: "front" (the question or term) and "back" (the answer or definition).
+            
+Example: \`\`\`json
+[
+  {"front": "What is the capital of France?", "back": "Paris"},
+  {"front": "What is 2 + 2?", "back": "4"}
+]
+\`\`\`
 
-Do NOT include any commentary, explanations, or introductory text like "Here are the flashcards:". Your entire response must be the raw JSON.
+Do NOT include any commentary, explanations, or introductory text outside of the JSON code block. Your entire response must be the raw JSON within the markdown block.
 
 Based on the following content, generate the flashcards:
 ---
@@ -532,7 +558,6 @@ ${sourceContent}
                 prompt += `\nFollow these additional user instructions carefully: "${instructions}"`;
             }
 
-            // For multi-modal content (images), we still need to use the parts structure
             let promptParts = [{ text: prompt }];
             uploadedFilesData.forEach(file => {
                 if (file.type.startsWith('image/')) {
@@ -626,3 +651,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+```
+70.2s
+Use Arrow Up and Arrow Down to select a turn, Enter to jump to it, and Escape to return to the chat.
+m
+
+Run
