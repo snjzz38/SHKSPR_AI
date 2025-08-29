@@ -51,7 +51,7 @@
         .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
         .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
-        .hero p { font-size: 1.2rem; margin: 0 auto 30px; /*text-shadow: 0 0 8px var(--accent); */ max-width: 600px; }
+        .hero p { font-size: 1.2rem; margin: 0 auto 30px; max-width: 600px; }
         .container {
             max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
             background-color: var(--bg-secondary); border-radius: 12px;
@@ -128,33 +128,23 @@
             transition: transform 0.6s; transform-style: preserve-3d;
         }
         .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
-        
-        /* --- MODIFIED: Flashcard Text and Scrollbar Styles --- */
         .flashcard-front, .flashcard-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; justify-content: center; 
-            align-items: flex-start; /* Align text to top for better scrolling */
-            padding: 20px; /* Increased padding */
-            font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: 20px; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
             word-wrap: break-word; overflow-y: auto; box-sizing: border-box; border-radius: 12px;
-            text-align: center; /* Keep text horizontally centered */
+            text-align: center;
         }
         .flashcard-front { background-color: var(--card-bg); border: 2px solid var(--accent); }
         .flashcard-back { background-color: var(--accent); color: var(--bg-primary); transform: rotateY(180deg); border: 2px solid var(--accent); }
-        
-        /* --- NEW: Custom Scrollbar Styles --- */
         .flashcard-front::-webkit-scrollbar, .flashcard-back::-webkit-scrollbar { width: 8px; }
         .flashcard-front::-webkit-scrollbar-track, .flashcard-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
         .flashcard-front::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
         .flashcard-back::-webkit-scrollbar-thumb { background-color: var(--bg-primary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-
-        /* --- NEW: Flashcard Counter Style --- */
         .flashcard-counter {
             font-size: 1rem; font-weight: 600; color: var(--accent);
-            margin-bottom: -5px; /* Adjusted to be closer to the card */
-            text-align: center;
+            margin-bottom: -5px; text-align: center;
         }
-
         .message-box {
             background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
             color: var(--text-primary); padding: 15px; border-radius: 8px;
@@ -240,7 +230,6 @@
         <div id="messageBox" class="message-box"></div>
 
         <div id="flashcardDisplayArea" class="flashcard-display-area">
-            <!-- NEW: Flashcard Counter Element -->
             <div id="flashcardCounter" class="flashcard-counter" style="display: none;"></div>
             <div id="flashcardWrapper" class="flashcard-wrapper"></div>
             <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
@@ -292,14 +281,10 @@ async function loadHeader() {
 }
 
 function initializeFlashcardApp() {
-    // --- MODIFIED: Using your specified model list ---
+    // --- FIX #1: SPEED - Prioritize the fastest models ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest', // Fastest model first
+      'gemini-1.5-pro-latest'    // Reliable backup
     ];
     
     const dom = {
@@ -308,7 +293,7 @@ function initializeFlashcardApp() {
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
         flashcardWrapper: document.getElementById('flashcardWrapper'),
-        flashcardCounter: document.getElementById('flashcardCounter'), // NEW
+        flashcardCounter: document.getElementById('flashcardCounter'),
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
@@ -374,14 +359,6 @@ function initializeFlashcardApp() {
         showMessage('All content cleared.');
     };
 
-    const shuffleArray = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    };
-
     const showMessage = (message, type = 'info') => {
         dom.messageBox.textContent = message;
         dom.messageBox.className = `message-box ${type}`;
@@ -406,7 +383,6 @@ function initializeFlashcardApp() {
         return flashcard;
     };
     
-    // --- MODIFIED: displayFlashcard function ---
     const displayFlashcard = (index) => {
         dom.flashcardWrapper.innerHTML = '';
         if (flashcardsData.length > 0) {
@@ -414,12 +390,10 @@ function initializeFlashcardApp() {
             const card = flashcardsData[currentFlashcardIndex];
             dom.flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
             dom.flashcardNavigation.style.display = flashcardsData.length > 1 ? 'flex' : 'none';
-            // Update and show the counter
             dom.flashcardCounter.textContent = `Flashcard ${currentFlashcardIndex + 1} of ${flashcardsData.length}`;
             dom.flashcardCounter.style.display = 'block';
         } else {
              dom.flashcardNavigation.style.display = 'none';
-             // Hide the counter if no cards
              dom.flashcardCounter.style.display = 'none';
         }
         dom.prevButton.disabled = currentFlashcardIndex === 0;
@@ -476,9 +450,9 @@ function initializeFlashcardApp() {
         });
     };
     
-    // --- MODIFIED: More robust API call with JSON extraction ---
+    // --- FIX #2: RELIABILITY - More robust API call with intelligent JSON extraction ---
     const callApiWithRetries = async (payload) => {
-        let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
+        let modelsToTry = [...ALL_GEMINI_MODELS]; // Use a copy to not modify the original
         let lastError = null;
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
@@ -498,22 +472,33 @@ function initializeFlashcardApp() {
                     throw new Error(`Model ${model} returned an empty response.`);
                 }
 
-                // --- NEW: JSON Extraction Logic ---
-                const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-                const jsonString = jsonMatch ? jsonMatch[1] : responseText;
+                // --- Intelligent JSON Extraction Logic ---
+                let jsonString = responseText;
+                const markdownMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+                if (markdownMatch) {
+                    jsonString = markdownMatch[1];
+                } else {
+                    // Fallback for raw JSON that might be surrounded by text
+                    const startIndex = jsonString.indexOf('[');
+                    const endIndex = jsonString.lastIndexOf(']');
+                    if (startIndex !== -1 && endIndex !== -1) {
+                        jsonString = jsonString.substring(startIndex, endIndex + 1);
+                    }
+                }
 
                 let parsedFlashcards;
                 try {
                     parsedFlashcards = JSON.parse(jsonString);
                 } catch (e) {
-                    throw new Error(`Model ${model} returned invalid JSON. Please try rephrasing your input.`);
+                    throw new Error(`Model ${model} returned invalid JSON. Retrying...`);
                 }
 
-                if (parsedFlashcards && parsedFlashcards.length > 0) {
+                if (Array.isArray(parsedFlashcards) && parsedFlashcards.length > 0) {
                     const validFlashcards = parsedFlashcards.filter(card =>
                         card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
                     );
                     if (validFlashcards.length > 0) {
+                        console.log(`Success with model: ${model}`);
                         return { flashcards: validFlashcards };
                     }
                 }
@@ -523,10 +508,9 @@ function initializeFlashcardApp() {
                 lastError = error;
             }
         }
-        throw lastError || new Error("All API models failed.");
+        throw lastError || new Error("All API models failed after multiple retries.");
     };
 
-    // --- MODIFIED: generateFlashcards function with new prompt ---
     const generateFlashcards = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
@@ -552,18 +536,18 @@ function initializeFlashcardApp() {
                 }
             });
 
-            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
+            // --- Stricter, more reliable prompt ---
+            let prompt = `You are an expert AI that creates flashcards from text. Your response MUST be a valid JSON array of objects.
             
 Each object in the array must have two keys: "front" (the question or term) and "back" (the answer or definition).
             
-Example: \`\`\`json
+Example:
 [
   {"front": "What is the capital of France?", "back": "Paris"},
   {"front": "What is 2 + 2?", "back": "4"}
 ]
-\`\`\`
 
-Do NOT include any commentary, explanations, or introductory text outside of the JSON code block. Your entire response must be the raw JSON within the markdown block.
+Do NOT include any commentary, explanations, or introductory text. Your entire response must be only the raw JSON array.
 
 Based on the following content, generate the flashcards:
 ---
