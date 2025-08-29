@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Flashcard Generator</title>
+    <title>AI Study Guide Generator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- For rendering Markdown -->
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
-        /* --- Theme Variables --- */
         :root {
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
+            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
             --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
@@ -33,8 +34,8 @@
         body.theme-red {
             --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
             --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
+            --destructive-bg: #991b1b; --destructive-text: #fca5a5;
         }
-        /* --- Global Styles --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -50,8 +51,8 @@
         /* --- Page-Specific Styles --- */
         .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
-        .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
-        .hero p { font-size: 1.2rem; margin: 0 auto 30px; /*text-shadow: 0 0 8px var(--accent); */ max-width: 600px; }
+        .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent), 0 0 40px var(--accent), 0 0 50px var(--accent), 0 0 60px var(--accent); margin-bottom: 20px; }
+        .hero p { font-size: 1.2rem; margin: 0 auto 30px; text-shadow: 0 0 8px var(--accent); max-width: 600px; }
         .container {
             max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
             background-color: var(--bg-secondary); border-radius: 12px;
@@ -62,7 +63,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -105,77 +106,106 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        .flashcard-display-area { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 30px; }
-        .flashcard-wrapper {
-            width: 100%;
-            display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;
+        .exit-quiz-button {
+            background-color: var(--destructive-bg); color: var(--destructive-text);
+            width: 100%; margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
         }
-        .flashcard {
-            width: 100%; max-width: 400px; perspective: 1000px; height: 250px;
-            background-color: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            cursor: pointer; position: relative;
-        }
-        .flashcard-inner {
-            position: absolute; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.6s; transform-style: preserve-3d;
-        }
-        .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+        .exit-quiz-button:hover { box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6); }
+        .study-guide-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         
-        /* --- MODIFIED: Flashcard Text Centering --- */
-        .flashcard-front, .flashcard-back {
-            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; 
-            justify-content: center; /* Horizontal centering */
-            align-items: center;   /* Vertical centering */
-            padding: 20px;
-            font-size: 1.1rem; font-weight: 500; color: var(--text-primary);
-            word-wrap: break-word; overflow-y: auto; box-sizing: border-box; border-radius: 12px;
-            text-align: center;
+        .study-guide-content { 
+            padding: 1rem; 
+            border: 1px solid var(--accent); 
+            border-radius: 8px; 
+            background-color: var(--card-bg); 
+            overflow-wrap: break-word;
         }
-        .flashcard-front { background-color: var(--card-bg); border: 2px solid var(--accent); }
-        .flashcard-back { background-color: var(--accent); color: var(--bg-primary); transform: rotateY(180deg); border: 2px solid var(--accent); }
         
-        .flashcard-front::-webkit-scrollbar, .flashcard-back::-webkit-scrollbar { width: 8px; }
-        .flashcard-front::-webkit-scrollbar-track, .flashcard-back::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
-        .flashcard-front::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-        .flashcard-back::-webkit-scrollbar-thumb { background-color: var(--bg-primary); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-
-        .flashcard-counter {
-            font-size: 1rem; font-weight: 600; color: var(--accent);
-            margin-bottom: -5px;
-            text-align: center;
+        .study-guide-content h1, .study-guide-content h2, .study-guide-content h3 { 
+            color: var(--accent); 
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .study-guide-content p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .study-guide-content ul, .study-guide-content ol { 
+            list-style-position: inside; 
+            padding-left: 1rem; 
+            margin-bottom: 1rem;
+        }
+        .study-guide-content li {
+            margin-bottom: 0.5rem;
+        }
+        .study-guide-content li:last-child {
+            margin-bottom: 0;
         }
 
+        .quiz-question {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .quiz-question h3 { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 10px; }
+        .quiz-question p { margin-bottom: 0.5rem; }
+        .quiz-navigation { display: flex; justify-content: space-between; margin-top: 2rem; }
+        .quiz-options-container { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
+        .quiz-option-btn {
+            background-color: var(--card-bg); border: 1px solid var(--accent); color: var(--text-primary);
+            padding: 10px 15px; border-radius: 8px; text-align: left; cursor: pointer; transition: all 0.2s;
+        }
+        .quiz-option-btn:hover { background-color: rgba(var(--accent-rgb), 0.2); }
+        .quiz-option-btn.selected { background-color: var(--accent); color: var(--bg-primary); font-weight: bold; }
+        .quiz-results { text-align: left; }
+        .quiz-results h2 { font-size: 1.8rem; color: var(--accent); text-align: center; margin-bottom: 1.5rem; }
+        .result-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-bg); }
+        .result-item p { 
+            margin-bottom: 0.5rem; 
+            overflow-wrap: break-word;
+        }
+        .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
+        .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
+        .start-quiz-area { text-align: center; }
         .message-box {
-            background-color: rgba(var(--accent-rgb), 0.1); border: 1px solid var(--accent);
-            color: var(--text-primary); padding: 15px; border-radius: 8px;
-            text-align: center; margin-top: 20px; font-size: 1rem; display: none;
+            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: left; border: 1px solid;
+        }
+        .message-box.info {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .message-box.error {
+            --error-rgb: 239, 68, 68;
+            background-color: rgba(var(--error-rgb), 0.1);
+            border-color: rgb(var(--error-rgb));
+            color: #fecaca;
         }
         .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
+        .hidden { display: none; }
+        footer.main-footer {
+            width: 100%; text-align: center; padding: 20px; font-size: 0.9rem;
+            background-color: var(--bg-secondary); position: relative; z-index: 10;
+        }
 
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
-            .action-buttons, .input-navigation-buttons, .flashcard-navigation { flex-direction: column;}
-            .flashcard { height: 200px; }
-            .flashcard-front, .flashcard-back { font-size: 1rem; }
-        }
-
-        .flashcard-navigation {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 10px;    
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
     <script>
@@ -192,15 +222,15 @@
 
   <main class="main-content animate-on-load">
     <section class="hero">
-        <h1>AI Flashcard Generator</h1>
-        <p>Instantly convert your notes, images, or PDFs into interactive study cards.</p>
+        <h1>AI Study Guide Generator</h1>
+        <p>Transform your notes, documents, or images into a structured study guide with an interactive quiz.</p>
     </section>
 
-    <div class="container">
+    <div id="generatorContainer" class="container">
         <div class="input-step-container">
             <div id="inputStep1" class="input-step active">
-                <h2>Step 1: Enter Your Text</h2>
-                <p class="subtitle">Provide the main content from which flashcards will be generated.</p>
+                <h2>Step 1: Upload Material</h2>
+                <p class="subtitle">Provide the content to be turned into a study guide.</p>
                 <textarea id="inputText" placeholder="Enter text here... or paste an image (Ctrl+V)"></textarea>
                 <div class="file-upload-container">
                     <div class="file-input-wrapper">
@@ -218,9 +248,9 @@
             </div>
 
             <div id="inputStep2" class="input-step">
-                <h2>Step 2: Add Custom Instructions (Optional)</h2>
-                <p class="subtitle">Guide the AI on how to create your flashcards.</p>
-                <textarea id="customInstructions" placeholder="e.g., 'Focus on key terms only', 'Generate 3 flashcards'"></textarea>
+                <h2>Step 2: Custom Instructions (Optional)</h2>
+                <p class="subtitle">Guide the AI on how to create your study guide and quiz.</p>
+                <textarea id="customInstructions" placeholder="e.g., 'Focus on the key historical dates.', 'Create a 10-question multiple-choice quiz.'"></textarea>
             </div>
 
             <div class="input-navigation-buttons">
@@ -230,26 +260,27 @@
         </div>
 
         <div class="action-buttons">
-          <button id="generateButton" class="generate-button">Generate Flashcards</button>
+          <button id="generateButton" class="generate-button">Generate Study Guide</button>
           <button id="clearButton" class="clear-button">Clear All</button>
         </div>
         <div id="loadingBarContainer" class="loading-bar-container">
             <div id="loadingBar" class="loading-bar"></div>
         </div>
         <div id="messageBox" class="message-box"></div>
-
-        <div id="flashcardDisplayArea" class="flashcard-display-area">
-            <div id="flashcardCounter" class="flashcard-counter" style="display: none;"></div>
-            <div id="flashcardWrapper" class="flashcard-wrapper"></div>
-            <div id="flashcardNavigation" class="flashcard-navigation" style="display: none;">
-                <button id="prevButton" class="nav-button" disabled>Previous</button>
-                <button id="nextButton" class="nav-button" disabled>Next</button>
-            </div>
+        <div id="studyGuideArea" class="study-guide-area hidden">
+            <div id="studyGuideContent" class="study-guide-content"></div>
         </div>
+        <div id="startQuizArea" class="start-quiz-area hidden mt-4">
+            <button id="startQuizButton" class="start-quiz-button">Quiz Me!</button>
+        </div>
+    </div>
+
+    <div id="interactiveQuizContainer" class="container hidden">
+        <!-- Interactive quiz content will be rendered here -->
     </div>
   </main>
   
-  <footer class="main-footer" style="width: 100%; text-align: center; padding: 20px; font-size: 0.9rem; background-color: var(--bg-secondary); position: relative; z-index: 10;">
+  <footer class="main-footer">
       <p>&copy; 2025 Shkspr. All rights reserved.</p>
   </footer>
 
@@ -285,29 +316,31 @@ async function loadHeader() {
     }
   } catch (error) {
     console.error('Error loading header:', error);
-    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
+    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header. Make sure ../Structure/header.html exists.</p>';
   }
 }
 
-function initializeFlashcardApp() {
+function initializeStudyGuideApp() {
+    // --- FIX #1: Use a valid and reliable list of models ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
-      'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest', // Fastest model first
+      'gemini-1.5-pro-latest'    // Reliable backup
     ];
     
     const dom = {
+        generatorContainer: document.getElementById('generatorContainer'),
+        interactiveQuizContainer: document.getElementById('interactiveQuizContainer'),
+        startQuizArea: document.getElementById('startQuizArea'),
+        startQuizButton: document.getElementById('startQuizButton'),
+        studyGuideArea: document.getElementById('studyGuideArea'),
+        studyGuideContent: document.getElementById('studyGuideContent'),
         inputText: document.getElementById('inputText'),
         customInstructions: document.getElementById('customInstructions'),
         generateButton: document.getElementById('generateButton'),
         clearButton: document.getElementById('clearButton'),
-        flashcardWrapper: document.getElementById('flashcardWrapper'),
-        flashcardCounter: document.getElementById('flashcardCounter'),
         messageBox: document.getElementById('messageBox'),
         loadingBarContainer: document.getElementById('loadingBarContainer'),
         loadingBar: document.getElementById('loadingBar'),
-        prevButton: document.getElementById('prevButton'),
-        nextButton: document.getElementById('nextButton'),
-        flashcardNavigation: document.getElementById('flashcardNavigation'),
         inputSteps: [document.getElementById('inputStep1'), document.getElementById('inputStep2')],
         inputPrevButton: document.getElementById('inputPrevButton'),
         inputNextButton: document.getElementById('inputNextButton'),
@@ -319,50 +352,78 @@ function initializeFlashcardApp() {
     };
 
     let uploadedFilesData = [];
-    let flashcardsData = [];
-    let currentFlashcardIndex = 0;
+    let quizData = [];
+    let userAnswers = [];
+    let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
+    let studyGuideMarkdown = '';
 
     const saveState = () => {
-        localStorage.setItem('flashcardInput', dom.inputText.value);
-        localStorage.setItem('flashcardInstructions', dom.customInstructions.value);
-        if (flashcardsData && flashcardsData.length > 0) {
-            localStorage.setItem('flashcardsData', JSON.stringify(flashcardsData));
+        localStorage.setItem('studyGuideInput', dom.inputText.value);
+        localStorage.setItem('studyGuideInstructions', dom.customInstructions.value);
+        if (quizData && quizData.length > 0) {
+            localStorage.setItem('studyGuideMarkdown', studyGuideMarkdown);
+            localStorage.setItem('studyGuideQuizData', JSON.stringify(quizData));
         } else {
-            localStorage.removeItem('flashcardsData');
+            localStorage.removeItem('studyGuideMarkdown');
+            localStorage.removeItem('studyGuideQuizData');
         }
     };
 
     const loadState = () => {
-        const savedInput = localStorage.getItem('flashcardInput');
-        const savedInstructions = localStorage.getItem('flashcardInstructions');
-        const savedFlashcards = localStorage.getItem('flashcardsData');
+        const savedInput = localStorage.getItem('studyGuideInput');
+        const savedInstructions = localStorage.getItem('studyGuideInstructions');
+        const savedMarkdown = localStorage.getItem('studyGuideMarkdown');
+        const savedQuizData = localStorage.getItem('studyGuideQuizData');
 
         if (savedInput) dom.inputText.value = savedInput;
         if (savedInstructions) dom.customInstructions.value = savedInstructions;
-        if (savedFlashcards) {
+
+        if (savedMarkdown !== null && savedQuizData) {
             try {
-                flashcardsData = JSON.parse(savedFlashcards);
-                if (Array.isArray(flashcardsData) && flashcardsData.length > 0) {
-                    displayFlashcard(0);
-                } else { flashcardsData = []; }
+                quizData = JSON.parse(savedQuizData);
+                studyGuideMarkdown = savedMarkdown;
+                if (Array.isArray(quizData) && quizData.length > 0) {
+                    if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
+                        dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
+                    } else {
+                        dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the previous content, but a quiz is available.</p>`;
+                    }
+                    dom.studyGuideArea.classList.remove('hidden');
+                    dom.startQuizArea.classList.remove('hidden');
+                }
             } catch (e) {
-                console.error("Failed to parse saved flashcards:", e);
-                flashcardsData = [];
+                console.error("Failed to parse saved data:", e);
+                quizData = [];
+                studyGuideMarkdown = '';
             }
         }
     };
 
+    // --- FIX #3: Robust clearState function ---
     const clearState = () => {
         dom.inputText.value = '';
         dom.customInstructions.value = '';
         uploadedFilesData = [];
-        flashcardsData = [];
-        localStorage.removeItem('flashcardInput');
-        localStorage.removeItem('flashcardInstructions');
-        localStorage.removeItem('flashcardsData');
+        quizData = [];
+        userAnswers = [];
+        studyGuideMarkdown = '';
+        
+        localStorage.removeItem('studyGuideInput');
+        localStorage.removeItem('studyGuideInstructions');
+        localStorage.removeItem('studyGuideMarkdown');
+        localStorage.removeItem('studyGuideQuizData');
+
+        dom.studyGuideContent.innerHTML = '';
+        dom.studyGuideArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
+        
+        // Ensure quiz view is hidden and main view is shown
+        dom.interactiveQuizContainer.innerHTML = '';
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.generatorContainer.classList.remove('hidden');
+        
         updateFileListDisplay();
-        displayFlashcard(0);
         showInputStep(0);
         showMessage('All content cleared.');
     };
@@ -380,40 +441,6 @@ function initializeFlashcardApp() {
         dom.messageBox.className = `message-box ${type}`;
         dom.messageBox.style.display = 'block';
         setTimeout(() => { dom.messageBox.style.display = 'none'; }, 5000);
-    };
-
-    const createFlashcardElement = (frontText, backText) => {
-        const flashcard = document.createElement('div');
-        flashcard.className = 'flashcard';
-        const inner = document.createElement('div');
-        inner.className = 'flashcard-inner';
-        const front = document.createElement('div');
-        front.className = 'flashcard-front';
-        front.textContent = frontText;
-        const back = document.createElement('div');
-        back.className = 'flashcard-back';
-        back.textContent = backText;
-        inner.append(front, back);
-        flashcard.appendChild(inner);
-        flashcard.addEventListener('click', () => inner.parentElement.classList.toggle('flipped'));
-        return flashcard;
-    };
-    
-    const displayFlashcard = (index) => {
-        dom.flashcardWrapper.innerHTML = '';
-        if (flashcardsData.length > 0) {
-            currentFlashcardIndex = index;
-            const card = flashcardsData[currentFlashcardIndex];
-            dom.flashcardWrapper.appendChild(createFlashcardElement(card.front, card.back));
-            dom.flashcardNavigation.style.display = flashcardsData.length > 1 ? 'flex' : 'none';
-            dom.flashcardCounter.textContent = `Flashcard ${currentFlashcardIndex + 1} of ${flashcardsData.length}`;
-            dom.flashcardCounter.style.display = 'block';
-        } else {
-             dom.flashcardNavigation.style.display = 'none';
-             dom.flashcardCounter.style.display = 'none';
-        }
-        dom.prevButton.disabled = currentFlashcardIndex === 0;
-        dom.nextButton.disabled = currentFlashcardIndex === flashcardsData.length - 1;
     };
 
     const showInputStep = (index) => {
@@ -466,50 +493,56 @@ function initializeFlashcardApp() {
         });
     };
     
+    // --- FIX #2: Secure and reliable API call to the backend ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
+
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/Flashcard_API', {
+                // The body now includes the model name for the backend to use
+                const response = await fetch('/api/Study_Guide_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ...payload, model })
                 });
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
+
                 const result = await response.json();
-                if (result.flashcards && result.flashcards.length > 0) {
-                    const validFlashcards = result.flashcards.filter(card =>
-                        card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
-                    );
-                    if (validFlashcards.length > 0) {
-                        return { flashcards: validFlashcards };
-                    }
+                
+                // The backend now handles validation, so we can trust the result
+                if (result.studyGuide !== null && result.quizQuestions) {
+                    return result;
                 }
-                lastError = new Error(`Model ${model} returned no valid flashcards.`);
+                
+                lastError = new Error(`Model ${model} returned an unexpected structure.`);
             } catch (error) {
-                console.warn(error.message);
+                console.warn(`Error with model ${model}:`, error.message);
                 lastError = error;
             }
         }
-        throw lastError || new Error("All API models failed.");
+        throw lastError || new Error("All API models failed to return a valid response.");
     };
 
-    const generateFlashcards = async () => {
+    const generateStudyGuide = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
-        if (!text && uploadedFilesData.length === 0) {
-            showMessage('Please enter text or upload a file.', 'error');
+        if ((!text || text.length < 50) && uploadedFilesData.length === 0) {
+            showMessage('Please provide at least 50 characters of text or upload a file.', 'error');
             return;
         }
-        flashcardsData = [];
-        displayFlashcard(0);
+        quizData = [];
+        dom.studyGuideArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
         dom.loadingBarContainer.style.display = 'block';
         dom.loadingBar.style.width = '0%';
+        
+        showMessage('Generating study guide... This may take a moment.', 'info');
         let progress = 0;
         const interval = setInterval(() => {
             if (progress < 90) { progress += 5; dom.loadingBar.style.width = `${progress}%`; }
@@ -517,28 +550,42 @@ function initializeFlashcardApp() {
 
         try {
             let promptParts = [];
-            if (text) promptParts.push({ text: `From this text: "${text}"` });
+            const basePrompt = "You are an expert tutor and quiz designer. Your task is to perform two actions: First, create a well-structured study guide from the provided material using Markdown. It should include sections like 'Key Concepts', 'Important Definitions', and 'Core Principles'. Second, based ONLY on the study guide you just generated, create a quiz.";
+            
+            promptParts.push({ text: basePrompt });
+            if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
+            
             uploadedFilesData.forEach(file => {
                 if (file.type.startsWith('image/')) {
-                    promptParts.push({ text: `From image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
+                    promptParts.push({ text: `\n\nAnalyze the following image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
                 } else {
-                    promptParts.push({ text: `From text file (${file.name}): "${file.content}"` });
+                    promptParts.push({ text: `\n\nAnalyze the following text from the file (${file.name}):\n"${file.content}"` });
                 }
             });
-            promptParts.push({ text: `\n\nGenerate a list of flashcards from ALL provided content. Ensure at least one flashcard per source. The 'front' is a question/term, 'back' is the answer/definition.` });
-            if (instructions) promptParts.push({ text: `\n\nFollow these instructions: "${instructions}"` });
+            
+            const instructionPrompt = `\n\n${instructions ? `Follow these specific instructions for both the guide and the quiz: "${instructions}".` : ''} The final output MUST be a single JSON object with two keys: "studyGuide" (containing the Markdown text of the guide) and "quizQuestions" (containing a JSON array of quiz objects). Each quiz object must have 'question', 'answer', 'type' ('multiple_choice', 'true_false', or 'short_answer'), and an 'options' array for multiple_choice. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a comma-separated string of keywords. Be flexible and forgiving: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive". This ensures a user who answers "it's repetitive" is graded correctly. For answers that are a list of items (e.g., "a and e"), provide only the core items separated by a comma (e.g., "a,e").`;
+            promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
-            flashcardsData = result.flashcards;
-            displayFlashcard(0);
-            showMessage('Flashcards generated successfully!', 'success');
+            quizData = result.quizQuestions;
+            studyGuideMarkdown = result.studyGuide;
+
+            if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
+                dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
+            } else {
+                dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the provided content, but a quiz is available.</p>`;
+            }
+
+            dom.studyGuideArea.classList.remove('hidden');
+            dom.startQuizArea.classList.remove('hidden');
+            showMessage(`Study guide and quiz generated successfully!`, 'info');
             
             saveState();
 
         } catch (error) {
             console.error('Error:', error);
-            showMessage(`Failed to generate flashcards: ${error.message}`, 'error');
+            showMessage(`Failed to generate content: ${error.message}`, 'error');
         } finally {
             clearInterval(interval);
             dom.loadingBar.style.width = '100%';
@@ -546,15 +593,170 @@ function initializeFlashcardApp() {
         }
     };
 
-    dom.inputText.addEventListener('input', saveState);
-    dom.customInstructions.addEventListener('input', saveState);
+    const startQuiz = () => {
+        userAnswers = new Array(quizData.length).fill(null);
+        currentQuestionIndex = 0;
+        dom.generatorContainer.classList.add('hidden');
+        dom.interactiveQuizContainer.classList.remove('hidden');
+        renderInteractiveQuestion(currentQuestionIndex);
+    };
 
+    const exitQuiz = () => {
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.interactiveQuizContainer.innerHTML = '';
+        dom.generatorContainer.classList.remove('hidden');
+    };
+
+    const renderInteractiveQuestion = (index) => {
+        dom.interactiveQuizContainer.innerHTML = '';
+        const questionData = quizData[index];
+
+        const questionDisplay = document.createElement('div');
+        questionDisplay.className = 'quiz-question-display';
+        questionDisplay.innerHTML = `<h3>Question ${index + 1} of ${quizData.length}</h3><p>${questionData.question}</p>`;
+        
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'quiz-options-container';
+
+        let options = [];
+        if (questionData.type === 'true_false') {
+            options = ['True', 'False'];
+        } else if (questionData.type === 'multiple_choice' && questionData.options) {
+            options = questionData.options;
+        }
+
+        if (options.length > 0) {
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn';
+                btn.textContent = option;
+                if (userAnswers[index] === option) btn.classList.add('selected');
+                btn.addEventListener('click', () => {
+                    userAnswers[index] = option;
+                    optionsContainer.querySelectorAll('.quiz-option-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+                optionsContainer.appendChild(btn);
+            });
+        } else if (questionData.type === 'short_answer') {
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = "Type your answer here...";
+            textarea.value = userAnswers[index] || '';
+            textarea.addEventListener('input', () => { userAnswers[index] = textarea.value; });
+            optionsContainer.appendChild(textarea);
+        }
+
+        const navigation = document.createElement('div');
+        navigation.className = 'quiz-navigation';
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'nav-button';
+        prevBtn.textContent = 'Previous';
+        prevBtn.disabled = index === 0;
+        prevBtn.addEventListener('click', () => renderInteractiveQuestion(index - 1));
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'nav-button';
+        if (index === quizData.length - 1) {
+            nextBtn.textContent = 'Submit Quiz';
+            nextBtn.addEventListener('click', submitQuiz);
+        } else {
+            nextBtn.textContent = 'Next';
+            nextBtn.addEventListener('click', () => renderInteractiveQuestion(index + 1));
+        }
+        
+        const exitBtn = document.createElement('button');
+        exitBtn.className = 'exit-quiz-button';
+        exitBtn.textContent = 'Exit Quiz';
+        exitBtn.addEventListener('click', exitQuiz);
+
+        navigation.append(prevBtn, nextBtn);
+        questionDisplay.appendChild(optionsContainer);
+        dom.interactiveQuizContainer.append(questionDisplay, navigation, exitBtn);
+    };
+
+    const gradeShortAnswer = (userAnswer, correctAnswer) => {
+        if (!userAnswer || !correctAnswer) return false;
+
+        const normalizedUserAnswer = userAnswer
+            .toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ")
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const keywords = correctAnswer
+            .toLowerCase()
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k);
+
+        if (keywords.length === 0) return false;
+
+        const isComponentBased = keywords.every(k => k.length <= 3);
+
+        if (isComponentBased) {
+            const userAnswerParts = normalizedUserAnswer.split(' ');
+            return keywords.every(key => userAnswerParts.includes(key));
+        } else {
+            return keywords.some(key => normalizedUserAnswer.includes(key));
+        }
+    };
+
+    const submitQuiz = () => {
+        let score = 0;
+        quizData.forEach((q, i) => {
+            if (q.type === 'short_answer') {
+                if (gradeShortAnswer(userAnswers[i], q.answer)) score++;
+            } else {
+                if (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase()) {
+                    score++;
+                }
+            }
+        });
+
+        dom.interactiveQuizContainer.innerHTML = '';
+        const resultsDiv = document.createElement('div');
+        resultsDiv.className = 'quiz-results';
+        resultsDiv.innerHTML = `<h2>Quiz Complete!</h2><p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem;">You scored ${score} out of ${quizData.length}</p>`;
+        
+        quizData.forEach((q, i) => {
+            const isCorrect = q.type === 'short_answer' 
+                ? gradeShortAnswer(userAnswers[i], q.answer) 
+                : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
+            
+            const item = document.createElement('div');
+            item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
+            
+            let displayAnswer = q.answer;
+            if (q.type === 'true_false') {
+                displayAnswer = displayAnswer.charAt(0).toUpperCase() + displayAnswer.slice(1);
+            } else if (q.type === 'short_answer') {
+                displayAnswer = displayAnswer.replace(/,/g, ' / ');
+            }
+
+            item.innerHTML = `
+                <p><strong>Q:</strong> ${q.question}</p>
+                <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
+                <p><strong>Correct Answer:</strong> ${displayAnswer}</p>
+            `;
+            resultsDiv.appendChild(item);
+        });
+
+        const exitBtn = document.createElement('button');
+        exitBtn.className = 'nav-button mt-4 mx-auto';
+        exitBtn.textContent = 'Back to Generator';
+        exitBtn.addEventListener('click', exitQuiz);
+        resultsDiv.appendChild(exitBtn);
+
+        dom.interactiveQuizContainer.appendChild(resultsDiv);
+    };
+
+    // --- Event Listeners ---
     dom.fileInput.addEventListener('change', async (e) => {
         for (const file of e.target.files) {
             try {
                 const { type, content } = await readFileContent(file);
                 uploadedFilesData.push({ id: Date.now() + Math.random(), name: file.name, type, content });
-                showMessage(`Loaded "${file.name}"`, 'success');
+                showMessage(`Loaded "${file.name}"`, 'info');
             } catch (error) { showMessage(`Error loading "${file.name}": ${error.message}`, 'error'); }
         }
         updateFileListDisplay();
@@ -569,7 +771,6 @@ function initializeFlashcardApp() {
         }
     });
     dom.clearFileButton.addEventListener('click', () => { uploadedFilesData = []; updateFileListDisplay(); });
-
     dom.inputText.addEventListener('paste', (e) => {
         for (const item of e.clipboardData.items) {
             if (item.kind === 'file' && item.type.startsWith('image/')) {
@@ -589,33 +790,23 @@ function initializeFlashcardApp() {
 
     dom.inputPrevButton.addEventListener('click', () => showInputStep(currentInputStepIndex - 1));
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
-    dom.prevButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex - 1));
-    dom.nextButton.addEventListener('click', () => displayFlashcard(currentFlashcardIndex + 1));
-    dom.generateButton.addEventListener('click', generateFlashcards);
+    dom.generateButton.addEventListener('click', generateStudyGuide);
+    dom.startQuizButton.addEventListener('click', startQuiz);
     
     dom.clearButton.addEventListener('click', clearState);
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
 
+    // Initialization
     showInputStep(0);
-    dom.generateButton.style.display = 'none';
     updateFileListDisplay();
-    
     loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     loadHeader();
-    initializeFlashcardApp();
+    initializeStudyGuideApp();
 });
 </script>
-
-
-<!-- Vercel Analytics -->
-<script>
-  window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
-  window.va('set', 'mode', 'auto');
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-    
-    
 </body>
 </html>
