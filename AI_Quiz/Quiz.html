@@ -401,7 +401,9 @@ function initializeQuizApp() {
         dom.messageBox.textContent = message;
         dom.messageBox.className = `message-box ${type}`;
         dom.messageBox.style.display = 'block';
-        setTimeout(() => { dom.messageBox.style.display = 'none'; }, 5000);
+        // Keep error messages on screen longer
+        const timeoutDuration = type === 'error' ? 10000 : 5000;
+        setTimeout(() => { dom.messageBox.style.display = 'none'; }, timeoutDuration);
     };
 
     const showInputStep = (index) => {
@@ -456,10 +458,13 @@ function initializeQuizApp() {
     
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
-        let lastError = null;
+        // --- FIX: Collect all unique errors for better diagnostics ---
+        const encounteredErrors = new Set();
+
         for (const model of modelsToTry) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+            // --- FIX: Increase timeout to 30 seconds ---
+            const timeoutId = setTimeout(() => controller.abort(), 30000); 
 
             console.log(`Attempting API call with model: ${model}`);
             try {
@@ -473,7 +478,7 @@ function initializeQuizApp() {
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    const errorBody = await response.json();
+                    const errorBody = await response.json().catch(() => ({ error: `Server error (${response.status}) with no JSON body` }));
                     throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
                 
@@ -503,7 +508,6 @@ function initializeQuizApp() {
                     throw new Error(`Model ${model} returned invalid JSON. Retrying...`);
                 }
 
-                // --- FIX: Check for a structured error message from the AI ---
                 if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0 && parsedQuestions[0].error) {
                     throw new Error(`AI Error: ${parsedQuestions[0].error}`);
                 }
@@ -515,19 +519,22 @@ function initializeQuizApp() {
                         return { quizQuestions: validQuestions };
                     }
                 }
-                lastError = new Error(`Model ${model} returned no valid questions.`);
+                throw new Error(`Model ${model} returned no valid questions.`);
             } catch (error) {
                 clearTimeout(timeoutId);
+                let errorMessage;
                 if (error.name === 'AbortError') {
-                    console.warn(`Request with model ${model} timed out. Trying next model.`);
-                    lastError = new Error(`Model ${model} timed out.`);
+                    errorMessage = `Request with model ${model} timed out.`;
                 } else {
-                    console.warn(error.message);
-                    lastError = error;
+                    errorMessage = error.message;
                 }
+                console.warn(errorMessage);
+                encounteredErrors.add(errorMessage);
             }
         }
-        throw lastError || new Error("All API models failed after multiple retries.");
+        // --- FIX: Throw a comprehensive error message if all retries fail ---
+        const combinedErrors = Array.from(encounteredErrors).join('; ');
+        throw new Error(`All API models failed. Please try again. (Errors: ${combinedErrors})`);
     };
 
     const generateQuiz = async () => {
@@ -558,7 +565,6 @@ function initializeQuizApp() {
                 }
             });
 
-            // --- FIX: Enhanced prompt to prevent empty responses ---
             let prompt = `You are an expert quiz designer. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
             
 Each object must have 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice', include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a concise string of keywords, comma-separated.
