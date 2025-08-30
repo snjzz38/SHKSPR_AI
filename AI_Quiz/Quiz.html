@@ -285,6 +285,7 @@ async function loadHeader() {
 }
 
 function initializeQuizApp() {
+    // --- UNCHANGED: Keeping the original model list as requested ---
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-flash-lite', 'gemini-2.5-flash',
       'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
@@ -319,7 +320,6 @@ function initializeQuizApp() {
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
 
-    // --- NEW: LocalStorage Functions ---
     const saveState = () => {
         localStorage.setItem('quizInput', dom.inputText.value);
         localStorage.setItem('quizInstructions', dom.customInstructions.value);
@@ -441,6 +441,7 @@ function initializeQuizApp() {
         });
     };
     
+    // --- FIX: Updated API call logic to handle the new object structure ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -457,9 +458,11 @@ function initializeQuizApp() {
                     throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
                 }
                 const result = await response.json();
-                if (result.quizQuestions && result.quizQuestions.length > 0) {
+                // Check for the new expected structure from the backend
+                if (result.quizQuestions && Array.isArray(result.quizQuestions) && result.quizQuestions.length > 0) {
                     const validQuestions = result.quizQuestions.filter(q => q.question && q.answer && q.question.trim() !== '' && (typeof q.answer === 'string' ? q.answer.trim() !== '' : q.answer.primary_answer.trim() !== ''));
                     if (validQuestions.length > 0) {
+                        // Return the entire result object, which now contains the quiz
                         return { quizQuestions: validQuestions };
                     }
                 }
@@ -489,7 +492,9 @@ function initializeQuizApp() {
 
         try {
             let promptParts = [];
-            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise. If the provided material is too short or unsuitable for generating a meaningful quiz, return a single question object explaining the issue.";
+            
+            // --- FIX: Replicate the more efficient two-step prompting strategy ---
+            const basePrompt = "You are an expert quiz designer. Your task is a two-step process. First, internally synthesize the provided material into a list of key concepts, facts, and principles. Second, using ONLY that internal summary, create a quiz. This method ensures accuracy and relevance.";
             
             promptParts.push({ text: basePrompt });
             if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
@@ -502,15 +507,17 @@ function initializeQuizApp() {
                 }
             });
             
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
+            // --- FIX: Update the final instruction to ask for a JSON object, not just an array ---
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate the quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The final output MUST be a single JSON object with one key: "quizQuestions". The value of "quizQuestions" must be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
+            // Extract the quiz questions from the returned object
             quizData = result.quizQuestions;
             renderQuizPreview(quizData);
             showMessage(`Quiz generated successfully! (${quizData.length} questions)`, 'info');
-            saveState(); // --- NEW: Save the generated quiz ---
+            saveState();
 
         } catch (error) {
             console.error('Error:', error);
@@ -750,10 +757,7 @@ function initializeQuizApp() {
     dom.generateButton.addEventListener('click', generateQuiz);
     dom.startQuizButton.addEventListener('click', startQuiz);
     
-    // --- UPDATED: Use the new clearState function ---
     dom.clearButton.addEventListener('click', clearState);
-
-    // --- NEW: Add event listeners to auto-save input ---
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
 
@@ -761,7 +765,7 @@ function initializeQuizApp() {
     showInputStep(0);
     dom.generateButton.style.display = 'none';
     updateFileListDisplay();
-    loadState(); // --- NEW: Load saved state on startup ---
+    loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -771,3 +775,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+```
