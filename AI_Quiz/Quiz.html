@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Quiz Builder</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <title>AI Quiz Builder</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
@@ -102,13 +103,13 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button, .start-quiz-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .copy-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .copy-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .copy-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
         #exitButton { width: 100%; margin-top: 1rem; }
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
@@ -141,7 +142,13 @@
         .result-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-bg); }
         .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
         .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
-        .start-quiz-area { text-align: center; }
+        .start-quiz-area {
+            text-align: center;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
         .message-box {
             padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
             text-align: left; border: 1px solid;
@@ -164,11 +171,31 @@
             width: 100%; text-align: center; padding: 20px; font-size: 0.9rem;
             background-color: var(--bg-secondary); position: relative; z-index: 10;
         }
+        /* --- NEW: Styles for small copy button --- */
+        .copy-button.small {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            box-shadow: none;
+        }
+        .copy-button.small:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
 
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button, .start-quiz-button, #exitButton { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, #exitButton, .copy-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
             .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
@@ -236,6 +263,8 @@
         </div>
         <div id="startQuizArea" class="start-quiz-area hidden mt-4">
             <button id="startQuizButton" class="start-quiz-button">Start Interactive Quiz</button>
+            <!-- NEW: Copy button added here -->
+            <button id="copyQuizButton" class="copy-button">Copy Quiz</button>
         </div>
     </div>
 
@@ -311,6 +340,8 @@ function initializeQuizApp() {
         clearFileButton: document.getElementById('clearFileButton'),
         fileList: document.getElementById('fileList'),
         toggleFileListButton: document.getElementById('toggleFileListButton'),
+        // --- NEW: Add copy button to DOM object ---
+        copyQuizButton: document.getElementById('copyQuizButton'),
     };
 
     let uploadedFilesData = [];
@@ -510,7 +541,6 @@ function initializeQuizApp() {
                 }
             });
             
-            // --- FIX: Use the robust, simple prompt for short answers ---
             const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a simple, comma-separated string of keywords. Be flexible: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive".`;
             promptParts.push({ text: instructionPrompt });
             
@@ -549,7 +579,6 @@ function initializeQuizApp() {
 
             const answerContainer = document.createElement('div');
             answerContainer.className = 'quiz-answer hidden';
-            // --- FIX: Display the simple string answer ---
             let answerText = q.answer.replace(/,/g, ' / ');
             answerContainer.innerHTML = `<p><strong>Answer:</strong> ${answerText}</p>`;
             
@@ -589,9 +618,23 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.innerHTML = '';
         const questionData = quizData[index];
 
+        // --- NEW: Create a header for the question and copy button ---
+        const quizHeader = document.createElement('div');
+        quizHeader.className = 'quiz-header';
+        quizHeader.innerHTML = `<h3>Question ${index + 1} of ${quizData.length}</h3>`;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-button small';
+        copyBtn.textContent = 'Copy Quiz';
+        copyBtn.addEventListener('click', copyQuiz);
+        quizHeader.appendChild(copyBtn);
+
         const questionDisplay = document.createElement('div');
         questionDisplay.className = 'quiz-question-display';
-        questionDisplay.innerHTML = `<h3>Question ${index + 1} of ${quizData.length}</h3><p>${questionData.question}</p>`;
+        questionDisplay.appendChild(quizHeader);
+        const questionP = document.createElement('p');
+        questionP.textContent = questionData.question;
+        questionDisplay.appendChild(questionP);
         
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'quiz-options-container';
@@ -647,7 +690,6 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.append(questionDisplay, navigation, exitBtn);
     };
 
-    // --- FIX: Use the robust grading logic from Study Guide ---
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
         if (!userAnswer || !correctAnswer) return false;
 
@@ -688,7 +730,6 @@ function initializeQuizApp() {
             const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
-            // --- FIX: Display the simple string answer ---
             let correctAnswerText = q.answer.replace(/,/g, ' / ');
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
@@ -706,6 +747,37 @@ function initializeQuizApp() {
         resultsDiv.appendChild(exitBtn);
 
         dom.interactiveQuizContainer.appendChild(resultsDiv);
+    };
+
+    // --- NEW: Function to format and copy the quiz ---
+    const copyQuiz = async (event) => {
+        if (!quizData || quizData.length === 0) return;
+        
+        let quizText = "Quiz\n====================\n\n";
+        quizData.forEach((q, index) => {
+            quizText += `Question ${index + 1}: ${q.question}\n`;
+            if (q.type === 'multiple_choice' && q.options) {
+                q.options.forEach(opt => {
+                    quizText += `- ${opt}\n`;
+                });
+            }
+            let answerText = q.answer;
+            if (q.type === 'short_answer') {
+                answerText = answerText.replace(/,/g, ' / ');
+            }
+            quizText += `\nCorrect Answer: ${answerText}\n`;
+            quizText += "--------------------\n\n";
+        });
+
+        try {
+            await navigator.clipboard.writeText(quizText);
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => button.textContent = originalText, 2000);
+        } catch (err) {
+            showMessage('Failed to copy quiz.', 'error');
+        }
     };
 
     // --- Event Listeners ---
@@ -754,6 +826,9 @@ function initializeQuizApp() {
     dom.clearButton.addEventListener('click', clearState);
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
+    
+    // --- NEW: Add event listener for the main copy button ---
+    dom.copyQuizButton.addEventListener('click', copyQuiz);
 
     // Initialization
     showInputStep(0);
