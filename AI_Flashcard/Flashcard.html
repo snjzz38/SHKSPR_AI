@@ -291,7 +291,7 @@ async function loadHeader() {
 }
 
 function initializeFlashcardApp() {
-    // --- FIX: Use the proven, reliable model list ---
+    // --- UNCHANGED: Keeping the original model list as requested ---
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-flash-lite',
       'gemini-2.5-flash',
@@ -474,7 +474,7 @@ function initializeFlashcardApp() {
         });
     };
     
-    // --- FIX: Use the efficient API call method ---
+    // --- FIX: Use the efficient and robust API call method ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -487,12 +487,20 @@ function initializeFlashcardApp() {
                     body: JSON.stringify({ ...payload, model })
                 });
                 if (!response.ok) {
-                    const errorBody = await response.json();
+                    const errorBody = await response.json().catch(() => ({ error: `Server error (${response.status}) with no JSON body` }));
                     throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
                 const result = await response.json();
-                if (result.flashcards && result.flashcards.length > 0) {
-                    const validFlashcards = result.flashcards.filter(card =>
+                
+                let flashcardsArray = null;
+                if (result.flashcards && Array.isArray(result.flashcards)) {
+                    flashcardsArray = result.flashcards;
+                } else if (Array.isArray(result)) {
+                    flashcardsArray = result;
+                }
+
+                if (flashcardsArray && flashcardsArray.length > 0) {
+                    const validFlashcards = flashcardsArray.filter(card =>
                         card && card.front && card.back && card.front.trim() !== '' && card.back.trim() !== ''
                     );
                     if (validFlashcards.length > 0) {
@@ -534,6 +542,7 @@ function initializeFlashcardApp() {
                     promptParts.push({ text: `From text file (${file.name}): "${file.content}"` });
                 }
             });
+            // --- FIX: Use the more explicit and robust prompt ---
             promptParts.push({ text: `\n\nGenerate a list of flashcards from ALL provided content. The output MUST be a JSON object with a single key "flashcards" which contains an array of objects. Each object must have a 'front' (question/term) and a 'back' (answer/definition).` });
             if (instructions) promptParts.push({ text: `\n\nFollow these instructions: "${instructions}"` });
             
