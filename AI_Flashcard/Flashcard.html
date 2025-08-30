@@ -466,7 +466,7 @@ function initializeFlashcardApp() {
     };
     
     const callApiWithRetries = async (payload) => {
-        // --- FIX: Remove the random shuffle ---
+        // --- FIX: Remove the random shuffle and use a prioritized list ---
         let modelsToTry = [...ALL_GEMINI_MODELS];
         let lastError = null;
         for (const model of modelsToTry) {
@@ -526,17 +526,23 @@ function initializeFlashcardApp() {
 
         try {
             let promptParts = [];
-            if (text) promptParts.push({ text: `From this text: "${text}"` });
+            // --- FIX: Add the "mental roadmap" instruction to the base prompt ---
+            const basePrompt = "You are an expert flashcard designer. Your task is a two-step process. First, internally synthesize the provided material into a list of key terms and concepts. Second, using ONLY that internal summary, create the flashcards.";
+            
+            promptParts.push({ text: basePrompt });
+            if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
+            
             uploadedFilesData.forEach(file => {
                 if (file.type.startsWith('image/')) {
-                    promptParts.push({ text: `From image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
+                    promptParts.push({ text: `\n\nAnalyze the following image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
                 } else {
-                    promptParts.push({ text: `From text file (${file.name}): "${file.content}"` });
+                    promptParts.push({ text: `\n\nAnalyze the following text from the file (${file.name}):\n"${file.content}"` });
                 }
             });
-            // --- FIX: Use the more explicit and robust prompt ---
-            promptParts.push({ text: `\n\nGenerate a list of flashcards from ALL provided content. The output MUST be a JSON object with a single key "flashcards" which contains an array of objects. Each object must have a 'front' (question/term) and a 'back' (answer/definition).` });
-            if (instructions) promptParts.push({ text: `\n\nFollow these instructions: "${instructions}"` });
+            
+            // --- FIX: Use the more explicit and robust prompt for the final output ---
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate the flashcards. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The final output MUST be a JSON object with a single key "flashcards" which contains an array of objects. Each object must have a 'front' (question/term) and a 'back' (answer/definition).`;
+            promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
