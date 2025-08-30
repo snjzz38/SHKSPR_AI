@@ -110,7 +110,7 @@
         .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
         .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        #exitButton { width: 100%; margin-top: 1rem; } /* FIX: New ID for layout */
+        #exitButton { width: 100%; margin-top: 1rem; }
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         .quiz-question {
             background-color: var(--card-bg);
@@ -173,7 +173,6 @@
         }
     </style>
     <script>
-        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -183,7 +182,6 @@
     </script>
 </head>
 <body>
-  <!-- Container for the dynamically loaded header -->
   <div id="header-container"></div>
 
   <main class="main-content animate-on-load">
@@ -194,7 +192,6 @@
 
     <div id="generatorContainer" class="container">
         <div class="input-step-container">
-            <!-- Step 1: Material Upload -->
             <div id="inputStep1" class="input-step active">
                 <h2>Step 1: Upload Material</h2>
                 <p class="subtitle">Provide the content from which the quiz questions will be generated.</p>
@@ -214,7 +211,6 @@
                 </div>
             </div>
 
-            <!-- Step 2: Custom Instructions -->
             <div id="inputStep2" class="input-step">
                 <h2>Step 2: Custom Instructions (Optional)</h2>
                 <p class="subtitle">Guide the AI on the type and difficulty of the quiz.</p>
@@ -290,7 +286,7 @@ async function loadHeader() {
 
 function initializeQuizApp() {
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
+      'gemini-2.5-flash-lite', 'gemini-2.5-flash',
       'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
     ];
     
@@ -322,6 +318,63 @@ function initializeQuizApp() {
     let userAnswers = [];
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
+
+    // --- NEW: LocalStorage Functions ---
+    const saveState = () => {
+        localStorage.setItem('quizInput', dom.inputText.value);
+        localStorage.setItem('quizInstructions', dom.customInstructions.value);
+        if (quizData && quizData.length > 0) {
+            localStorage.setItem('quizData', JSON.stringify(quizData));
+        } else {
+            localStorage.removeItem('quizData');
+        }
+    };
+
+    const loadState = () => {
+        const savedInput = localStorage.getItem('quizInput');
+        const savedInstructions = localStorage.getItem('quizInstructions');
+        const savedQuizData = localStorage.getItem('quizData');
+
+        if (savedInput) dom.inputText.value = savedInput;
+        if (savedInstructions) dom.customInstructions.value = savedInstructions;
+        if (savedQuizData) {
+            try {
+                quizData = JSON.parse(savedQuizData);
+                if (Array.isArray(quizData) && quizData.length > 0) {
+                    renderQuizPreview(quizData);
+                } else {
+                    quizData = [];
+                }
+            } catch (e) {
+                console.error("Failed to parse saved quiz data:", e);
+                quizData = [];
+            }
+        }
+    };
+
+    const clearState = () => {
+        dom.inputText.value = '';
+        dom.customInstructions.value = '';
+        uploadedFilesData = [];
+        quizData = [];
+        userAnswers = [];
+        
+        localStorage.removeItem('quizInput');
+        localStorage.removeItem('quizInstructions');
+        localStorage.removeItem('quizData');
+
+        dom.quizPreviewArea.innerHTML = '';
+        dom.quizPreviewArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
+        
+        dom.interactiveQuizContainer.innerHTML = '';
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.generatorContainer.classList.remove('hidden');
+        
+        updateFileListDisplay();
+        showInputStep(0);
+        showMessage('All content cleared.');
+    };
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -365,7 +418,7 @@ function initializeQuizApp() {
                     resolve({ type: 'text/plain', content: text });
                 } catch (e) { reject(e); }
             } else if (file.type.startsWith('text/')) {
-                reader.onload = (e) => resolve({ type: file.type, content: e.target.result });
+                reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
                 reader.readAsText(file);
             } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
         });
@@ -422,10 +475,6 @@ function initializeQuizApp() {
     const generateQuiz = async () => {
         const text = dom.inputText.value.trim();
         const instructions = dom.customInstructions.value.trim();
-        if ((!text || text.length < 50) && uploadedFilesData.length === 0) {
-            showMessage('Please provide at least 50 characters of text or upload a file.', 'error');
-            return;
-        }
         quizData = [];
         dom.quizPreviewArea.classList.add('hidden');
         dom.startQuizArea.classList.add('hidden');
@@ -461,6 +510,7 @@ function initializeQuizApp() {
             quizData = result.quizQuestions;
             renderQuizPreview(quizData);
             showMessage(`Quiz generated successfully! (${quizData.length} questions)`, 'info');
+            saveState(); // --- NEW: Save the generated quiz ---
 
         } catch (error) {
             console.error('Error:', error);
@@ -583,8 +633,8 @@ function initializeQuizApp() {
         }
         
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button'; // Use the standard nav-button class for color
-        exitBtn.id = 'exitButton'; // Use an ID for specific layout styles
+        exitBtn.className = 'nav-button';
+        exitBtn.id = 'exitButton';
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
@@ -648,8 +698,8 @@ function initializeQuizApp() {
         });
 
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button mt-4 mx-auto'; // Use standard nav-button for color
-        exitBtn.id = 'exitButton'; // Use ID for layout
+        exitBtn.className = 'nav-button mt-4 mx-auto';
+        exitBtn.id = 'exitButton';
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
         resultsDiv.appendChild(exitBtn);
@@ -699,26 +749,19 @@ function initializeQuizApp() {
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateQuiz);
     dom.startQuizButton.addEventListener('click', startQuiz);
-    dom.clearButton.addEventListener('click', () => {
-        dom.inputText.value = '';
-        dom.customInstructions.value = '';
-        uploadedFilesData = [];
-        quizData = [];
-        userAnswers = [];
-        dom.quizPreviewArea.innerHTML = '';
-        dom.quizPreviewArea.classList.add('hidden');
-        dom.startQuizArea.classList.add('hidden');
-        dom.interactiveQuizContainer.classList.add('hidden');
-        dom.generatorContainer.classList.remove('hidden');
-        updateFileListDisplay();
-        showInputStep(0);
-        showMessage('All content cleared.');
-    });
+    
+    // --- UPDATED: Use the new clearState function ---
+    dom.clearButton.addEventListener('click', clearState);
+
+    // --- NEW: Add event listeners to auto-save input ---
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
 
     // Initialization
     showInputStep(0);
     dom.generateButton.style.display = 'none';
     updateFileListDisplay();
+    loadState(); // --- NEW: Load saved state on startup ---
 }
 
 document.addEventListener('DOMContentLoaded', () => {
