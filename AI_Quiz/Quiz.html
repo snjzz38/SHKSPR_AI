@@ -285,7 +285,6 @@ async function loadHeader() {
 }
 
 function initializeQuizApp() {
-    // --- UNCHANGED: Keeping the original model list as requested ---
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-flash-lite', 'gemini-2.5-flash',
       'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
@@ -441,7 +440,6 @@ function initializeQuizApp() {
         });
     };
     
-    // --- FIX: Updated API call logic to handle the new object structure ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -458,11 +456,17 @@ function initializeQuizApp() {
                     throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
                 }
                 const result = await response.json();
-                // Check for the new expected structure from the backend
-                if (result.quizQuestions && Array.isArray(result.quizQuestions) && result.quizQuestions.length > 0) {
-                    const validQuestions = result.quizQuestions.filter(q => q.question && q.answer && q.question.trim() !== '' && (typeof q.answer === 'string' ? q.answer.trim() !== '' : q.answer.primary_answer.trim() !== ''));
+                
+                let questionsArray = null;
+                if (result.quizQuestions && Array.isArray(result.quizQuestions)) {
+                    questionsArray = result.quizQuestions;
+                } else if (Array.isArray(result)) {
+                    questionsArray = result;
+                }
+
+                if (questionsArray && questionsArray.length > 0) {
+                    const validQuestions = questionsArray.filter(q => q.question && q.answer && q.question.trim() !== '');
                     if (validQuestions.length > 0) {
-                        // Return the entire result object, which now contains the quiz
                         return { quizQuestions: validQuestions };
                     }
                 }
@@ -493,8 +497,7 @@ function initializeQuizApp() {
         try {
             let promptParts = [];
             
-            // --- FIX: Replicate the more efficient two-step prompting strategy ---
-            const basePrompt = "You are an expert quiz designer. Your task is a two-step process. First, internally synthesize the provided material into a list of key concepts, facts, and principles. Second, using ONLY that internal summary, create a quiz. This method ensures accuracy and relevance.";
+            const basePrompt = "You are an expert quiz designer. Your task is to create a well-structured quiz from the provided material. First, internally synthesize the material into key concepts. Second, using ONLY that internal summary, create the quiz questions.";
             
             promptParts.push({ text: basePrompt });
             if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
@@ -507,13 +510,12 @@ function initializeQuizApp() {
                 }
             });
             
-            // --- FIX: Update the final instruction to ask for a JSON object, not just an array ---
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate the quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The final output MUST be a single JSON object with one key: "quizQuestions". The value of "quizQuestions" must be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
+            // --- FIX: Use the robust, simple prompt for short answers ---
+            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a simple, comma-separated string of keywords. Be flexible: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive".`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
-            // Extract the quiz questions from the returned object
             quizData = result.quizQuestions;
             renderQuizPreview(quizData);
             showMessage(`Quiz generated successfully! (${quizData.length} questions)`, 'info');
@@ -547,13 +549,8 @@ function initializeQuizApp() {
 
             const answerContainer = document.createElement('div');
             answerContainer.className = 'quiz-answer hidden';
-            let answerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    answerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            // --- FIX: Display the simple string answer ---
+            let answerText = q.answer.replace(/,/g, ' / ');
             answerContainer.innerHTML = `<p><strong>Answer:</strong> ${answerText}</p>`;
             
             const toggleButton = document.createElement('button');
@@ -650,22 +647,24 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.append(questionDisplay, navigation, exitBtn);
     };
 
+    // --- FIX: Use the robust grading logic from Study Guide ---
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
-        if (!userAnswer) return false;
-        const userAnswerLower = userAnswer.toLowerCase();
-        try {
-            const answerObj = JSON.parse(correctAnswer);
-            
-            const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
-            const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
+        if (!userAnswer || !correctAnswer) return false;
 
-            const hasRequired = allKeywords.some(keyword => userAnswerLower.includes(keyword));
-            const hasForbidden = forbiddenKeywords.length > 0 ? forbiddenKeywords.some(keyword => userAnswerLower.includes(keyword)) : false;
-            
-            return hasRequired && !hasForbidden;
-        } catch (e) {
-            return correctAnswer.toLowerCase().split(',').map(k => k.trim()).some(k => userAnswerLower.includes(k));
-        }
+        const normalizedUserAnswer = userAnswer
+            .toLowerCase()
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ")
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const keywords = correctAnswer
+            .toLowerCase()
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k);
+
+        if (keywords.length === 0) return false;
+        return keywords.some(key => normalizedUserAnswer.includes(key));
     };
 
     const submitQuiz = () => {
@@ -689,13 +688,8 @@ function initializeQuizApp() {
             const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
-            let correctAnswerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    correctAnswerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
+            // --- FIX: Display the simple string answer ---
+            let correctAnswerText = q.answer.replace(/,/g, ' / ');
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
                 <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
@@ -775,4 +769,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-```
