@@ -12,6 +12,7 @@
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
+            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
         body.theme-cyan {
             --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
@@ -32,6 +33,7 @@
         body.theme-red {
             --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
             --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
+            --destructive-bg: #991b1b; --destructive-text: #fca5a5;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -60,7 +62,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -103,15 +105,20 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button, .start-quiz-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        #exitButton { width: 100%; margin-top: 1rem; } /* FIX: New ID for layout */
+        .exit-quiz-button {
+            background-color: var(--destructive-bg); color: var(--destructive-text);
+            width: 100%; margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(var(--destructive-glow-rgb), 0.4);
+        }
+        .exit-quiz-button:hover { box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6); }
         .quiz-preview-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         .quiz-question {
             background-color: var(--card-bg);
@@ -140,6 +147,10 @@
         .quiz-results { text-align: left; }
         .quiz-results h2 { font-size: 1.8rem; color: var(--accent); text-align: center; margin-bottom: 1.5rem; }
         .result-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-bg); }
+        .result-item p { 
+            margin-bottom: 0.5rem; 
+            overflow-wrap: break-word;
+        }
         .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
         .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
         .start-quiz-area { text-align: center; }
@@ -169,12 +180,11 @@
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button, .start-quiz-button, #exitButton { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
             .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
     <script>
-        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -184,7 +194,6 @@
     </script>
 </head>
 <body>
-  <!-- Container for the dynamically loaded header -->
   <div id="header-container"></div>
 
   <main class="main-content animate-on-load">
@@ -195,7 +204,6 @@
 
     <div id="generatorContainer" class="container">
         <div class="input-step-container">
-            <!-- Step 1: Material Upload -->
             <div id="inputStep1" class="input-step active">
                 <h2>Step 1: Upload Material</h2>
                 <p class="subtitle">Provide the content from which the quiz questions will be generated.</p>
@@ -215,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- Step 2: Custom Instructions -->
             <div id="inputStep2" class="input-step">
                 <h2>Step 2: Custom Instructions (Optional)</h2>
                 <p class="subtitle">Guide the AI on the type and difficulty of the quiz.</p>
@@ -290,9 +297,10 @@ async function loadHeader() {
 }
 
 function initializeQuizApp() {
+    // --- FIX #1: SPEED - Prioritize the fastest models ---
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
-      'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-latest', // Fastest model first
+      'gemini-1.5-pro-latest'    // Reliable backup
     ];
     
     const dom = {
@@ -323,6 +331,61 @@ function initializeQuizApp() {
     let userAnswers = [];
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
+
+    const saveState = () => {
+        localStorage.setItem('quizInput', dom.inputText.value);
+        localStorage.setItem('quizInstructions', dom.customInstructions.value);
+        if (quizData && quizData.length > 0) {
+            localStorage.setItem('quizData', JSON.stringify(quizData));
+        } else {
+            localStorage.removeItem('quizData');
+        }
+    };
+
+    const loadState = () => {
+        const savedInput = localStorage.getItem('quizInput');
+        const savedInstructions = localStorage.getItem('quizInstructions');
+        const savedQuizData = localStorage.getItem('quizData');
+
+        if (savedInput) dom.inputText.value = savedInput;
+        if (savedInstructions) dom.customInstructions.value = savedInstructions;
+        if (savedQuizData) {
+            try {
+                quizData = JSON.parse(savedQuizData);
+                if (Array.isArray(quizData) && quizData.length > 0) {
+                    renderQuizPreview(quizData);
+                } else { quizData = []; }
+            } catch (e) {
+                console.error("Failed to parse saved quiz data:", e);
+                quizData = [];
+            }
+        }
+    };
+
+    // --- FIX #3: Robust clearState function ---
+    const clearState = () => {
+        dom.inputText.value = '';
+        dom.customInstructions.value = '';
+        uploadedFilesData = [];
+        quizData = [];
+        userAnswers = [];
+        
+        localStorage.removeItem('quizInput');
+        localStorage.removeItem('quizInstructions');
+        localStorage.removeItem('quizData');
+
+        dom.quizPreviewArea.innerHTML = '';
+        dom.quizPreviewArea.classList.add('hidden');
+        dom.startQuizArea.classList.add('hidden');
+        
+        dom.interactiveQuizContainer.innerHTML = '';
+        dom.interactiveQuizContainer.classList.add('hidden');
+        dom.generatorContainer.classList.remove('hidden');
+        
+        updateFileListDisplay();
+        showInputStep(0);
+        showMessage('All content cleared.');
+    };
 
     const shuffleArray = (array) => {
         for (let i = array.length - 1; i > 0; i--) {
@@ -366,7 +429,7 @@ function initializeQuizApp() {
                     resolve({ type: 'text/plain', content: text });
                 } catch (e) { reject(e); }
             } else if (file.type.startsWith('text/')) {
-                reader.onload = (e) => resolve({ type: file.type, content: e.target.result });
+                reader.onload = (e) => resolve({ type: 'text/plain', content: e.target.result });
                 reader.readAsText(file);
             } else { reject(new Error(`Unsupported file type: ${file.type}`)); }
         });
@@ -389,35 +452,76 @@ function initializeQuizApp() {
         });
     };
     
+    // --- FIX #2: RELIABILITY - More robust API call with intelligent JSON extraction and timeout ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
         for (const model of modelsToTry) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+
             console.log(`Attempting API call with model: ${model}`);
             try {
-                const response = await fetch('/api/quiz', {
+                const response = await fetch('/api/Quiz_API', { // Correct API endpoint
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...payload, model })
+                    body: JSON.stringify({ ...payload, model }),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error (${response.status}) with model ${model}: ${errorText}`);
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
+                
                 const result = await response.json();
-                if (result.quizQuestions && result.quizQuestions.length > 0) {
-                    const validQuestions = result.quizQuestions.filter(q => q.question && q.answer && q.question.trim() !== '' && (typeof q.answer === 'string' ? q.answer.trim() !== '' : q.answer.primary_answer.trim() !== ''));
+                const responseText = result.text; // The backend now returns a clean text string
+                
+                if (!responseText) {
+                    throw new Error(`Model ${model} returned an empty response.`);
+                }
+
+                let jsonString = responseText;
+                const markdownMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+                if (markdownMatch) {
+                    jsonString = markdownMatch[1];
+                } else {
+                    const startIndex = jsonString.indexOf('[');
+                    const endIndex = jsonString.lastIndexOf(']');
+                    if (startIndex !== -1 && endIndex !== -1) {
+                        jsonString = jsonString.substring(startIndex, endIndex + 1);
+                    }
+                }
+
+                let parsedQuestions;
+                try {
+                    parsedQuestions = JSON.parse(jsonString);
+                } catch (e) {
+                    throw new Error(`Model ${model} returned invalid JSON. Retrying...`);
+                }
+
+                if (Array.isArray(parsedQuestions) && parsedQuestions.length > 0) {
+                    const validQuestions = parsedQuestions.filter(q => q && q.question && q.answer);
                     if (validQuestions.length > 0) {
+                        console.log(`Success with model: ${model}`);
                         return { quizQuestions: validQuestions };
                     }
                 }
                 lastError = new Error(`Model ${model} returned no valid questions.`);
             } catch (error) {
-                console.warn(error.message);
-                lastError = error;
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    console.warn(`Request with model ${model} timed out. Trying next model.`);
+                    lastError = new Error(`Model ${model} timed out.`);
+                } else {
+                    console.warn(error.message);
+                    lastError = error;
+                }
             }
         }
-        throw lastError || new Error("All API models failed.");
+        throw lastError || new Error("All API models failed after multiple retries.");
     };
 
     const generateQuiz = async () => {
@@ -440,28 +544,51 @@ function initializeQuizApp() {
         }, 200);
 
         try {
-            let promptParts = [];
-            const basePrompt = "You are a professional quiz designer. Your task is to create a well-structured and informative quiz from the provided material. The quiz should test key concepts, facts, and understanding. Ensure the questions are clear and the answers are accurate and concise. If the provided material is too short or unsuitable for generating a meaningful quiz, return a single question object explaining the issue.";
-            
-            promptParts.push({ text: basePrompt });
-            if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
-            
+            let sourceContent = "";
+            if (text) sourceContent += `Text Content:\n${text}\n\n`;
             uploadedFilesData.forEach(file => {
-                if (file.type.startsWith('image/')) {
-                    promptParts.push({ text: `\n\nAnalyze the following image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
-                } else {
-                    promptParts.push({ text: `\n\nAnalyze the following text from the file (${file.name}):\n"${file.content}"` });
+                if (file.type.startsWith('text/')) {
+                    sourceContent += `From File (${file.name}):\n${file.content}\n\n`;
                 }
             });
+
+            let prompt = `You are an expert quiz designer. Your response MUST be a valid JSON array of objects, wrapped in a markdown code block like this: \`\`\`json ... \`\`\`.
             
-            const instructionPrompt = `\n\nBased on ALL the material provided, generate a quiz. ${instructions ? `Follow these specific instructions: "${instructions}".` : ''} The output MUST be a JSON array of objects, where each object has a 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice' questions, include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a JSON STRING representing an object with 'primary_answer' (a human-readable string), 'alternative_keywords' (an array of acceptable synonyms/formulas), and 'not_contains' (an array of forbidden keywords).`;
-            promptParts.push({ text: instructionPrompt });
+Each object must have 'question', 'answer', and 'type' ('multiple_choice', 'true_false', or 'short_answer'). For 'multiple_choice', include an 'options' array with 4 choices. For 'short_answer', the 'answer' MUST be a concise string of keywords, comma-separated.
+
+Example: \`\`\`json
+[
+  {"question": "What is the capital of France?", "type": "short_answer", "answer": "Paris"},
+  {"question": "The sky is blue.", "type": "true_false", "answer": "True"},
+  {"question": "Which planet is known as the Red Planet?", "type": "multiple_choice", "options": ["Earth", "Mars", "Jupiter", "Venus"], "answer": "Mars"}
+]
+\`\`\`
+
+Do NOT include any text outside the JSON code block.
+
+Based on the following content, generate the quiz:
+---
+${sourceContent}
+---
+`;
+
+            if (instructions) {
+                prompt += `\nFollow these additional user instructions carefully: "${instructions}"`;
+            }
+
+            let promptParts = [{ text: prompt }];
+            uploadedFilesData.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    promptParts.push({ text: `From image (${file.name}):` }, { inlineData: { mimeType: file.type, data: file.content } });
+                }
+            });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
             
             quizData = result.quizQuestions;
             renderQuizPreview(quizData);
             showMessage(`Quiz generated successfully! (${quizData.length} questions)`, 'info');
+            saveState();
 
         } catch (error) {
             console.error('Error:', error);
@@ -491,17 +618,11 @@ function initializeQuizApp() {
 
             const answerContainer = document.createElement('div');
             answerContainer.className = 'quiz-answer hidden';
-            let answerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    answerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
-            answerContainer.innerHTML = `<p><strong>Answer:</strong> ${answerText}</p>`;
+            answerContainer.innerHTML = `<p><strong>Answer:</strong> ${q.answer}</p>`;
             
             const toggleButton = document.createElement('button');
-            toggleButton.className = 'nav-button mt-2 !py-1 !px-3 !text-sm';
+            toggleButton.className = 'nav-button';
+            Object.assign(toggleButton.style, {padding: '4px 12px', fontSize: '0.9rem'});
             toggleButton.textContent = 'Show Answer';
             
             toggleButton.addEventListener('click', () => {
@@ -538,7 +659,7 @@ function initializeQuizApp() {
 
         const questionDisplay = document.createElement('div');
         questionDisplay.className = 'quiz-question-display';
-        questionDisplay.innerHTML = `<h3>Question ${index + 1} of ${quizData.length}</h3><p>${questionData.question}</p>`;
+        questionDisplay.innerHTML = `<h2>Question ${index + 1} of ${quizData.length}</h2><p style="font-size: 1.2rem;">${questionData.question}</p>`;
         
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'quiz-options-container';
@@ -584,8 +705,7 @@ function initializeQuizApp() {
         }
         
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button'; // Use the standard nav-button class for color
-        exitBtn.id = 'exitButton'; // Use an ID for specific layout styles
+        exitBtn.className = 'exit-quiz-button';
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
@@ -595,21 +715,11 @@ function initializeQuizApp() {
     };
 
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
-        if (!userAnswer) return false;
-        const userAnswerLower = userAnswer.toLowerCase();
-        try {
-            const answerObj = JSON.parse(correctAnswer);
-            
-            const allKeywords = [answerObj.primary_answer, ...(answerObj.alternative_keywords || [])].map(k => k.toLowerCase());
-            const forbiddenKeywords = (answerObj.not_contains || []).map(k => k.toLowerCase());
-
-            const hasRequired = allKeywords.some(keyword => userAnswerLower.includes(keyword));
-            const hasForbidden = forbiddenKeywords.length > 0 ? forbiddenKeywords.some(keyword => userAnswerLower.includes(keyword)) : false;
-            
-            return hasRequired && !hasForbidden;
-        } catch (e) {
-            return correctAnswer.toLowerCase().split(',').map(k => k.trim()).some(k => userAnswerLower.includes(k));
-        }
+        if (!userAnswer || !correctAnswer) return false;
+        const userAnswerLower = userAnswer.toLowerCase().trim();
+        const keywords = correctAnswer.toLowerCase().split(',').map(k => k.trim()).filter(k => k);
+        if (keywords.length === 0) return false;
+        return keywords.some(key => userAnswerLower.includes(key));
     };
 
     const submitQuiz = () => {
@@ -633,24 +743,17 @@ function initializeQuizApp() {
             const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
-            let correctAnswerText = q.answer;
-            try {
-                const answerObj = JSON.parse(q.answer);
-                if (answerObj && answerObj.primary_answer) {
-                    correctAnswerText = answerObj.primary_answer;
-                }
-            } catch(e) { /* Not a JSON string, display as is */ }
             item.innerHTML = `
                 <p><strong>Q:</strong> ${q.question}</p>
                 <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
-                <p><strong>Correct Answer:</strong> ${correctAnswerText}</p>
+                <p><strong>Correct Answer:</strong> ${q.answer}</p>
             `;
             resultsDiv.appendChild(item);
         });
 
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button mt-4 mx-auto'; // Use standard nav-button for color
-        exitBtn.id = 'exitButton'; // Use ID for layout
+        exitBtn.className = 'nav-button';
+        exitBtn.style.margin = '1rem auto 0';
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
         resultsDiv.appendChild(exitBtn);
@@ -700,26 +803,15 @@ function initializeQuizApp() {
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateQuiz);
     dom.startQuizButton.addEventListener('click', startQuiz);
-    dom.clearButton.addEventListener('click', () => {
-        dom.inputText.value = '';
-        dom.customInstructions.value = '';
-        uploadedFilesData = [];
-        quizData = [];
-        userAnswers = [];
-        dom.quizPreviewArea.innerHTML = '';
-        dom.quizPreviewArea.classList.add('hidden');
-        dom.startQuizArea.classList.add('hidden');
-        dom.interactiveQuizContainer.classList.add('hidden');
-        dom.generatorContainer.classList.remove('hidden');
-        updateFileListDisplay();
-        showInputStep(0);
-        showMessage('All content cleared.');
-    });
+    
+    dom.clearButton.addEventListener('click', clearState);
+    dom.inputText.addEventListener('input', saveState);
+    dom.customInstructions.addEventListener('input', saveState);
 
     // Initialization
     showInputStep(0);
-    dom.generateButton.style.display = 'none';
     updateFileListDisplay();
+    loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
