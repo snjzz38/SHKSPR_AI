@@ -299,8 +299,12 @@ async function loadHeader() {
 function initializeQuizApp() {
     // --- FIX #1: SPEED - Prioritize the fastest models ---
     const ALL_GEMINI_MODELS = [
-      'gemini-1.5-flash-latest', // Fastest model first
-      'gemini-1.5-pro-latest'    // Reliable backup
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
     ];
     
     const dom = {
