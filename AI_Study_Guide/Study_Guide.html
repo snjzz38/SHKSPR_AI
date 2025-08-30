@@ -63,7 +63,7 @@
         .input-step-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
         .input-step { width: 100%; display: none; flex-direction: column; gap: 10px; }
         .input-step.active { display: flex; }
-        .input-step p.subtitle { font-size: 0.9rem; text-align: center; margin-bottom: 15px; }
+        .input-step p.subtitle { font-size: 0.9rem; color: rgba(var(--accent-rgb), 0.7); text-align: center; margin-bottom: 15px; }
         textarea {
             width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
             background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
@@ -106,13 +106,13 @@
         .file-list-item button:hover { color: #ff0000; }
         .input-navigation-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button {
+        .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button, .copy-button {
             background-color: var(--accent); color: var(--bg-primary); border: none;
             padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
             cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
         }
-        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
+        .generate-button:hover, .clear-button:hover, .nav-button:hover:not(:disabled), .start-quiz-button:hover, .exit-quiz-button:hover, .copy-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .clear-button:active, .nav-button:active:not(:disabled), .start-quiz-button:active, .exit-quiz-button:active, .copy-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .nav-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
         .exit-quiz-button {
             background-color: var(--accent); color: var(--bg-primary);
@@ -122,6 +122,23 @@
         .exit-quiz-button:hover { box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6); }
         .study-guide-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         
+        /* --- NEW: Styles for the study guide header --- */
+        .study-guide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .study-guide-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .copy-button.small {
+            padding: 6px 15px;
+            font-size: 0.9rem;
+            font-weight: normal;
+        }
+
         .study-guide-content { 
             padding: 1rem; 
             border: 1px solid var(--accent); 
@@ -204,7 +221,7 @@
         @media (max-width: 768px) {
             .container { width: 95%; margin: 20px auto; padding: 15px; }
             .hero h1 { font-size: 2.2rem; }
-            .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .generate-button, .clear-button, .nav-button, .start-quiz-button, .exit-quiz-button, .copy-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
             .action-buttons, .input-navigation-buttons, .quiz-navigation { flex-direction: column; }
         }
     </style>
@@ -268,6 +285,11 @@
         </div>
         <div id="messageBox" class="message-box"></div>
         <div id="studyGuideArea" class="study-guide-area hidden">
+            <!-- NEW: Header for the study guide with a copy button -->
+            <div class="study-guide-header">
+                <h2>Your Study Guide</h2>
+                <button id="copyGuideButton" class="copy-button small">Copy Guide</button>
+            </div>
             <div id="studyGuideContent" class="study-guide-content"></div>
         </div>
         <div id="startQuizArea" class="start-quiz-area hidden mt-4">
@@ -321,7 +343,6 @@ async function loadHeader() {
 }
 
 function initializeStudyGuideApp() {
-    // --- FIX #1: Use a valid and reliable list of models ---
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-flash-lite',
       'gemini-2.5-flash',
@@ -353,6 +374,8 @@ function initializeStudyGuideApp() {
         clearFileButton: document.getElementById('clearFileButton'),
         fileList: document.getElementById('fileList'),
         toggleFileListButton: document.getElementById('toggleFileListButton'),
+        // --- NEW: Add copy button to DOM object ---
+        copyGuideButton: document.getElementById('copyGuideButton'),
     };
 
     let uploadedFilesData = [];
@@ -404,7 +427,6 @@ function initializeStudyGuideApp() {
         }
     };
 
-    // --- FIX #3: Robust clearState function ---
     const clearState = () => {
         dom.inputText.value = '';
         dom.customInstructions.value = '';
@@ -422,7 +444,6 @@ function initializeStudyGuideApp() {
         dom.studyGuideArea.classList.add('hidden');
         dom.startQuizArea.classList.add('hidden');
         
-        // Ensure quiz view is hidden and main view is shown
         dom.interactiveQuizContainer.innerHTML = '';
         dom.interactiveQuizContainer.classList.add('hidden');
         dom.generatorContainer.classList.remove('hidden');
@@ -497,7 +518,6 @@ function initializeStudyGuideApp() {
         });
     };
     
-    // --- FIX #2: Secure and reliable API call to the backend ---
     const callApiWithRetries = async (payload) => {
         let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
         let lastError = null;
@@ -505,7 +525,6 @@ function initializeStudyGuideApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
-                // The body now includes the model name for the backend to use
                 const response = await fetch('/api/Study_Guide_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -519,7 +538,6 @@ function initializeStudyGuideApp() {
 
                 const result = await response.json();
                 
-                // The backend now handles validation, so we can trust the result
                 if (result.studyGuide !== null && result.quizQuestions) {
                     return result;
                 }
@@ -668,14 +686,28 @@ function initializeStudyGuideApp() {
             nextBtn.addEventListener('click', () => renderInteractiveQuestion(index + 1));
         }
         
+        // --- NEW: Create and add the Copy Quiz and Exit Quiz buttons ---
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.marginTop = '1rem';
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.flexDirection = 'column';
+        buttonContainer.style.gap = '10px';
+
+        const copyQuizBtn = document.createElement('button');
+        copyQuizBtn.className = 'copy-button small';
+        copyQuizBtn.id = 'copyQuizButton';
+        copyQuizBtn.textContent = 'Copy Quiz';
+        copyQuizBtn.addEventListener('click', copyQuiz);
+
         const exitBtn = document.createElement('button');
         exitBtn.className = 'exit-quiz-button';
         exitBtn.textContent = 'Exit Quiz';
         exitBtn.addEventListener('click', exitQuiz);
 
+        buttonContainer.append(copyQuizBtn, exitBtn);
         navigation.append(prevBtn, nextBtn);
         questionDisplay.appendChild(optionsContainer);
-        dom.interactiveQuizContainer.append(questionDisplay, navigation, exitBtn);
+        dom.interactiveQuizContainer.append(questionDisplay, navigation, buttonContainer);
     };
 
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
@@ -745,13 +777,65 @@ function initializeStudyGuideApp() {
             resultsDiv.appendChild(item);
         });
 
+        // --- NEW: Add Copy Quiz and Exit buttons to the results page ---
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.marginTop = '1rem';
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.flexDirection = 'column';
+        buttonContainer.style.gap = '10px';
+
+        const copyQuizBtn = document.createElement('button');
+        copyQuizBtn.className = 'copy-button small';
+        copyQuizBtn.id = 'copyQuizButton';
+        copyQuizBtn.textContent = 'Copy Quiz';
+        copyQuizBtn.addEventListener('click', copyQuiz);
+
         const exitBtn = document.createElement('button');
-        exitBtn.className = 'nav-button mt-4 mx-auto';
+        exitBtn.className = 'nav-button';
         exitBtn.textContent = 'Back to Generator';
         exitBtn.addEventListener('click', exitQuiz);
-        resultsDiv.appendChild(exitBtn);
 
+        buttonContainer.append(copyQuizBtn, exitBtn);
+        resultsDiv.appendChild(buttonContainer);
         dom.interactiveQuizContainer.appendChild(resultsDiv);
+    };
+
+    // --- NEW: Function to copy the study guide ---
+    const copyStudyGuide = async () => {
+        if (!studyGuideMarkdown) return;
+        try {
+            await navigator.clipboard.writeText(studyGuideMarkdown);
+            dom.copyGuideButton.textContent = 'Copied!';
+            setTimeout(() => dom.copyGuideButton.textContent = 'Copy Guide', 2000);
+        } catch (err) {
+            showMessage('Failed to copy guide.', 'error');
+        }
+    };
+
+    // --- NEW: Function to format and copy the quiz ---
+    const copyQuiz = async (event) => {
+        if (!quizData || quizData.length === 0) return;
+        
+        let quizText = "Study Guide Quiz\n====================\n\n";
+        quizData.forEach((q, index) => {
+            quizText += `Question ${index + 1}: ${q.question}\n`;
+            if (q.type === 'multiple_choice' && q.options) {
+                q.options.forEach(opt => {
+                    quizText += `- ${opt}\n`;
+                });
+            }
+            quizText += `\nCorrect Answer: ${q.answer}\n`;
+            quizText += "--------------------\n\n";
+        });
+
+        try {
+            await navigator.clipboard.writeText(quizText);
+            const button = event.target;
+            button.textContent = 'Copied!';
+            setTimeout(() => button.textContent = 'Copy Quiz', 2000);
+        } catch (err) {
+            showMessage('Failed to copy quiz.', 'error');
+        }
     };
 
     // --- Event Listeners ---
@@ -800,6 +884,9 @@ function initializeStudyGuideApp() {
     dom.clearButton.addEventListener('click', clearState);
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
+    
+    // --- NEW: Add event listener for the copy guide button ---
+    dom.copyGuideButton.addEventListener('click', copyStudyGuide);
 
     // Initialization
     showInputStep(0);
