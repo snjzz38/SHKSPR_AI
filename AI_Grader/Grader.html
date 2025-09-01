@@ -157,7 +157,6 @@
         }
         .hero h1 {
             font-size: 3.2rem; color: var(--text-primary);
-            /* text-shadow: 0 0 10px var(--accent); */
             margin-bottom: 20px; transition: all 0.6s ease;
         }
         .hero p {
@@ -248,13 +247,15 @@
             background-color: var(--bg-secondary);
             position: relative; z-index: 10; margin-top: auto;
         }
+        /* --- FIX: Styles for the moved loading bar --- */
         .loading-bar-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 6px; z-index: 100;
-            background-color: rgba(var(--accent-rgb), 0.2); opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none;
+            width: 100%;
+            height: 6px;
+            background-color: rgba(var(--accent-rgb), 0.2);
+            margin-top: 1.5rem; /* Space above the bar */
         }
-        .loading-bar-container.show { opacity: 1; }
         .loading-bar {
-            width: 100%; height: 100%; background-color: var(--accent); border-radius: 0 3px 3px 0;
+            width: 100%; height: 100%; background-color: var(--accent); border-radius: 3px;
             transform: translateX(-100%); animation: indeterminate-loading 1.5s infinite ease-in-out;
         }
         @keyframes indeterminate-loading {
@@ -271,7 +272,6 @@
         .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
     </style>
     <script>
-        // INLINE SCRIPT TO PREVENT THEME GLITCH
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -283,14 +283,8 @@
     </script>
 </head>
 <body>
-    <!-- Container where header will be injected -->
     <div id="header-container"></div>
     <main class="main-content animate-on-load">
-
-    <!-- Loading bar -->
-    <div id="loading-bar-container" class="loading-bar-container">
-        <div class="loading-bar"></div>
-    </div>
 
     <section class="hero">
         <h1>AI Assignment Grader</h1>
@@ -299,7 +293,6 @@
 
     <div class="grader-container">
         <div>
-            <!-- Step 1: Assignment Instructions -->
             <div id="step-instructions" class="step-content">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button></div>
@@ -316,7 +309,6 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted. If instructions are an image, upload it directly.</p>
             </div>
 
-            <!-- Step 2: Grading Rubric -->
             <div id="step-rubric" class="step-content hidden">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
@@ -333,7 +325,6 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>Note:</strong> For PDFs, only text is extracted. If your rubric is an image, upload it directly as a JPG/PNG file.</p>
             </div>
 
-            <!-- Step 3: Assignment Text -->
             <div id="step-essay" class="step-content hidden">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
@@ -350,7 +341,6 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx files cannot be read by the browser.</strong> Please convert to PDF, TXT, or copy-paste the text.</p>
             </div>
 
-            <!-- Step 4: Extra AI Instructions -->
             <div id="step-extra-instructions" class="step-content hidden">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
@@ -358,7 +348,6 @@
                     <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
                 </div>
 
-                <!-- Grade Level Section -->
                 <div class="mb-6">
                     <label class="block text-lg font-semibold mb-2">Grade</label>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -371,7 +360,6 @@
                     </div>
                 </div>
 
-                <!-- Subject Quick-Add -->
                 <div id="subject-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
                     <label for="subject-select" class="block text-lg font-semibold mb-2">Subject (based on selected Grade)</label>
                     <p class="text-sm text-gray-400 mb-4">Pick a subject to add targeted guidance to the prompt below. Subjects change automatically for AP, Higher Ed, and IB.</p>
@@ -383,7 +371,6 @@
                     </div>
                 </div>
 
-                <!-- Rubric Quick-Add -->
                 <div id="rubric-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
                     <label for="rubric-select" class="block text-lg font-semibold mb-2">Rubric Quick-Add</label>
                     <p class="text-sm text-gray-400 mb-4">Choose a pre-defined rubric to add its details to the extra instructions prompt below.</p>
@@ -405,7 +392,6 @@
                 <p class="description-text mt-2">Provide any final, specific instructions for the AI on how to approach the grading. This step is optional.</p>
             </div>
 
-            <!-- Step 5: Set Strictness & Grade -->
             <div id="step-strictness" class="step-content hidden">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
@@ -423,12 +409,16 @@
                 </div>
             </div>
 
-            <!-- Action Buttons & Messages Area -->
             <div id="action-area" class="mt-6 space-y-4">
                 <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
+            </div>
+            
+            <!-- FIX: Loading bar moved here -->
+            <div id="loading-bar-container" class="loading-bar-container hidden">
+                <div class="loading-bar"></div>
             </div>
 
             <div id="grade-result" class="hidden">
@@ -480,10 +470,11 @@
             });
         }
 
+        // --- FIX: Rewritten function to correctly handle text and images ---
         async function getProcessedSectionContent(textareaId, files) {
             const textarea = document.getElementById(textareaId);
             let combinedText = textarea.value.trim();
-            const imageParts = [];
+            const parts = [];
             const errors = [];
 
             for (const file of files) {
@@ -492,7 +483,7 @@
                     if (result.type === 'text') {
                         combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
                     } else if (result.type === 'image') {
-                        imageParts.push({ ...result.imageData, filename: result.filename });
+                        parts.push({ inlineData: result.imageData });
                     }
                 } catch (error) {
                     errors.push(error.message);
@@ -500,10 +491,14 @@
             }
 
             if (errors.length > 0) throw new Error(errors.join('\n'));
-            return { combinedText, imageParts };
+            
+            // Add the combined text as the first part if it exists
+            if (combinedText) {
+                parts.unshift({ text: combinedText });
+            }
+            
+            return parts;
         }
-
-
 
         async function loadHeader() {
         try {
@@ -511,11 +506,9 @@
             if (!response.ok) throw new Error('Failed to load header');
             const text = await response.text();
             
-            // This line is the key: it injects EVERYTHING from header.html, including the styles.
             const container = document.getElementById('header-container');
             container.innerHTML = text;
 
-            // Extract the script content and append it to the document body to ensure it runs
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             const scriptElement = doc.querySelector('script');
@@ -525,21 +518,16 @@
                 document.body.appendChild(newScript);
             }
 
-            // The script from header.html should have now executed and the functions
-            // are available on the window object. We can now initialize everything.
             if (window.setTheme && window.initParticles) {
-                // Set the initial theme from local storage
                 const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
                 window.setTheme(savedTheme);
 
-                // Add click event listeners to theme buttons
                 document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
                 document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
                 document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
                 document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
                 document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
 
-                // Start the particle animation
                 window.initParticles(document.body);
             }
 
@@ -549,11 +537,10 @@
         }
         }
 
-        // --- Grader Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             const ALL_GEMINI_MODELS = [
-              'gemini-2.5-flash-lite', 'gemini-live-2.5-flash-preview', 'gemini-2.5-flash',
-              'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+              'gemini-1.5-flash',
+              'gemini-1.5-pro'
             ];
 
             const dom = {
@@ -576,7 +563,6 @@
                 subjectQuickAddArea: document.getElementById('subject-quick-add'),
                 subjectSelect: document.getElementById('subject-select'),
                 addSubjectBtn: document.getElementById('add-subject-to-prompt-btn'),
-                // NEW: Add textareas to dom object for easy access
                 instructions: document.getElementById('instructions'),
                 rubric: document.getElementById('rubric'),
                 essay: document.getElementById('essay'),
@@ -609,7 +595,6 @@
             let currentStep = 0;
             let selectedGrade = 'None';
 
-            // --- NEW: LocalStorage Functions ---
             const saveState = () => {
                 localStorage.setItem('graderInstructions', dom.instructions.value);
                 localStorage.setItem('graderRubric', dom.rubric.value);
@@ -659,7 +644,6 @@
                 dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
                 selectedGrade = 'None';
                 
-                // Clear from localStorage
                 localStorage.removeItem('graderInstructions');
                 localStorage.removeItem('graderRubric');
                 localStorage.removeItem('graderEssay');
@@ -686,7 +670,7 @@
             }
 
             function toggleLoading(isLoading) {
-                dom.loadingBarContainer.classList.toggle('show', isLoading);
+                dom.loadingBarContainer.classList.toggle('hidden', !isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
             }
@@ -725,11 +709,10 @@
                 if (tmpl) {
                     dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
                     displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
-                    saveState(); // Save after adding
+                    saveState();
                 }
             });
 
-            // --- UPDATED: Grade Level Button Logic ---
             dom.gradeLevelButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const isAlreadySelected = btn.classList.contains('selected');
@@ -737,16 +720,14 @@
                     dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
 
                     if (isAlreadySelected) {
-                        // If it was already selected, deselect it
                         selectedGrade = 'None';
                     } else {
-                        // Otherwise, select the new one
                         btn.classList.add('selected');
                         selectedGrade = btn.dataset.grade;
                     }
                     
                     refreshSubjectAreas();
-                    saveState(); // Save the new selection state
+                    saveState();
                 });
             });
 
@@ -757,7 +738,7 @@
                     if (rubricText) {
                         dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
                         displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
-                        saveState(); // Save after adding
+                        saveState();
                     }
                 }
             });
@@ -795,92 +776,89 @@
                 });
             });
 
-            // UPDATED: Clear button now calls clearState
             dom.clearButton.addEventListener('click', clearState);
 
             dom.strictnessMeter.addEventListener('input', (e) => {
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
             
+            async function callApiWithRetries(payload) {
+                if (GEMINI_API_KEY === "your-api-key-here") {
+                    throw new Error("Please replace 'your-api-key-here' with your actual API key in the HTML file.");
+                }
+                let modelsToTry = [...ALL_GEMINI_MODELS];
+                let lastError = null;
+
+                for (const model of modelsToTry) {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+                    console.log(`Attempting API call with model: ${model}`);
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            const errorMessage = errorData.error?.message || response.statusText;
+                            throw new Error(`API call with ${model} failed (Status: ${response.status}): ${errorMessage}`);
+                        }
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text && text.trim() !== '') {
+                            console.log(`Success with model: ${model}`);
+                            return text;
+                        }
+                        lastError = new Error(`Model ${model} returned an empty or invalid response.`);
+                    } catch (error) {
+                        console.warn(error.message);
+                        lastError = error;
+                    }
+                }
+                throw lastError || new Error("All available models failed.");
+            }
+
             window.gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
                 
-                // NEW: Clear previous result from localStorage
                 localStorage.removeItem('graderResultHTML');
 
-                let availableModels = [...ALL_GEMINI_MODELS];
-                let attemptCount = 0;
-                const MAX_ATTEMPTS = availableModels.length * 2;
-
                 try {
-                    const instructionsData = await getProcessedSectionContent('instructions', fileInputs[0].data);
-                    const rubricData = await getProcessedSectionContent('rubric', fileInputs[1].data);
-                    const essayData = await getProcessedSectionContent('essay', fileInputs[2].data);
+                    const instructionsParts = await getProcessedSectionContent('instructions', fileInputs[0].data);
+                    const rubricParts = await getProcessedSectionContent('rubric', fileInputs[1].data);
+                    const essayParts = await getProcessedSectionContent('essay', fileInputs[2].data);
 
-                    if (!instructionsData.combinedText && instructionsData.imageParts.length === 0) throw new Error("Please provide Assignment Instructions.");
-                    if (!rubricData.combinedText && rubricData.imageParts.length === 0) throw new Error("Please provide a Grading Rubric.");
-                    if (!essayData.combinedText && essayData.imageParts.length === 0) throw new Error("Please provide the Student's Assignment.");
+                    if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
+                    if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
+                    if (essayParts.length === 0) throw new Error("Please provide the Student's Assignment.");
 
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
                     const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
 
-                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} 
-                    (1=Very Lenient, 3=Normal, 5=Very Strict).\n- Level 1-2 (Lenient): Focus on the core content and ideas. Be generous with minor errors.\n- Level 3 (Normal): A balanced approach. Note all errors, but don't over-penalize minor mistakes.
-                    \n- Level 4-5 (Strict): Be highly critical. Minor errors in grammar, spelling, or structure should result in point deductions.\n\nEducational Context:\n- Grade Level: ${selectedGrade}\n\nInstructions for grading:\n${instructionsData.combinedText || 
-                    'No specific instructions provided.'}\n\nRubric:\n${rubricData.combinedText || 'No rubric provided.'}\n\nAdditional Instructions:\n${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. 
-                    Focus solely on the content provided within this prompt and do not use any external knowledge. If no external grading format is specified in the rubric, instructions, student work, or custom instructions, please default to a x/100 grading format.`;
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
                     
                     const parts = [
                         { text: systemPrompt },
-                        { text: `--- START OF STUDENT ASSIGNMENT ---` },
-                        { text: essayData.combinedText },
-                        { text: `--- END OF STUDENT ASSIGNMENT ---` }
+                        { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
+                        ...instructionsParts,
+                        { text: "\n\n--- GRADING RUBRIC ---\n" },
+                        ...rubricParts,
+                        { text: "\n\n--- STUDENT'S SUBMISSION ---\n" },
+                        ...essayParts
                     ];
-                    const contents = [{ role: "user", parts: parts }];
+                    
+                    const payload = { contents: [{ parts: parts }] };
+                    const resultText = await callApiWithRetries(payload);
 
-                    let result = null;
-                    while (availableModels.length > 0 && attemptCount < MAX_ATTEMPTS) {
-                        attemptCount++;
-                        const randomIndex = Math.floor(Math.random() * availableModels.length);
-                        const selectedModel = availableModels[randomIndex];
-                        console.log(`Attempt ${attemptCount}: Trying model ${selectedModel}`);
-                        const payload = { model: selectedModel, contents: contents };
-
-                        try {
-                            const response = await fetch('/api/Grader_API', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-
-                            if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}));
-                                throw new Error(errorData.error || response.statusText);
-                            }
-
-                            result = await response.json();
-                            if (!result.text) throw new Error("Received an empty response from the server.");
-                            break;
-
-                        } catch (fetchError) {
-                            console.warn(`Model ${selectedModel} failed: ${fetchError.message}. Retrying...`);
-                            availableModels.splice(randomIndex, 1);
-                            await new Promise(resolve => setTimeout(resolve, 1000 * Math.min(attemptCount, 5)));
-                        }
-                    }
-
-                    if (!result) throw new Error("All model attempts failed. The service may be temporarily unavailable. Please try again later.");
-
-                    dom.resultContentDiv.innerHTML = marked.parse(result.text);
+                    dom.resultContentDiv.innerHTML = marked.parse(resultText);
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     
-                    // NEW: Save state after successful grading
                     saveState();
 
                 } catch (error) {
@@ -891,26 +869,16 @@
                 }
             };
 
-            // NEW: Add event listeners to save textarea content on input
             ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
                 document.getElementById(id).addEventListener('input', saveState);
             });
 
             showStep(0);
-            // NEW: Load any saved state from localStorage on startup
             loadState();
         });
 
         document.addEventListener('DOMContentLoaded', loadHeader);
     </script>
 
-
-<!-- Vercel Analytics -->
-<script>
-  window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
-  window.va('set', 'mode', 'auto');
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-    
 </body>
 </html>
