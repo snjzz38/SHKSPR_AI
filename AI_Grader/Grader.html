@@ -718,4 +718,104 @@
                         }
                         lastError = new Error(`Model ${model} returned no valid text.`);
                     } catch (error) {
-   
+                        console.warn(error.message);
+                        lastError = error;
+                    }
+                }
+                throw lastError || new Error("All API models failed.");
+            }
+
+            window.gradeEssay = async () => {
+                dom.errorMessageDiv.classList.add('hidden');
+                dom.successMessageDiv.classList.add('hidden');
+                dom.gradeResultDiv.classList.add('hidden');
+                toggleLoading(true);
+                
+                localStorage.removeItem('graderResultHTML');
+
+                try {
+                    const instructionsParts = await getProcessedSectionContent('instructions', fileInputs[0].data);
+                    const rubricParts = await getProcessedSectionContent('rubric', fileInputs[1].data);
+                    const essayParts = await getProcessedSectionContent('essay', fileInputs[2].data);
+
+                    if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
+                    if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
+                    if (essayParts.length === 0) throw new Error("Please provide the Student's Assignment.");
+
+                    const extraInstructions = document.getElementById('extra-instructions').value.trim();
+                    const strictness = dom.strictnessMeter.value;
+                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
+
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
+                    
+                    const parts = [
+                        { text: systemPrompt },
+                        { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
+                        ...instructionsParts,
+                        { text: "\n\n--- GRADING RUBRIC ---\n" },
+                        ...rubricParts,
+                        { text: "\n\n--- STUDENT'S SUBMISSION ---\n" },
+                        ...essayParts
+                    ];
+                    
+                    const payload = { contents: [{ parts: parts }] };
+                    const resultText = await callApiWithRetries(payload);
+
+                    dom.resultContentDiv.innerHTML = marked.parse(resultText);
+                    dom.gradeResultDiv.classList.remove('hidden');
+                    displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
+                    dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
+                    
+                    saveState();
+
+                } catch (error) {
+                    console.error("Grading Error:", error);
+                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
+                } finally {
+                    toggleLoading(false);
+                }
+            };
+
+            // --- FIX: Add paste event listeners for all textareas ---
+            const addPasteListener = (textarea, fileInputObject) => {
+                textarea.addEventListener('paste', (e) => {
+                    for (const item of e.clipboardData.items) {
+                        if (item.kind === 'file' && item.type.startsWith('image/')) {
+                            e.preventDefault();
+                            const blob = item.getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const fileData = {
+                                    id: Date.now() + Math.random(),
+                                    name: 'Pasted Image',
+                                    type: blob.type,
+                                    content: event.target.result.split(',')[1]
+                                };
+                                fileInputObject.data.push(blob); // Store the blob for processing
+                                updateFileList(fileInputObject);
+                                displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
+                            };
+                            reader.readAsDataURL(blob);
+                            return;
+                        }
+                    }
+                });
+            };
+
+            addPasteListener(dom.instructions, fileInputs[0]);
+            addPasteListener(dom.rubric, fileInputs[1]);
+            addPasteListener(dom.essay, fileInputs[2]);
+
+            ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
+                document.getElementById(id).addEventListener('input', saveState);
+            });
+
+            showStep(0);
+            loadState();
+        });
+
+        document.addEventListener('DOMContentLoaded', loadHeader);
+    </script>
+
+</body>
+</html>
