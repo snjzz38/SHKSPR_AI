@@ -14,8 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* --- CRITICAL STYLES MOVED FROM HEADER.HTML TO PREVENT FOUC --- */
-        /* --- Theme Variables --- */
+        /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
         :root {
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
@@ -56,104 +55,10 @@
             overflow-x: hidden;
         }
 
-        /* --- Particles Container --- */
-        .particles-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; overflow: hidden;
-        }
-        .particle {
-            position: absolute; border-radius: 50%;
-            background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform;
-        }
-        
-        /* --- NEWLY ADDED: Header Specific Styles --- */
-        header.main-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 10%;
-            background-color: var(--bg-secondary);
-            transition: background-color 0.6s, color 0.6s;
-            position: relative;
-            z-index: 10;
-        }
-        .logo {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-primary);
-            text-shadow: 0 0 10px var(--accent);
-            text-decoration: none;
-            transition: all 0.6s ease;
-        }
-        .logo:hover {
-          transform: translateY(-5px);
-          text-shadow: 0 5px 15px var(--accent);
-        }
-        .theme-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .dropdown-button {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--text-primary);
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-        .dropdown-button:hover {
-          background: var(--text-primary);
-          color: var(--bg-primary);
-          transform: translateY(-5px);
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-        .dropdown-container {
-            position: relative;
-        }
-        .dropdown-container:hover .dropdown-options {
-            display: block;
-        }
-        .dropdown-options {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 0;
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 10px;
-            min-width: 150px;
-            z-index: 10;
-        }
-        .dropdown-options button,
-        .dropdown-options a {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            padding: 8px;
-            cursor: pointer;
-            text-align: left;
-            width: 100%;
-            font-size: 0.9rem;
-            display: block;
-            text-decoration: none;
-        }
-        .dropdown-options button:hover,
-        .dropdown-options a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
-        /* --- END OF HEADER STYLES --- */
-
-
         /* --- Styles specific to the Grader page --- */
         .hero {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5; 
-            
         }
         .hero h1 {
             font-size: 3.2rem; color: var(--text-primary);
@@ -247,7 +152,6 @@
             background-color: var(--bg-secondary);
             position: relative; z-index: 10; margin-top: auto;
         }
-        /* --- FIX: Corrected loading bar styles --- */
         .loading-bar-container {
             width: 100%;
             height: 6px;
@@ -255,7 +159,7 @@
             margin-top: 1.5rem;
             border-radius: 3px;
             position: relative;
-            overflow: hidden; /* This is the key fix */
+            overflow: hidden;
         }
         .loading-bar {
             position: absolute;
@@ -263,7 +167,7 @@
             left: 0;
             bottom: 0;
             background-color: var(--accent);
-            width: 50%; /* Width of the moving bar */
+            width: 50%;
             animation: indeterminate-loading 2s infinite ease-in-out;
         }
         @keyframes indeterminate-loading {
@@ -290,6 +194,7 @@
     </script>
 </head>
 <body>
+    <!-- FIX: Container where header will be injected -->
     <div id="header-container"></div>
     <main class="main-content animate-on-load">
 
@@ -505,41 +410,42 @@
             return parts;
         }
 
+        // --- FIX: Add the loadHeader function ---
         async function loadHeader() {
-        try {
-            const response = await fetch('../Structure/header.html');
-            if (!response.ok) throw new Error('Failed to load header');
-            const text = await response.text();
-            
-            const container = document.getElementById('header-container');
-            container.innerHTML = text;
+            try {
+                const response = await fetch('../Structure/header.html');
+                if (!response.ok) throw new Error('Failed to load header');
+                const text = await response.text();
+                
+                const container = document.getElementById('header-container');
+                container.innerHTML = text;
 
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const scriptElement = doc.querySelector('script');
-            if (scriptElement) {
-                const newScript = document.createElement('script');
-                newScript.textContent = scriptElement.textContent;
-                document.body.appendChild(newScript);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const scriptElement = doc.querySelector('script');
+                if (scriptElement) {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = scriptElement.textContent;
+                    document.body.appendChild(newScript);
+                }
+
+                if (window.setTheme && window.initParticles) {
+                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                    window.setTheme(savedTheme);
+
+                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+                    window.initParticles(document.body);
+                }
+
+            } catch (error) {
+                console.error('Error loading header:', error);
+                document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
             }
-
-            if (window.setTheme && window.initParticles) {
-                const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                window.setTheme(savedTheme);
-
-                document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-                document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-                document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-                document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-                document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-                window.initParticles(document.body);
-            }
-
-        } catch (error) {
-            console.error('Error loading header:', error);
-            document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
-        }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -787,6 +693,7 @@
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
             
+            // --- FIX: Rewritten API call function to use the backend ---
             async function callApiWithRetries(payload) {
                 let modelsToTry = [...ALL_GEMINI_MODELS];
                 let lastError = null;
@@ -811,74 +718,4 @@
                         }
                         lastError = new Error(`Model ${model} returned no valid text.`);
                     } catch (error) {
-                        console.warn(error.message);
-                        lastError = error;
-                    }
-                }
-                throw lastError || new Error("All API models failed.");
-            }
-
-            window.gradeEssay = async () => {
-                dom.errorMessageDiv.classList.add('hidden');
-                dom.successMessageDiv.classList.add('hidden');
-                dom.gradeResultDiv.classList.add('hidden');
-                toggleLoading(true);
-                
-                localStorage.removeItem('graderResultHTML');
-
-                try {
-                    const instructionsParts = await getProcessedSectionContent('instructions', fileInputs[0].data);
-                    const rubricParts = await getProcessedSectionContent('rubric', fileInputs[1].data);
-                    const essayParts = await getProcessedSectionContent('essay', fileInputs[2].data);
-
-                    if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
-                    if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
-                    if (essayParts.length === 0) throw new Error("Please provide the Student's Assignment.");
-
-                    const extraInstructions = document.getElementById('extra-instructions').value.trim();
-                    const strictness = dom.strictnessMeter.value;
-                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
-
-                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
-                    
-                    const parts = [
-                        { text: systemPrompt },
-                        { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
-                        ...instructionsParts,
-                        { text: "\n\n--- GRADING RUBRIC ---\n" },
-                        ...rubricParts,
-                        { text: "\n\n--- STUDENT'S SUBMISSION ---\n" },
-                        ...essayParts
-                    ];
-                    
-                    const payload = { contents: [{ parts: parts }] };
-                    const resultText = await callApiWithRetries(payload);
-
-                    dom.resultContentDiv.innerHTML = marked.parse(resultText);
-                    dom.gradeResultDiv.classList.remove('hidden');
-                    displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
-                    dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
-                    
-                    saveState();
-
-                } catch (error) {
-                    console.error("Grading Error:", error);
-                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
-                } finally {
-                    toggleLoading(false);
-                }
-            };
-
-            ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
-                document.getElementById(id).addEventListener('input', saveState);
-            });
-
-            showStep(0);
-            loadState();
-        });
-
-        document.addEventListener('DOMContentLoaded', loadHeader);
-    </script>
-
-</body>
-</html>
+   
