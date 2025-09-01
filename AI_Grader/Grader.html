@@ -788,39 +788,34 @@
             });
             
             async function callApiWithRetries(payload) {
-                if (GEMINI_API_KEY === "your-api-key-here") {
-                    throw new Error("Please replace 'your-api-key-here' with your actual API key in the HTML file.");
-                }
                 let modelsToTry = [...ALL_GEMINI_MODELS];
                 let lastError = null;
 
                 for (const model of modelsToTry) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
                     console.log(`Attempting API call with model: ${model}`);
                     try {
-                        const response = await fetch(apiUrl, {
+                        const response = await fetch('/api/Grader_API', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify({ ...payload, model })
                         });
+
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
-                            const errorMessage = errorData.error?.message || response.statusText;
-                            throw new Error(`API call with ${model} failed (Status: ${response.status}): ${errorMessage}`);
+                            throw new Error(errorData.error || `Server error (${response.status}) with no JSON body`);
                         }
+
                         const result = await response.json();
-                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text && text.trim() !== '') {
-                            console.log(`Success with model: ${model}`);
-                            return text;
+                        if (result.text) {
+                            return result.text;
                         }
-                        lastError = new Error(`Model ${model} returned an empty or invalid response.`);
+                        lastError = new Error(`Model ${model} returned no valid text.`);
                     } catch (error) {
                         console.warn(error.message);
                         lastError = error;
                     }
                 }
-                throw lastError || new Error("All available models failed.");
+                throw lastError || new Error("All API models failed.");
             }
 
             window.gradeEssay = async () => {
