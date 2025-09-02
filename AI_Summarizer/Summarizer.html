@@ -606,16 +606,20 @@
                 dom.processBtn.disabled = !GEMINI_API_KEY || !isReady;
             }
             
+            // MODIFIED: Added localStorage saving
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 currentStep = index;
+                localStorage.setItem('summarizerStep', currentStep);
                 dom.actionButtonsContainer.classList.toggle('hidden', index !== dom.steps.length - 1);
             }
 
             window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
             window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
 
+            // MODIFIED: Added localStorage saving
             function setMode(mode) {
+                localStorage.setItem('summarizerMode', mode);
                 currentMode = mode;
                 clearMessages();
                 uploadedFilesData = [];
@@ -664,6 +668,7 @@
                 dom.fileList.classList.toggle('expanded', uploadedFilesData.length > 0 && dom.fileList.classList.contains('expanded'));
             }
 
+            // MODIFIED: Added localStorage clearing
             function clearState() {
                 dom.inputs.text.value = '';
                 dom.inputs.youtube.value = '';
@@ -674,6 +679,9 @@
                 localStorage.removeItem('summarizerYoutubeInput');
                 localStorage.removeItem('summarizerTranscript');
                 localStorage.removeItem('summarizerSummary');
+                localStorage.removeItem('summarizerMode');
+                localStorage.removeItem('summarizerStep');
+                setMode('text'); // Reset to default mode
                 showStep(0);
             }
 
@@ -700,7 +708,6 @@
                 }
             }
 
-            // --- ADDED THIS FUNCTION ---
             function copyToClipboard(text, buttonElement) {
                 if (!navigator.clipboard) {
                     console.error('Clipboard API not available.');
@@ -714,11 +721,48 @@
                     setTimeout(() => {
                         buttonElement.textContent = originalText;
                         buttonElement.disabled = false;
-                    }, 2000); // Revert after 2 seconds
+                    }, 2000);
                 }).catch(err => {
                     console.error('Failed to copy text: ', err);
                     alert('Failed to copy text.');
                 });
+            }
+
+            // NEW: This function sets the UI on page load without clearing data
+            function applyInitialStateUI() {
+                const savedMode = localStorage.getItem('summarizerMode') || 'text';
+                const savedStep = parseInt(localStorage.getItem('summarizerStep') || '0', 10);
+                
+                currentMode = savedMode;
+                currentStep = savedStep;
+
+                Object.values(dom.modeButtons).forEach(btn => btn.classList.remove('active'));
+                if (dom.modeButtons[currentMode]) {
+                    dom.modeButtons[currentMode].classList.add('active');
+                }
+
+                hideElement(dom.inputContainers.text);
+                hideElement(dom.inputContainers.youtube);
+                hideElement(dom.inputContainers.file);
+
+                if (currentMode === 'text') {
+                    showElement(dom.inputContainers.text);
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = "Step 2: Provide Text";
+                } else if (currentMode === 'youtube') {
+                    showElement(dom.inputContainers.youtube);
+                    dom.step2Title.textContent = "Step 2: Provide YouTube URL";
+                } else {
+                    showElement(dom.inputContainers.file);
+                    dom.step2Title.textContent = `Step 2: Upload ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}(s)`;
+                }
+
+                const fileInput = dom.inputs.file;
+                if (currentMode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
+                else if (currentMode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
+                else if (currentMode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
+
+                showStep(currentStep);
             }
 
             // Event Listeners
@@ -753,7 +797,7 @@
 
             // Initial setup
             updateSummarizationPrompt();
-            showStep(0);
+            applyInitialStateUI(); // MODIFIED: Apply saved UI state first
             loadSavedResults();
             (async () => {
                 displayMessage("Loading API key...");
