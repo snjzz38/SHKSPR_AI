@@ -432,7 +432,7 @@
 
                 const savedResult = localStorage.getItem('graderResultHTML');
                 if (savedResult) {
-                    dom.resultContentDiv.innerHTML = savedResult;
+                    dom.resultContentDiv.innerHTML = marked.parse(savedResult);
                     dom.gradeResultDiv.classList.remove('hidden');
                 }
             };
@@ -662,6 +662,7 @@
             });
             
             dom.navButtons.forEach(button => {
+                const parentStep = button.closest('.step-content');
                 if (button.textContent.trim().toLowerCase() === 'next') {
                     button.addEventListener('click', nextStep);
                 } else if (button.textContent.trim().toLowerCase() === 'back') {
@@ -715,9 +716,12 @@
 
             showStep(0);
             loadState();
-        });
+        }
 
-        document.addEventListener('DOMContentLoaded', loadHeader);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHeader();
+            initializeApp();
+        });
     </script>
 
 </body>
