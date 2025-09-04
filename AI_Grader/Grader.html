@@ -662,7 +662,6 @@
             });
             
             dom.navButtons.forEach(button => {
-                const parentStep = button.closest('.step-content');
                 if (button.textContent.trim().toLowerCase() === 'next') {
                     button.addEventListener('click', nextStep);
                 } else if (button.textContent.trim().toLowerCase() === 'back') {
