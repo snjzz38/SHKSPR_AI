@@ -123,20 +123,8 @@
         }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
-        #error-message, #success-message {
-            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
-            text-align: center; border: 1px solid;
-        }
-        #error-message {
-            background-color: rgba(239, 68, 68, 0.1);
-            border-color: rgb(239, 68, 68);
-            color: #fecaca;
-        }
-        #success-message {
-            background-color: rgba(var(--accent-rgb), 0.1);
-            border-color: var(--accent);
-            color: var(--text-primary);
-        }
+        #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
+        #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
         #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
         #grade-result h2 { color: var(--accent); }
         .prose { color: var(--text-primary); word-break: break-word; }
@@ -392,35 +380,6 @@
             });
         }
 
-        // --- FIX: Rewritten function to correctly handle text and images ---
-        async function getProcessedSectionContent(textarea, files) {
-            let combinedText = textarea.value.trim();
-            const parts = [];
-            const errors = [];
-
-            for (const file of files) {
-                try {
-                    const result = await readFileContent(file);
-                    if (result.type === 'text') {
-                        combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
-                    } else if (result.type === 'image') {
-                        parts.push({ inlineData: result.imageData });
-                    }
-                } catch (error) {
-                    errors.push(error.message);
-                }
-            }
-
-            if (errors.length > 0) throw new Error(errors.join('\n'));
-            
-            if (combinedText) {
-                parts.unshift({ text: combinedText });
-            }
-            
-            return parts;
-        }
-
-        // --- FIX: Add the loadHeader function ---
         async function loadHeader() {
             try {
                 const response = await fetch('../Structure/header.html');
@@ -754,6 +713,7 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
+                    // --- FIX: Consolidate all text and images into a single request payload ---
                     const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
                     const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
                     const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
@@ -803,9 +763,8 @@
                         if (item.kind === 'file' && item.type.startsWith('image/')) {
                             e.preventDefault();
                             const blob = item.getAsFile();
-                            // Give it a name for display purposes
-                            blob.name = `Pasted Image ${Date.now()}`;
-                            filesArray.push(blob);
+                            const file = new File([blob], `Pasted Image ${Date.now()}.${blob.type.split('/')[1]}`, { type: blob.type });
+                            filesArray.push(file);
                             updateFileList(fileInputId, filesArray);
                             displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
                             return;
@@ -831,4 +790,3 @@
 
 </body>
 </html>
-```
