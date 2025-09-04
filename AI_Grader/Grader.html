@@ -713,7 +713,6 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
-                    // --- FIX: Consolidate all text and images into a single request payload ---
                     const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
                     const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
                     const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
