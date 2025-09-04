@@ -207,9 +207,9 @@
         <div>
             <div id="step-instructions" class="step-content">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none">Back</button></div>
                     <label class="title">1. Assignment Instructions</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="instructions" placeholder="E.g., 'Write a 500-word persuasive essay on renewable energy, with three supporting arguments.'"></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
@@ -223,9 +223,9 @@
 
             <div id="step-rubric" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">2. Grading Rubric</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="rubric" placeholder="E.g., 'Content: 40%. Organization: 30%. Language: 20%. Originality: 10%.'"></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
@@ -239,9 +239,9 @@
 
             <div id="step-essay" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">3. Student's Assignment</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="essay" placeholder="Paste the student's assignment text here..."></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
@@ -255,9 +255,9 @@
 
             <div id="step-extra-instructions" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">4. Extra AI Instructions (Optional)</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
 
                 <div class="mb-6">
@@ -306,7 +306,7 @@
 
             <div id="step-strictness" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">5. Set Strictness & Grade</label>
                     <div class="btn-container text-right"><button type="button" class="nav-button opacity-0 pointer-events-none">Next</button></div>
                 </div>
@@ -322,7 +322,7 @@
             </div>
 
             <div id="action-area" class="mt-6 space-y-4">
-                <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
+                <button id="grade-button" class="w-full py-3">Grade Assignment</button>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
@@ -345,79 +345,8 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js';
         
-        async function readFileContent(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-
-                if (file.type.startsWith('image/')) {
-                    reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
-                    reader.readAsDataURL(file);
-                } else if (file.type === 'application/pdf') {
-                    reader.onload = async (e) => {
-                        try {
-                            const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
-                            let fullText = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const textContent = await page.getTextContent();
-                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                            }
-                            resolve({ type: 'text', content: fullText, filename: file.name });
-                        } catch (error) {
-                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else if (file.type.startsWith('text/')) {
-                    reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
-                    reader.readAsText(file);
-                } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
-                } else {
-                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
-                }
-            });
-        }
-
-        async function loadHeader() {
-            try {
-                const response = await fetch('../Structure/header.html');
-                if (!response.ok) throw new Error('Failed to load header');
-                const text = await response.text();
-                
-                const container = document.getElementById('header-container');
-                container.innerHTML = text;
-
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                const scriptElement = doc.querySelector('script');
-                if (scriptElement) {
-                    const newScript = document.createElement('script');
-                    newScript.textContent = scriptElement.textContent;
-                    document.body.appendChild(newScript);
-                }
-
-                if (window.setTheme && window.initParticles) {
-                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                    window.setTheme(savedTheme);
-
-                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-                    window.initParticles(document.body);
-                }
-
-            } catch (error) {
-                console.error('Error loading header:', error);
-                document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
+        // --- FIX: Encapsulate all logic within initializeApp ---
+        function initializeApp() {
             const ALL_GEMINI_MODELS = [
               'gemini-1.5-flash',
               'gemini-1.5-pro'
@@ -446,9 +375,9 @@
                 instructions: document.getElementById('instructions'),
                 rubric: document.getElementById('rubric'),
                 essay: document.getElementById('essay'),
+                navButtons: document.querySelectorAll('.nav-button'),
             };
 
-            // --- FIX: Simplified file state management ---
             let instructionsFiles = [];
             let rubricFiles = [];
             let essayFiles = [];
@@ -544,8 +473,8 @@
                 currentStep = index;
             }
 
-            window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
-            window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
+            function nextStep() { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
+            function prevStep() { if (currentStep > 0) showStep(currentStep - 1); };
 
             function displayMessage(element, message, isError = false) {
                 element.innerHTML = message;
@@ -582,51 +511,6 @@
                 if (showSubject) populateSubjectOptions(selectedGrade);
             }
 
-            dom.subjectSelect.addEventListener('change', () => {
-                dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none');
-            });
-
-            dom.addSubjectBtn.addEventListener('click', () => {
-                const subject = dom.subjectSelect.value;
-                if (!subject || subject === 'none') return;
-                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) : selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) : selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
-                if (tmpl) {
-                    dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
-                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
-                    saveState();
-                }
-            });
-
-            dom.gradeLevelButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const isAlreadySelected = btn.classList.contains('selected');
-                    
-                    dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
-
-                    if (isAlreadySelected) {
-                        selectedGrade = 'None';
-                    } else {
-                        btn.classList.add('selected');
-                        selectedGrade = btn.dataset.grade;
-                    }
-                    
-                    refreshSubjectAreas();
-                    saveState();
-                });
-            });
-
-            dom.addRubricBtn.addEventListener('click', () => {
-                const selectedValue = dom.rubricSelect.value;
-                if (selectedValue !== 'none' && selectedValue !== 'Custom') {
-                    const rubricText = rubricTexts[selectedValue];
-                    if (rubricText) {
-                        dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
-                        displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
-                        saveState();
-                    }
-                }
-            });
-
             function updateFileList(fileInputId, filesArray) {
                 const listEl = document.getElementById(`${fileInputId}-list`);
                 listEl.innerHTML = '';
@@ -662,19 +546,17 @@
                     toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
                 });
             }
-
-            setupFileInput('instructions-file', instructionsFiles);
-            setupFileInput('rubric-file', rubricFiles);
-            setupFileInput('essay-file', essayFiles);
-
-            dom.clearButton.addEventListener('click', clearState);
-
-            dom.strictnessMeter.addEventListener('input', (e) => {
-                dom.strictnessValueDisplay.textContent = e.target.value;
-            });
             
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
             async function callApiWithRetries(payload) {
-                let modelsToTry = [...ALL_GEMINI_MODELS];
+                let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
                 let lastError = null;
 
                 for (const model of modelsToTry) {
@@ -704,7 +586,7 @@
                 throw lastError || new Error("All API models failed.");
             }
 
-            window.gradeEssay = async () => {
+            async function gradeEssay() {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
@@ -727,7 +609,7 @@
 
                     const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
                     
-                    const parts = [
+                    const allParts = [
                         { text: systemPrompt },
                         { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
                         ...instructionsParts,
@@ -737,7 +619,7 @@
                         ...essayParts
                     ];
                     
-                    const payload = { contents: [{ parts: parts }] };
+                    const payload = { contents: [{ parts: allParts }] };
                     const resultText = await callApiWithRetries(payload);
 
                     dom.resultContentDiv.innerHTML = marked.parse(resultText);
@@ -755,7 +637,6 @@
                 }
             };
 
-            // --- FIX: Add paste event listeners for all textareas ---
             const addPasteListener = (textarea, filesArray, fileInputId) => {
                 textarea.addEventListener('paste', (e) => {
                     for (const item of e.clipboardData.items) {
@@ -778,6 +659,58 @@
 
             ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
                 document.getElementById(id).addEventListener('input', saveState);
+            });
+            
+            dom.navButtons.forEach(button => {
+                if (button.textContent.trim().toLowerCase() === 'next') {
+                    button.addEventListener('click', nextStep);
+                } else if (button.textContent.trim().toLowerCase() === 'back') {
+                    button.addEventListener('click', prevStep);
+                }
+            });
+            
+            dom.gradeButton.addEventListener('click', gradeEssay);
+            dom.clearButton.addEventListener('click', clearState);
+            dom.strictnessMeter.addEventListener('input', (e) => {
+                dom.strictnessValueDisplay.textContent = e.target.value;
+            });
+            dom.addRubricBtn.addEventListener('click', () => {
+                const selectedValue = dom.rubricSelect.value;
+                if (selectedValue !== 'none' && selectedValue !== 'Custom') {
+                    const rubricText = rubricTexts[selectedValue];
+                    if (rubricText) {
+                        dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
+                        displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
+                        saveState();
+                    }
+                }
+            });
+            dom.addSubjectBtn.addEventListener('click', () => {
+                const subject = dom.subjectSelect.value;
+                if (!subject || subject === 'none') return;
+                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) : selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) : selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
+                if (tmpl) {
+                    dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
+                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
+                    saveState();
+                }
+            });
+            dom.subjectSelect.addEventListener('change', () => {
+                dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none');
+            });
+            dom.gradeLevelButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const isAlreadySelected = btn.classList.contains('selected');
+                    dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
+                    if (isAlreadySelected) {
+                        selectedGrade = 'None';
+                    } else {
+                        btn.classList.add('selected');
+                        selectedGrade = btn.dataset.grade;
+                    }
+                    refreshSubjectAreas();
+                    saveState();
+                });
             });
 
             showStep(0);
