@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
+        /* --- Theme Variables --- */
         :root {
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
@@ -123,8 +123,20 @@
         }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
-        #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
-        #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
+        #error-message, #success-message {
+            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: center; border: 1px solid;
+        }
+        #error-message {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgb(239, 68, 68);
+            color: #fecaca;
+        }
+        #success-message {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
         #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
         #grade-result h2 { color: var(--accent); }
         .prose { color: var(--text-primary); word-break: break-word; }
@@ -181,6 +193,7 @@
             background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px;
         }
         .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
+        .hidden { display: none; }
     </style>
     <script>
         (function() {
@@ -194,7 +207,6 @@
     </script>
 </head>
 <body>
-    <!-- FIX: Container where header will be injected -->
     <div id="header-container"></div>
     <main class="main-content animate-on-load">
 
@@ -326,7 +338,6 @@
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
-                <!-- FIX: Loading bar moved here -->
                 <div id="loading-bar-container" class="loading-bar-container hidden">
                     <div class="loading-bar"></div>
                 </div>
@@ -382,8 +393,7 @@
         }
 
         // --- FIX: Rewritten function to correctly handle text and images ---
-        async function getProcessedSectionContent(textareaId, files) {
-            const textarea = document.getElementById(textareaId);
+        async function getProcessedSectionContent(textarea, files) {
             let combinedText = textarea.value.trim();
             const parts = [];
             const errors = [];
@@ -479,11 +489,10 @@
                 essay: document.getElementById('essay'),
             };
 
-            const fileInputs = [
-                { id: 'instructions-file', list: 'instructions-file-list', data: [] },
-                { id: 'rubric-file', list: 'rubric-file-list', data: [] },
-                { id: 'essay-file', list: 'essay-file-list', data: [] },
-            ];
+            // --- FIX: Simplified file state management ---
+            let instructionsFiles = [];
+            let rubricFiles = [];
+            let essayFiles = [];
 
             const rubricTexts = {
                 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
@@ -542,7 +551,12 @@
 
             const clearState = () => {
                 document.querySelectorAll('textarea').forEach(ta => ta.value = '');
-                fileInputs.forEach(fi => { fi.data = []; updateFileList(fi); });
+                instructionsFiles = [];
+                rubricFiles = [];
+                essayFiles = [];
+                updateFileList('instructions-file', instructionsFiles);
+                updateFileList('rubric-file', rubricFiles);
+                updateFileList('essay-file', essayFiles);
                 dom.strictnessMeter.value = 3;
                 dom.strictnessValueDisplay.textContent = '3';
                 dom.gradeResultDiv.classList.add('hidden');
@@ -654,38 +668,45 @@
                 }
             });
 
-            function updateFileList(fileInput) {
-                const listEl = document.getElementById(fileInput.list);
+            function updateFileList(fileInputId, filesArray) {
+                const listEl = document.getElementById(`${fileInputId}-list`);
                 listEl.innerHTML = '';
-                fileInput.data.forEach((file, index) => {
+                filesArray.forEach((file, index) => {
                     const item = document.createElement('li');
                     item.className = 'file-list-item';
-                    item.innerHTML = `<span>${file.name}</span><button data-index="${index}">&times;</button>`;
+                    item.innerHTML = `<span>${file.name}</span><button data-index="${index}" data-input-id="${fileInputId}">&times;</button>`;
                     listEl.appendChild(item);
                 });
-                listEl.classList.toggle('expanded', fileInput.data.length > 0);
+                listEl.classList.toggle('expanded', filesArray.length > 0);
             }
 
-            fileInputs.forEach(fi => {
-                const inputEl = document.getElementById(fi.id);
-                const listEl = document.getElementById(fi.list);
+            function setupFileInput(fileInputId, filesArray) {
+                const inputEl = document.getElementById(fileInputId);
+                const listEl = document.getElementById(`${fileInputId}-list`);
                 const toggleBtn = inputEl.closest('.step-content').querySelector('.toggle-file-list-button');
+                
                 inputEl.addEventListener('change', (e) => {
-                    fi.data.push(...Array.from(e.target.files));
-                    updateFileList(fi);
+                    filesArray.push(...Array.from(e.target.files));
+                    updateFileList(fileInputId, filesArray);
                     e.target.value = '';
                 });
+
                 listEl.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'BUTTON') {
-                        fi.data.splice(e.target.dataset.index, 1);
-                        updateFileList(fi);
+                    if (e.target.tagName === 'BUTTON' && e.target.dataset.inputId === fileInputId) {
+                        filesArray.splice(e.target.dataset.index, 1);
+                        updateFileList(fileInputId, filesArray);
                     }
                 });
+
                 toggleBtn.addEventListener('click', () => {
                     listEl.classList.toggle('expanded');
                     toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
                 });
-            });
+            }
+
+            setupFileInput('instructions-file', instructionsFiles);
+            setupFileInput('rubric-file', rubricFiles);
+            setupFileInput('essay-file', essayFiles);
 
             dom.clearButton.addEventListener('click', clearState);
 
@@ -693,7 +714,6 @@
                 dom.strictnessValueDisplay.textContent = e.target.value;
             });
             
-            // --- FIX: Rewritten API call function to use the backend ---
             async function callApiWithRetries(payload) {
                 let modelsToTry = [...ALL_GEMINI_MODELS];
                 let lastError = null;
@@ -734,9 +754,9 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
-                    const instructionsParts = await getProcessedSectionContent('instructions', fileInputs[0].data);
-                    const rubricParts = await getProcessedSectionContent('rubric', fileInputs[1].data);
-                    const essayParts = await getProcessedSectionContent('essay', fileInputs[2].data);
+                    const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
+                    const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
+                    const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
 
                     if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
                     if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
@@ -777,34 +797,26 @@
             };
 
             // --- FIX: Add paste event listeners for all textareas ---
-            const addPasteListener = (textarea, fileInputObject) => {
+            const addPasteListener = (textarea, filesArray, fileInputId) => {
                 textarea.addEventListener('paste', (e) => {
                     for (const item of e.clipboardData.items) {
                         if (item.kind === 'file' && item.type.startsWith('image/')) {
                             e.preventDefault();
                             const blob = item.getAsFile();
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                                const fileData = {
-                                    id: Date.now() + Math.random(),
-                                    name: 'Pasted Image',
-                                    type: blob.type,
-                                    content: event.target.result.split(',')[1]
-                                };
-                                fileInputObject.data.push(blob); // Store the blob for processing
-                                updateFileList(fileInputObject);
-                                displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
-                            };
-                            reader.readAsDataURL(blob);
+                            // Give it a name for display purposes
+                            blob.name = `Pasted Image ${Date.now()}`;
+                            filesArray.push(blob);
+                            updateFileList(fileInputId, filesArray);
+                            displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
                             return;
                         }
                     }
                 });
             };
 
-            addPasteListener(dom.instructions, fileInputs[0]);
-            addPasteListener(dom.rubric, fileInputs[1]);
-            addPasteListener(dom.essay, fileInputs[2]);
+            addPasteListener(dom.instructions, instructionsFiles, 'instructions-file');
+            addPasteListener(dom.rubric, rubricFiles, 'rubric-file');
+            addPasteListener(dom.essay, essayFiles, 'essay-file');
 
             ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
                 document.getElementById(id).addEventListener('input', saveState);
@@ -819,3 +831,4 @@
 
 </body>
 </html>
+```
