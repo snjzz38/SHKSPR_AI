@@ -72,7 +72,8 @@
             max-width: 1000px; width: 95%; margin: 0 auto 2rem auto; background: var(--card-bg);
             border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0, 0.5); padding: 1.5rem; position: relative; z-index: 5; color: var(--text-primary);
         }
-        .step-content { animation: fadeIn 0.5s ease-in-out; }
+        .step-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .step-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         textarea {
             font-family: 'Fira Mono', monospace; background: var(--bg-secondary); color: var(--text-primary);
@@ -123,8 +124,20 @@
         }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
-        #error-message { background: rgba(255, 0, 0, 0.2); border: 1px solid #f56565; color: #ffcccc; }
-        #success-message { background: rgba(0, 255, 0, 0.15); border: 1px solid #68d391; color: #ccffcc; }
+        #error-message, #success-message {
+            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: center; border: 1px solid;
+        }
+        #error-message {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgb(239, 68, 68);
+            color: #fecaca;
+        }
+        #success-message {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
         #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
         #grade-result h2 { color: var(--accent); }
         .prose { color: var(--text-primary); word-break: break-word; }
@@ -205,7 +218,7 @@
 
     <div class="grader-container">
         <div>
-            <div id="step-instructions" class="step-content">
+            <div id="step-instructions" class="step-content active">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none">Back</button></div>
                     <label class="title">1. Assignment Instructions</label>
@@ -221,7 +234,7 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted. If instructions are an image, upload it directly.</p>
             </div>
 
-            <div id="step-rubric" class="step-content hidden">
+            <div id="step-rubric" class="step-content">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">2. Grading Rubric</label>
@@ -237,7 +250,7 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>Note:</strong> For PDFs, only text is extracted. If your rubric is an image, upload it as a JPG/PNG file.</p>
             </div>
 
-            <div id="step-essay" class="step-content hidden">
+            <div id="step-essay" class="step-content">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">3. Student's Assignment</label>
@@ -253,7 +266,7 @@
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx files cannot be read by the browser.</strong> Please convert to PDF, TXT, or copy-paste the text.</p>
             </div>
 
-            <div id="step-extra-instructions" class="step-content hidden">
+            <div id="step-extra-instructions" class="step-content">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">4. Extra AI Instructions (Optional)</label>
@@ -304,7 +317,7 @@
                 <p class="description-text mt-2">Provide any final, specific instructions for the AI on how to approach the grading. This step is optional.</p>
             </div>
 
-            <div id="step-strictness" class="step-content hidden">
+            <div id="step-strictness" class="step-content">
                 <div class="step-header">
                     <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">5. Set Strictness & Grade</label>
@@ -321,7 +334,7 @@
                 </div>
             </div>
 
-            <div id="action-area" class="mt-6 space-y-4">
+            <div id="action-area" class="mt-6 space-y-4 hidden">
                 <button id="grade-button" class="w-full py-3">Grade Assignment</button>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
@@ -505,6 +518,7 @@
 
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
+                dom.steps[index].classList.add('active');
                 dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
                 currentStep = index;
             }
