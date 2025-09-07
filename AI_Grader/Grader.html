@@ -392,33 +392,6 @@
             });
         }
 
-        async function getProcessedSectionContent(textarea, files) {
-            let combinedText = textarea.value.trim();
-            const parts = [];
-            const errors = [];
-
-            for (const file of files) {
-                try {
-                    const result = await readFileContent(file);
-                    if (result.type === 'text') {
-                        combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
-                    } else if (result.type === 'image') {
-                        parts.push({ inlineData: result.imageData });
-                    }
-                } catch (error) {
-                    errors.push(error.message);
-                }
-            }
-
-            if (errors.length > 0) throw new Error(errors.join('\n'));
-            
-            if (combinedText) {
-                parts.unshift({ text: combinedText });
-            }
-            
-            return parts;
-        }
-
         async function loadHeader() {
             try {
                 const response = await fetch('../Structure/header.html');
@@ -782,12 +755,10 @@
                     ];
                     
                     const payload = { contents: [{ parts: parts }] };
-
-                    // THIS IS THE FIX: Check payload size before sending.
-                    const payloadSizeLimit = 4 * 1024 * 1024; // 4MB limit
-                    const payloadString = JSON.stringify(payload);
-                    if (payloadString.length > payloadSizeLimit) {
-                        throw new Error(`Total input size is too large (${(payloadString.length / 1024 / 1024).toFixed(2)} MB). Please reduce the number or size of your files (limit is ~4MB).`);
+                    
+                    const payloadSizeLimit = 4 * 1024 * 1024; // 4MB
+                    if (JSON.stringify(payload).length > payloadSizeLimit) {
+                        throw new Error(`Total input size is too large. Please reduce the number or size of your files (limit is ~4MB).`);
                     }
 
                     const resultText = await callApiWithRetries(payload);
@@ -837,13 +808,6 @@
 
         document.addEventListener('DOMContentLoaded', loadHeader);
     </script>
-    
-<!-- Vercel Analytics -->
-<script>
-  window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
-  window.va('set', 'mode', 'auto');
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-    
+
 </body>
 </html>
