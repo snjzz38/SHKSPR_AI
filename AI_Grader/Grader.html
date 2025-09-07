@@ -357,6 +357,34 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js';
         
+        // THIS IS THE CRITICAL FUNCTION THAT WAS MISSING. IT IS NOW RESTORED.
+        async function getProcessedSectionContent(textarea, files) {
+            let combinedText = textarea.value.trim();
+            const parts = [];
+            const errors = [];
+
+            for (const file of files) {
+                try {
+                    const result = await readFileContent(file);
+                    if (result.type === 'text') {
+                        combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
+                    } else if (result.type === 'image') {
+                        parts.push({ inlineData: result.imageData });
+                    }
+                } catch (error) {
+                    errors.push(error.message);
+                }
+            }
+
+            if (errors.length > 0) throw new Error(errors.join('\n'));
+            
+            if (combinedText) {
+                parts.unshift({ text: combinedText });
+            }
+            
+            return parts;
+        }
+
         async function readFileContent(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
