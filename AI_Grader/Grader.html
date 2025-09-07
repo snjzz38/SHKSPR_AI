@@ -1,810 +1,830 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Assignment Grader</title>
-   <!-- Tailwind CSS CDN -->
-   <script src="https://cdn.tailwindcss.com"></script>
-   <!-- Inter Font -->
-   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-   <style>
-       body {
-           font-family: 'Inter', sans-serif;
-       }
-       /* Custom styles for better prose in results */
-       .prose br {
-           display: block;
-           margin-bottom: 0.5em; /* Add some spacing between lines */
-       }
-       /* Fix for text overflow within prose content */
-       .prose {
-           word-break: break-word;
-           overflow-wrap: break-word;
-       }
-       input[type="range"] {
-           -webkit-appearance: none;
-           width: 100%;
-           height: 10px;
-           background: #ddd;
-           border-radius: 50px; /* More rounded */
-           outline: none;
-           opacity: 0.7;
-           transition: opacity .2s;
-       }
-       input[type="range"]:hover {
-           opacity: 1;
-       }
-       input[type="range"]::-webkit-slider-thumb {
-           -webkit-appearance: none;
-           appearance: none;
-           width: 25px;
-           height: 25px;
-           border-radius: 50%;
-           background: #8b5cf6; /* purple-500 */
-           cursor: pointer;
-           box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-       }
-       input[type="range"]::-moz-range-thumb {
-           width: 25px;
-           height: 25px;
-           border-radius: 50%;
-           background: #8b5cf6; /* purple-500 */
-           cursor: pointer;
-           box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-       }
-       .file-list {
-           list-style: none;
-           padding: 0;
-           margin-top: 8px;
-           max-height: 0; /* Hidden by default */
-           overflow: hidden;
-           transition: max-height 0.3s ease-out;
-       }
-       .file-list.expanded {
-           max-height: 200px; /* Adjust as needed for visible height */
-           overflow-y: auto;
-       }
-       .file-list-item {
-           display: flex;
-           align-items: center;
-           justify-content: space-between;
-           background-color: #f3e8ff; /* purple-50 */
-           padding: 6px 12px;
-           border-radius: 6px;
-           margin-bottom: 4px;
-           font-size: 0.9em;
-           color: #5b21b6; /* purple-700 */
-       }
-       .file-list-item button {
-           background: none;
-           border: none;
-           color: #7e22ce; /* purple-800 */
-           font-weight: bold;
-           cursor: pointer;
-           margin-left: 8px;
-           font-size: 1.2em;
-           line-height: 1;
-       }
-       .file-list-item button:hover {
-           color: #581c87; /* purple-900 */
-       }
-   </style>
+    <meta charset="UTF-8">
+    <title>AI Assignment Grader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/favicon.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <!-- Marked.js CDN for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        /* --- Theme Variables --- */
+        :root {
+            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+            --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
+            --accent-rgb: 255, 255, 255;
+        }
+        body.theme-cyan {
+            --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
+            --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
+            --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
+        }
+        body.theme-green {
+            --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6;
+            --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+            --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
+        }
+        body.theme-red {
+            --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
+            --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
+        }
+
+        /* --- Global Styles --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-weight: bold;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.6s, color 0.6s;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- Styles specific to the Grader page --- */
+        .hero {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5; 
+        }
+        .hero h1 {
+            font-size: 3.2rem; color: var(--text-primary);
+            margin-bottom: 20px; transition: all 0.6s ease;
+        }
+        .hero p {
+            font-size: 1.2rem; margin-bottom: 30px; text-shadow: 0 0 8px var(--accent);
+            max-width: 600px; color: var(--text-primary); transition: all 0.6s ease;
+        }
+        .grader-container {
+            max-width: 1000px; width: 95%; margin: 0 auto 2rem auto; background: var(--card-bg);
+            border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0, 0.5); padding: 1.5rem; position: relative; z-index: 5; color: var(--text-primary);
+        }
+        .step-content { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        textarea {
+            font-family: 'Fira Mono', monospace; background: var(--bg-secondary); color: var(--text-primary);
+            border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%;
+            min-height: 120px; resize: vertical;
+        }
+        input[type="text"], input[type="file"] {
+            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 12px; width: 100%;
+        }
+        textarea:focus, input[type="text"]:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
+        .grade-level-btn, .rubric-btn {
+            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary);
+            padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center;
+        }
+        .grade-level-btn.selected, .rubric-btn.selected {
+            background: var(--accent); color: var(--bg-primary); border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); font-weight: bold;
+        }
+        .grade-level-btn:hover, .rubric-btn:hover { opacity: 0.8; }
+        input[type="file"] { display: none; }
+        .file-input-label {
+            display: inline-block; background: var(--bg-secondary); color: var(--accent);
+            border: 1px solid var(--accent); padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center;
+        }
+        .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none; width: 100%; height: 10px; background: var(--bg-secondary);
+            border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s;
+        }
+        input[type="range"]:hover { opacity: 1; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%;
+            background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
+        }
+        .nav-button, button#grade-button, .clear-button {
+            background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem;
+            transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer;
+        }
+        .nav-button:hover, button#grade-button:hover, .clear-button:hover {
+            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px);
+        }
+        .nav-button:disabled, button#grade-button:disabled {
+            background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important;
+        }
+        .clear-button { background: #4a5568; color: #fff; }
+        .clear-button:hover { background: #2d3748; }
+        #error-message, #success-message {
+            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
+            text-align: center; border: 1px solid;
+        }
+        #error-message {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgb(239, 68, 68);
+            color: #fecaca;
+        }
+        #success-message {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+        #grade-result h2 { color: var(--accent); }
+        .prose { color: var(--text-primary); word-break: break-word; }
+        .prose h1, .prose h2, .prose h3 { color: var(--accent); }
+        .prose a { color: var(--accent); text-decoration: underline; }
+        .prose strong { color: var(--text-primary); }
+        .prose ul > li::before { background-color: var(--accent); }
+        .file-list { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+        .file-list.expanded { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
+        .file-list-item {
+            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
+            padding: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem;
+        }
+        .file-list-item button {
+            background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem;
+        }
+        .file-list-item button:hover { color: #ff4d4d; }
+        .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .step-header .btn-container { flex: 1 0 0; }
+        .step-header .title { flex: 2 1 auto; text-align: center; font-size: 1.25rem; font-weight: 600; margin: 0 1rem; }
+        .description-text { min-height: 80px; line-height: 1.5; font-size: 0.875rem; color: #ccc; }
+        .action-area { display: none; }
+        footer.main-footer {
+            text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
+            background-color: var(--bg-secondary);
+            position: relative; z-index: 10; margin-top: auto;
+        }
+        .loading-bar-container {
+            width: 100%;
+            height: 6px;
+            background-color: rgba(var(--accent-rgb), 0.2);
+            margin-top: 1.5rem;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        .loading-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background-color: var(--accent);
+            width: 50%;
+            animation: indeterminate-loading 2s infinite ease-in-out;
+        }
+        @keyframes indeterminate-loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        .rubric-select {
+            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 12px; width: 100%; cursor: pointer; appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%20164.2c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9L146.2%2063.2l-107.4%20101c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9c-9.1-10.4-8.1-26.6%202.3-35.7L130.4%2022.4c4.4-5.1%2010.4-7.9%2016.7-7.9s12.3%202.8%2016.7%207.9l118.8%20111.9c9.2%209.1%209.2%2024.1%200%2033.2z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px;
+        }
+        .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
+        .hidden { display: none; }
+    </style>
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                document.documentElement.className = theme;
+            } catch (e) {
+                console.error("Failed to apply theme from localStorage", e);
+            }
+        })();
+    </script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-200 p-4 sm:p-6 lg:p-8 antialiased">
-   <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
-       <header class="bg-purple-700 text-white p-6 rounded-t-3xl shadow-md">
-           <h1 class="text-3xl font-bold text-center">Assignment Grader</h1>
-           <p class="text-center mt-2 text-purple-200">
-               Automate assignment evaluation based on your specific criteria.
-           </p>
-       </header>
-
-       <main class="p-6 space-y-8">
-           <div class="space-y-4">
-               <div>
-                   <label for="instructions" class="block text-lg font-semibold text-gray-800 mb-2">
-                       Assignment Instructions (or upload files):
-                   </label>
-                   <textarea
-                       id="instructions"
-                       class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 transition duration-200 h-32 resize-y mb-4"
-                       placeholder="E.g., 'Write a persuasive assignment arguing for or against the use of renewable energy sources. The assignment should be 500-700 words and include at least three supporting arguments.'"
-                   ></textarea>
-                   <div class="flex items-center mb-2">
-                       <input
-                           type="file"
-                           id="instructions-file"
-                           accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp"
-                           multiple
-                           class="block w-full text-sm text-gray-700
-                                 file:mr-4 file:py-2 file:px-4
-                                 file:rounded-full file:border-0
-                                 file:text-sm file:font-semibold
-                                 file:bg-purple-50 file:text-purple-700
-                                 hover:file:bg-purple-100"
-                       />
-                       <button type="button" class="toggle-file-list-button ml-2 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">Show Files</button>
-                   </div>
-                   <ul id="instructions-file-list" class="file-list"></ul>
-                   <p class="text-sm text-gray-500 mt-2">Accepted formats: .txt, .md, .pdf, .jpg, .png, .gif, .webp. Both typed text and uploaded file contents will be sent to the AI. **Note: For PDFs, only text content is extracted; images embedded in PDFs are NOT processed. If your instructions are an image, please upload it as a standalone JPG/PNG/etc.**</p>
-               </div>
-
-               <div>
-                   <label for="rubric" class="block text-lg font-semibold text-gray-800 mb-2">
-                       Grading Rubric (or upload files):
-                   </label>
-                   <textarea
-                       id="rubric"
-                       class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 transition duration-200 h-48 resize-y mb-4"
-                       placeholder="E.g., 'Content (40%): Thesis clarity, development of arguments, evidence. Organization (30%): Introduction, body paragraphs, conclusion, transitions. Language (20%): Grammar, spelling, vocabulary, sentence structure. Originality (10%): Unique insights, critical thinking.'"
-                   ></textarea>
-                   <div class="flex items-center mb-2">
-                       <input
-                           type="file"
-                           id="rubric-file"
-                           accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp"
-                           multiple
-                           class="block w-full text-sm text-gray-700
-                                 file:mr-4 file:py-2 file:px-4
-                                 file:rounded-full file:border-0
-                                 file:text-sm file:font-semibold
-                                 file:bg-purple-50 file:text-purple-700
-                                 hover:file:bg-purple-100"
-                       />
-                       <button type="button" class="toggle-file-list-button ml-2 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">Show Files</button>
-                   </div>
-                   <ul id="rubric-file-list" class="file-list"></ul>
-                   <p class="text-sm text-gray-500 mt-2">Accepted formats: .txt, .md, .pdf, .jpg, .png, .gif, .webp. Both typed text and uploaded file contents will be sent to the AI. **Note: For PDFs, only text content is extracted; images embedded in PDFs are NOT processed. If your rubric is an image, please upload it as a standalone JPG/PNG/etc.**</p>
-               </div>
-
-               <div>
-                   <label for="essay" class="block text-lg font-semibold text-gray-800 mb-2">
-                       Assignment Text (or upload files):
-                   </label>
-                   <textarea
-                       id="essay"
-                       class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 transition duration-200 h-64 resize-y mb-4"
-                       placeholder="Paste the assignment text here..."
-                   ></textarea>
-                   <div class="flex items-center mb-2">
-                       <input
-                           type="file"
-                           id="essay-file"
-                           accept=".txt,.md,.doc,.docx,.pdf,image/jpeg,image/png,image/gif,image/webp"
-                           multiple
-                           class="block w-full text-sm text-gray-700
-                                 file:mr-4 file:py-2 file:px-4
-                                 file:rounded-full file:border-0
-                                 file:text-sm file:font-semibold
-                                 file:bg-purple-50 file:text-purple-700
-                                 hover:file:bg-purple-100"
-                       />
-                       <button type="button" class="toggle-file-list-button ml-2 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300">Show Files</button>
-                   </div>
-                   <ul id="essay-file-list" class="file-list"></ul>
-                   <p class="text-sm text-gray-500 mt-2">Accepted formats: .txt, .md, .pdf, .jpg, .png, .gif, .webp. For assignment files, .doc and .docx are also accepted, but conversion may vary. Both typed text and uploaded file contents will be sent to the AI. **Note: For PDFs, only text content is extracted; images embedded in PDFs are NOT processed. If your assignment includes crucial visual elements (like graphs) or is a scanned image, please upload it as a standalone JPG/PNG/etc. to ensure the AI can analyze it.**</p>
-               </div>
-
-               <!-- Extra AI Instructions -->
-               <div>
-                   <label for="extra-instructions" class="block text-lg font-semibold text-gray-800 mb-2">
-                       Extra AI Instructions (Optional):
-                   </label>
-                   <textarea
-                       id="extra-instructions"
-                       class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-purple-500 focus:border-purple-500 transition duration-200 h-24 resize-y"
-                       placeholder="E.g., 'Pay close attention to the originality of ideas and deduct points for any common clichés.' or 'Focus only on grammar and spelling, ignore content for this grade.'"
-                   ></textarea>
-                   <p class="text-sm text-gray-500 mt-2">Provide any additional specific instructions for the AI on how to grade the assignment.</p>
-               </div>
-
-               <!-- Grading Strictness Meter -->
-               <div class="mt-6">
-                   <label for="strictness-meter" class="block text-lg font-semibold text-gray-800 mb-2">
-                       Grading Strictness: <span id="strictness-value" class="text-purple-700 font-bold">3</span>
-                   </label>
-                   <input
-                       type="range"
-                       id="strictness-meter"
-                       min="1"
-                       max="5"
-                       value="3"
-                       step="1"
-                       class="w-full"
-                   />
-                   <div class="flex justify-between text-sm text-gray-600 mt-2">
-                       <span>Lenient (1)</span>
-                       <span>Normal (3)</span>
-                       <span>Strict (5)</span>
-                   </div>
-                   <p class="text-sm text-gray-500 mt-2">
-                       A higher strictness will make the AI more critical of mistakes and deduct points more rigorously.
-                   </p>
-               </div>
-
-               <button
-                   id="grade-button"
-                   class="w-full py-3 px-6 rounded-lg text-white font-bold text-lg shadow-lg transform transition duration-300 bg-purple-600 hover:bg-purple-700 active:scale-95"
-               >
-                   Grade Assignment
-               </button>
-
-               <div id="loading-indicator" class="hidden flex items-center justify-center py-3">
-                   <svg class="animate-spin -ml-1 mr-3 h-7 w-7 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                   </svg>
-                   <span class="text-lg text-purple-700">Grading...</span>
-               </div>
-
-               <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
-                   <strong class="font-bold">Error!</strong>
-                   <span id="error-text" class="block sm:inline"></span>
-               </div>
-
-               <div id="success-message" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative" role="alert">
-                   <strong class="font-bold">Success!</strong>
-                   <span id="success-text" class="block sm:inline"></span>
-               </div>
-
-               <div id="grade-result" class="hidden bg-purple-50 p-6 rounded-lg shadow-inner mt-6">
-                   <h2 class="text-2xl font-bold text-purple-800 mb-4">Grading Results:</h2>
-                   <div id="result-content" class="prose max-w-none text-gray-700 leading-relaxed"></div>
-               </div>
-           </div>
-       </main>
-
-       <footer class="bg-purple-700 text-white p-4 text-center rounded-b-3xl text-sm">
-           Powered by Google Gemini AI
-       </footer>
-   </div>
-
-   <!-- PDF.js CDN -->
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-   <script>
-       // Set the workerSrc for PDF.js
-       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
-   </script>
-
-   <script type="module">
-       let googleApiKey = null; // Will store the fetched Google API key
-
-       // Define the primary Gemini model to use
-       const PRIMARY_GEMINI_MODEL = "gemini-2.0-flash-lite"; // Most cost-efficient and generally available
-
-       // DOM Elements - Using direct HTML IDs as keys for consistency
-       const dom = {
-           instructions: document.getElementById('instructions'), // textarea
-           'instructions-file': document.getElementById('instructions-file'), // file input
-           'instructions-file-list': document.getElementById('instructions-file-list'), // ul for file list
-
-           rubric: document.getElementById('rubric'), // textarea
-           'rubric-file': document.getElementById('rubric-file'), // file input
-           'rubric-file-list': document.getElementById('rubric-file-list'), // ul for file list
-
-           essay: document.getElementById('essay'), // textarea (now 'assignment')
-           'essay-file': document.getElementById('essay-file'), // file input (now 'assignment-file')
-           'essay-file-list': document.getElementById('essay-file-list'), // ul for file list (now 'assignment-file-list')
-
-           extraInstructionsTextarea: document.getElementById('extra-instructions'),
-           gradeButton: document.getElementById('grade-button'),
-           loadingIndicator: document.getElementById('loading-indicator'),
-           errorMessageDiv: document.getElementById('error-message'),
-           errorTextSpan: document.getElementById('error-text'),
-           successMessageDiv: document.getElementById('success-message'),
-           successTextSpan: document.getElementById('success-text'),
-           gradeResultDiv: document.getElementById('grade-result'),
-           resultContentDiv: document.getElementById('result-content'),
-           strictnessMeter: document.getElementById('strictness-meter'),
-           strictnessValueDisplay: document.getElementById('strictness-value'),
-       };
-
-       // Store files in arrays mapped to their input elements (using HTML IDs as keys)
-       const attachedFiles = {
-           'instructions-file': [],
-           'rubric-file': [],
-           'essay-file': [] // Refers to 'essay' elements in HTML
-       };
-
-       // Update strictness value display as the slider moves
-       dom.strictnessMeter.addEventListener('input', () => {
-           dom.strictnessValueDisplay.textContent = dom.strictnessMeter.value;
-       });
-
-       /**
-        * Displays an error message to the user.
-        * @param {string} message The error message to display.
-        */
-       function displayError(message) {
-           hideSuccessMessage(); // Hide success message if an error occurs
-           dom.errorMessageDiv.classList.remove('hidden');
-           dom.errorTextSpan.textContent = message;
-       }
-
-       /**
-        * Hides the error message.
-        */
-       function hideError() {
-           dom.errorMessageDiv.classList.add('hidden');
-           dom.errorTextSpan.textContent = '';
-       }
-
-       /**
-        * Displays a success message to the user.
-        * @param {string} message The success message to display.
-        */
-       function displaySuccessMessage(message) {
-           hideError(); // Hide error message if success occurs
-           dom.successMessageDiv.classList.remove('hidden');
-           dom.successTextSpan.textContent = message;
-           setTimeout(() => {
-               hideSuccessMessage();
-           }, 5000); // Hide after 5 seconds
-       }
-
-       /**
-        * Hides the success message.
-        */
-       function hideSuccessMessage() {
-           dom.successMessageDiv.classList.add('hidden');
-           dom.successTextSpan.textContent = '';
-       }
-
-       /**
-        * Fetches application configurations (Google API key)
-        * from the Vercel serverless function.
-        */
-       async function fetchAppConfigs() {
-           try {
-               const response = await fetch('/api/get-configs');
-               if (!response.ok) {
-                   let errorMsg = `HTTP Error: ${response.status}`;
-                   try {
-                       const errorData = await response.json();
-                       errorMsg = errorData.error || errorMsg;
-                   } catch (parseError) {
-                       console.warn('Could not parse error response as JSON:', parseError);
-                   }
-                   throw new Error(`Failed to fetch application configs: ${errorMsg}`);
-               }
-               const data = await response.json();
-               if (data.googleApiKey) {
-                   googleApiKey = data.googleApiKey;
-                   console.log("App configs fetched successfully (Google API key).");
-               } else {
-                   throw new Error("Essential app configs not found in response (check serverless function's return data).");
-               }
-           } catch (error) {
-               console.error("Error fetching application configs:", error);
-               displayError(`Application error: Could not load essential configurations. ${error.message}`);
-               dom.gradeButton.disabled = true;
-               dom.gradeButton.classList.add('bg-purple-400', 'cursor-not-allowed');
-               dom.gradeButton.textContent = 'Error Loading App Configs';
-           }
-       }
-
-       /**
-        * Toggles the loading indicator and button state.
-        * @param {boolean} isLoading True to show loading, false to hide.
-        */
-       function toggleLoading(isLoading) {
-           dom.loadingIndicator.classList.toggle('hidden', !isLoading);
-           dom.gradeButton.disabled = isLoading || !googleApiKey;
-           dom.gradeButton.classList.toggle('bg-purple-400', isLoading || !googleApiKey);
-           dom.gradeButton.classList.toggle('cursor-not-allowed', isLoading || !googleApiKey);
-           dom.gradeButton.classList.toggle('bg-purple-600', !(isLoading || !googleApiKey));
-           dom.gradeButton.classList.toggle('hover:bg-purple-700', !(isLoading || !googleApiKey));
-           dom.gradeButton.classList.toggle('active:scale-95', !(isLoading || !googleApiKey));
-
-           let buttonText = 'Grade Assignment';
-           if (!googleApiKey) {
-               buttonText = 'Loading App Configs...';
-           } else if (isLoading) {
-               buttonText = `<span class="flex items-center justify-center">
-                                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                 </svg>
-                                 Grading...
-                             </span>`;
-           }
-           dom.gradeButton.innerHTML = buttonText;
-       }
-
-       /**
-        * Reads content from a single file (text, PDF text, or base64 image).
-        * @param {File} file The file to read.
-        * @returns {Promise<{ type: 'text' | 'image', content: string | null, imageData?: { mimeType: string, data: string }, sourceType?: 'pdf' | 'textfile' | 'imagefile' }>}
-        */
-       async function readFileContent(file) {
-           return new Promise((resolve, reject) => {
-               const reader = new FileReader();
-               reader.onerror = (e) => reject(new Error(`Failed to read file: ${file.name}. Error: ${e.target.error}`));
-
-               if (file.type.startsWith('image/')) {
-                   reader.onload = (e) => resolve({ type: 'image', content: null, imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, sourceType: 'imagefile', filename: file.name });
-                   reader.readAsDataURL(file);
-               } else if (file.type === 'application/pdf') {
-                   reader.onload = async (e) => {
-                       try {
-                           const typedarray = new Uint8Array(e.target.result);
-                           const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                           let fullText = '';
-                           for (let i = 1; i <= pdf.numPages; i++) {
-                               const page = await pdf.getPage(i);
-                               const textContent = await page.getTextContent();
-                               fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                           }
-                           resolve({ type: 'text', content: fullText, sourceType: 'pdf', filename: file.name });
-                       } catch (error) {
-                           reject(new Error(`Failed to process PDF '${file.name}': ${error.message}`));
-                       }
-                   };
-                   reader.readAsArrayBuffer(file);
-               } else if (file.type === 'text/plain' || file.type === 'text/markdown') {
-                   reader.onload = (e) => resolve({ type: 'text', content: e.target.result, sourceType: 'textfile', filename: file.name });
-                   reader.readAsText(file);
-               } else if (file.type === 'application/msword' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                   // Frontend cannot directly read .doc/.docx. Instruct user.
-                   reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be directly processed by the browser for AI grading. Please convert to .txt, .md, .pdf, or an image format (jpg/png) and re-upload.`));
-               } else {
-                   reject(new Error(`Unsupported file type for '${file.name}': ${file.type}. Please use .txt, .md, .pdf, or common image formats.`));
-               }
-           });
-       }
-
-       /**
-        * Processes content from textarea and attached files for a given input section.
-        * @param {HTMLTextAreaElement} textareaElement The textarea for text input.
-        * @param {Array<File>} filesArray The array of File objects attached.
-        * @returns {Promise<{ combinedText: string, imageParts: Array<{ mimeType: string, data: string, filename: string }> }>}
-        */
-       async function getProcessedSectionContent(textareaElement, filesArray) {
-           let combinedText = textareaElement.value.trim();
-           const imageParts = [];
-           const errors = [];
-
-           for (const file of filesArray) {
-               try {
-                   const fileData = await readFileContent(file);
-                   if (fileData.type === 'text' && fileData.content) {
-                       combinedText += `\n\n--- Start of File: ${fileData.filename} ---\n${fileData.content}\n--- End of File: ${fileData.filename} ---`;
-                   } else if (fileData.type === 'image' && fileData.imageData) {
-                       imageParts.push({ ...fileData.imageData, filename: file.name }); // Use file.name for consistency
-                   }
-               } catch (error) {
-                   errors.push(error.message);
-               }
-           }
-
-           if (errors.length > 0) {
-               // Combine all file processing errors into one message
-               throw new Error(`Errors processing files:\n${errors.join('\n')}`);
-           }
-
-           return { combinedText: combinedText, imageParts: imageParts };
-       }
-
-       /**
-        * Handles the assignment grading process.
-        */
-       async function gradeEssay() { // Function name remains 'gradeEssay' for simplicity
-           hideError();
-           hideSuccessMessage();
-           dom.gradeResultDiv.classList.add('hidden'); // Hide previous results
-           toggleLoading(true); // Show loading indicator and disable button
-
-           try { // Wrap the entire grading process in try...finally
-               if (!googleApiKey) {
-                   displayError("Application not fully loaded. Please wait or refresh the page.");
-                   return;
-               }
-
-               const extraInstructions = dom.extraInstructionsTextarea.value.trim();
-               const strictness = dom.strictnessMeter.value;
-
-               let instructionsData, rubricData, essayData;
-
-               try {
-                   instructionsData = await getProcessedSectionContent(dom.instructions, attachedFiles['instructions-file']);
-                   rubricData = await getProcessedSectionContent(dom.rubric, attachedFiles['rubric-file']);
-                   essayData = await getProcessedSectionContent(dom.essay, attachedFiles['essay-file']); // refers to the 'essay' elements now holding assignment data
-               } catch (fileProcessingError) {
-                   displayError(`File processing error: ${fileProcessingError.message}`);
-                   return; // Stop execution if file processing fails
-               }
-
-               const validateContentPresence = (data, fieldName) => {
-                   if (!data.combinedText && data.imageParts.length === 0) {
-                        displayError(`Please provide ${fieldName} (text, images, or files).`);
-                        return false;
-                   }
-                   return true;
-               };
-
-               if (!validateContentPresence(instructionsData, "Assignment Instructions") ||
-                   !validateContentPresence(rubricData, "Grading Rubric") ||
-                   !validateContentPresence(essayData, "Assignment Text")) {
-                   return; // Stop execution if content is missing
-               }
-
-               await processGrading(instructionsData, rubricData, essayData, extraInstructions, strictness);
-
-           } catch (overallError) {
-               console.error("An unexpected error occurred during grading:", overallError);
-               displayError(`An unexpected error occurred: ${overallError.message}. Please try again.`);
-           } finally {
-               toggleLoading(false); // Always hide loading and re-enable button
-           }
-       }
-
-       /**
-        * Sends the grading request to the AI and processes the response.
-        * @param {{ combinedText: string, imageParts: Array<{ mimeType: string, data: string, filename: string }> }} instructionsData Instructions content.
-        * @param {{ combinedText: string, imageParts: Array<{ mimeType: string, data: string, filename: string }> }} rubricData Rubric content.
-        * @param {{ combinedText: string, imageParts: Array<{ mimeType: string, data: string, filename: string }> }} essayData Assignment content.
-        * @param {string} extraInstructions Additional instructions for the AI.
-        * @param {string} strictness The strictness level (1-5).
-        */
-       async function processGrading(instructionsData, rubricData, essayData, extraInstructions, strictness) {
-           const contents = [];
-
-           // System-like prompt incorporated into the first user part
-           contents.push({
-               role: "user",
-               parts: [{ text: `
-               You are an AI assignment grader. Your task is to evaluate an assignment based on provided instructions and a specific rubric.
-
-               ---
-               Grading Strictness Level: ${strictness} (1 = Very Lenient, 5 = Very Strict).
-               - When strictness is **4 or 5 (Strict/Very Strict)**: Identify *all* errors, even minor ones. Be highly critical and apply **significant point deductions** for deviations from instructions, rubric, or quality standards. Focus on precision and flawlessness.
-               - When strictness is **2 or 3 (Lenient/Normal)**: Be more forgiving of minor errors. Focus on overall understanding, effort, and major concepts. Apply **fewer point deductions** for small imperfections, emphasizing growth and broader achievement.
-               - Tailor your feedback and numerical grade (if applicable) to reflect this chosen strictness, ensuring consistency in your scoring.
-               ---
-
-               ${extraInstructions ? `
-               ---
-               ***URGENT: CRITICAL ADDITIONAL INSTRUCTIONS FOR GRADING THIS ASSIGNMENT!***
-               ***Please pay extremely close attention to the following and prioritize them above all other general grading guidelines:***
-               ${extraInstructions}
-               ***END OF CRITICAL INSTRUCTIONS.***
-               ---
-               ` : ''}
-
-               Provide a detailed grade and feedback, addressing each point of the rubric.
-               `}]
-           });
-
-           // Helper to add combined text and image parts to Gemini's 'contents' array
-           const addSectionToGeminiContents = (data, label) => {
-               if (data.combinedText || data.imageParts.length > 0) {
-                   const sectionParts = [];
-                   sectionParts.push({ text: `\n--- ${label} ---\n` }); // Section header for AI clarity
-
-                   if (data.combinedText) {
-                       sectionParts.push({ text: data.combinedText + '\n' });
-                   }
-
-                   data.imageParts.forEach(imgPart => {
-                       sectionParts.push({ text: `\n(Image: ${imgPart.filename}) Please refer to the content in this image:` });
-                       sectionParts.push({
-                           inlineData: {
-                               mimeType: imgPart.mimeType,
-                               data: imgPart.data
-                           }
-                       });
-                   });
-                   contents.push({ role: 'user', parts: sectionParts });
-               }
-           };
-
-           addSectionToGeminiContents(instructionsData, "ASSIGNMENT INSTRUCTIONS");
-           addSectionToGeminiContents(rubricData, "GRADING RUBRIC");
-           addSectionToGeminiContents(essayData, "ASSIGNMENT TO BE GRADED"); // Label changed to Assignment
-
-           // Add the final formatting instruction
-           contents.push({
-               role: "user",
-               parts: [{ text: `
-               ---
-               Please provide your feedback and grade in the following structured Markdown format. Use extra line breaks where appropriate to improve readability between sections and paragraphs.
-
-               # Overall Grade: [Your calculated grade based on the rubric, e.g., A, B+, 85/100, etc.]
-
-               ---
-
-               ## Detailed Feedback:
-
-               * **Criterion 1 (from Rubric):**
-                 [Evaluation for this criterion, strengths, weaknesses, and suggestions for improvement. Use bullet points for strengths, weaknesses, and suggestions if applicable. Ensure there is vertical spacing between points.]
-
-               * **Criterion 2 (from Rubric):**
-                 [Evaluation for this criterion, strengths, weaknesses, and suggestions for improvement. Ensure there is vertical spacing between points.]
-
-               * ... (Continue for all relevant rubric criteria, ensuring clear headings, ample vertical spacing, and bullet points for each criterion's evaluation, strengths, weaknesses, and suggestions.)
-
-               ---
-
-               ## General Comments:
-               [Any additional overall feedback, summary of major strengths, or overarching areas for growth. Ensure good paragraph spacing.]
-
-               ---
-
-               ## What to Work On to Improve:
-               [Provide clear, actionable steps for improvement. Use numbered lists or bulleted lists for clarity. Each point should be a specific suggestion based on the weaknesses identified in the detailed feedback. Ensure good vertical spacing between points.]
-           `}]
-           });
-
-           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${PRIMARY_GEMINI_MODEL}:generateContent?key=${googleApiKey}`;
-
-           try {
-               const response = await fetch(apiUrl, {
-                   method: 'POST',
-                   headers: {
-                       'Content-Type': 'application/json'
-                   },
-                   body: JSON.stringify({ contents: contents })
-               });
-
-               if (!response.ok) {
-                   const errorData = await response.json();
-                   const errorMessage = errorData.error?.message || JSON.stringify(errorData) || 'Unknown error from Gemini';
-                   throw new Error(`Google Gemini API error with ${PRIMARY_GEMINI_MODEL}: ${response.status} - ${errorMessage}`);
-               }
-
-               const result = await response.json();
-
-               if (result.candidates && result.candidates.length > 0 &&
-                   result.candidates[0].content && result.candidates[0].content.parts &&
-                   result.candidates[0].content.parts.length > 0) {
-                   const text = result.candidates[0].content.parts[0].text;
-                   dom.resultContentDiv.innerHTML = marked.parse(text);
-                   dom.gradeResultDiv.classList.remove('hidden');
-                   displaySuccessMessage(`Assignment graded successfully using ${PRIMARY_GEMINI_MODEL}!`);
-               } else {
-                   throw new Error(`Could not get a valid response from Google Gemini AI using ${PRIMARY_GEMINI_MODEL}. Unexpected response structure.`);
-               }
-           } catch (err) {
-               console.error(`Error grading assignment with ${PRIMARY_GEMINI_MODEL}:`, err);
-               displayError(`Failed to grade assignment: ${err.message}. Please check your inputs and try again.`);
-           }
-           // The finally block in gradeEssay (the calling function) will handle enabling the button.
-       }
-
-       // --- File Attachment Handling ---
-
-       /**
-        * Updates the displayed list of attached files for a given input.
-        * @param {string} fileInputId The ID of the file input element (e.g., 'instructions-file').
-        */
-       function updateFileListDisplay(fileInputId) {
-           const fileListElement = dom[fileInputId + '-list']; // Access ul element using its ID in dom object
-           fileListElement.innerHTML = ''; // Clear current list
-
-           if (attachedFiles[fileInputId].length === 0) {
-               fileListElement.classList.remove('expanded'); // Ensure collapsed if no files
-               // Locate the specific toggle button for this input section
-               const fileInput = dom[fileInputId];
-               // Find the containing div of the file input and the toggle button
-               const parentDiv = fileInput.parentNode;
-               const toggleButton = parentDiv ? parentDiv.querySelector('.toggle-file-list-button') : null;
-               if (toggleButton) toggleButton.textContent = 'Show Files';
-               return;
-           }
-
-           attachedFiles[fileInputId].forEach((file, index) => {
-               const listItem = document.createElement('li');
-               listItem.className = 'file-list-item';
-               listItem.innerHTML = `
-                   <span>${file.name}</span>
-                   <button type="button" data-index="${index}">x</button>
-               `;
-               fileListElement.appendChild(listItem);
-           });
-       }
-
-       /**
-        * Attaches event listeners for file input changes and removal, and adds toggle for file list.
-        * @param {string} fileInputId The ID of the file input element.
-        */
-       function setupFileInput(fileInputId) {
-           const fileInput = dom[fileInputId]; // Access file input element using its ID in dom object
-           const fileListElement = dom[fileInputId + '-list']; // Access ul element using its ID in dom object
-
-           // Add a null check for fileInput to prevent errors if element is missing
-           if (!fileInput) {
-               console.error(`File input element with ID '${fileInputId}' not found. Cannot set up file input.`);
-               return;
-           }
-
-           // Correctly find the parent div (which contains both file input and toggle button)
-           const parentDiv = fileInput.parentNode;
-           const toggleButton = parentDiv ? parentDiv.querySelector('.toggle-file-list-button') : null;
-
-           // Handle file selection
-           fileInput.addEventListener('change', (event) => {
-               // THIS IS THE FIX: Use push with spread syntax to ADD files, not replace the array.
-               attachedFiles[fileInputId].push(...Array.from(event.target.files));
-               updateFileListDisplay(fileInputId);
-               fileListElement.classList.add('expanded'); // Expand when files are added
-               if (toggleButton) toggleButton.textContent = 'Hide Files';
-               event.target.value = ''; // Clear input value to allow re-selection
-           });
-
-           // Handle file removal
-           fileListElement.addEventListener('click', (event) => {
-               if (event.target.tagName === 'BUTTON') {
-                   const indexToRemove = parseInt(event.target.dataset.index);
-                   if (!isNaN(indexToRemove)) {
-                       attachedFiles[fileInputId].splice(indexToRemove, 1);
-                       updateFileListDisplay(fileInputId); // This will also handle collapsing if empty
-                   }
-               }
-           });
-
-           // Handle toggle button click
-           if (toggleButton) {
-               toggleButton.addEventListener('click', () => {
-                   fileListElement.classList.toggle('expanded');
-                   if (fileListElement.classList.contains('expanded')) {
-                       toggleButton.textContent = 'Hide Files';
-                   } else {
-                       toggleButton.textContent = 'Show Files';
-                   }
-               });
-           }
-       }
-
-
-       // Function to clear all textareas and hide previous results
-       function clearInputs() {
-           dom.instructions.value = '';
-           dom.rubric.value = '';
-           dom.essay.value = ''; // Clear assignment text area
-           dom.extraInstructionsTextarea.value = '';
-
-           // Clear file inputs and their displays
-           attachedFiles['instructions-file'] = [];
-           attachedFiles['rubric-file'] = [];
-           attachedFiles['essay-file'] = [];
-           updateFileListDisplay('instructions-file');
-           updateFileListDisplay('rubric-file');
-           updateFileListDisplay('essay-file');
-
-           dom.gradeResultDiv.classList.add('hidden');
-           dom.resultContentDiv.innerHTML = '';
-           hideError();
-           hideSuccessMessage();
-           dom.strictnessMeter.value = 3;
-           dom.strictnessValueDisplay.textContent = 3;
-       }
-
-
-       // Main initialization function
-       async function initApp() {
-           dom.gradeButton.addEventListener('click', gradeEssay);
-
-           const clearButton = document.createElement('button');
-           clearButton.textContent = 'Clear All Fields';
-           clearButton.className = 'w-full py-3 px-6 rounded-lg bg-gray-200 text-gray-800 font-bold text-lg shadow-lg transform transition duration-300 hover:bg-gray-300 active:scale-95 mt-4';
-           clearButton.addEventListener('click', clearInputs);
-           dom.gradeButton.parentNode.insertBefore(clearButton, dom.gradeButton.nextSibling);
-
-           // Setup file input listeners for all sections
-           setupFileInput('instructions-file'); // Pass the actual HTML ID string
-           setupFileInput('rubric-file');
-           setupFileInput('essay-file'); // Use 'essay-file' as the ID refers to it in HTML
-
-           await fetchAppConfigs();
-           toggleLoading(false); // Initial state: not loading, button enabled
-       }
-
-       // Initialize the app on window load
-       window.onload = initApp;
-   </script>
-   <!-- Marked.js CDN for Markdown rendering -->
-   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-   <script defer src="/_vercel/insights/script.js"></script>
+<body>
+    <div id="header-container"></div>
+    <main class="main-content animate-on-load">
+
+    <section class="hero">
+        <h1>AI Assignment Grader</h1>
+        <p>Leverage generative AI to automate assignment evaluation based on your specific instructions and rubric.</p>
+    </section>
+
+    <div class="grader-container">
+        <div>
+            <div id="step-instructions" class="step-content">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button></div>
+                    <label class="title">1. Assignment Instructions</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                </div>
+                <textarea id="instructions" placeholder="E.g., 'Write a 500-word persuasive essay on renewable energy, with three supporting arguments.'"></textarea>
+                <div class="flex items-center justify-between mt-2 space-x-2">
+                    <label for="instructions-file" class="file-input-label flex-grow">Upload Files</label>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
+                </div>
+                <input type="file" id="instructions-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <ul id="instructions-file-list" class="file-list"></ul>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted. If instructions are an image, upload it directly.</p>
+            </div>
+
+            <div id="step-rubric" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">2. Grading Rubric</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                </div>
+                <textarea id="rubric" placeholder="E.g., 'Content: 40%. Organization: 30%. Language: 20%. Originality: 10%.'"></textarea>
+                <div class="flex items-center justify-between mt-2 space-x-2">
+                    <label for="rubric-file" class="file-input-label flex-grow">Upload Files</label>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
+                </div>
+                <input type="file" id="rubric-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <ul id="rubric-file-list" class="file-list"></ul>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>Note:</strong> For PDFs, only text is extracted. If your rubric is an image, upload it as a JPG/PNG file.</p>
+            </div>
+
+            <div id="step-essay" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">3. Student's Assignment</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                </div>
+                <textarea id="essay" placeholder="Paste the student's assignment text here..."></textarea>
+                <div class="flex items-center justify-between mt-2 space-x-2">
+                    <label for="essay-file" class="file-input-label flex-grow">Upload Files</label>
+                    <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
+                </div>
+                <input type="file" id="essay-file" accept=".txt,.md,.doc,.docx,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <ul id="essay-file-list" class="file-list"></ul>
+                <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx files cannot be read by the browser.</strong> Please convert to PDF, TXT, or copy-paste the text.</p>
+            </div>
+
+            <div id="step-extra-instructions" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">4. Extra AI Instructions (Optional)</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-lg font-semibold mb-2">Grade</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <button class="grade-level-btn" data-grade="Elementary">Elementary</button>
+                        <button class="grade-level-btn" data-grade="Middle School">Middle School</button>
+                        <button class="grade-level-btn" data-grade="High School">High School</button>
+                        <button class="grade-level-btn" data-grade="AP Courses">AP Courses</button>
+                        <button class="grade-level-btn" data-grade="Higher Ed">Higher Ed</button>
+                        <button class="grade-level-btn" data-grade="IB">IB</button>
+                    </div>
+                </div>
+
+                <div id="subject-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
+                    <label for="subject-select" class="block text-lg font-semibold mb-2">Subject (based on selected Grade)</label>
+                    <p class="text-sm text-gray-400 mb-4">Pick a subject to add targeted guidance to the prompt below. Subjects change automatically for AP, Higher Ed, and IB.</p>
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                        <select id="subject-select" class="flex-grow rubric-select">
+                            <option value="none" disabled selected>Select a subject...</option>
+                        </select>
+                        <button id="add-subject-to-prompt-btn" class="nav-button !rounded-full !px-6 !py-3">Add to Prompt</button>
+                    </div>
+                </div>
+
+                <div id="rubric-quick-add" class="hidden mb-6 p-4 bg-[var(--bg-secondary)] rounded-lg">
+                    <label for="rubric-select" class="block text-lg font-semibold mb-2">Rubric Quick-Add</label>
+                    <p class="text-sm text-gray-400 mb-4">Choose a pre-defined rubric to add its details to the extra instructions prompt below.</p>
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                        <select id="rubric-select" class="flex-grow rubric-select">
+                            <option value="none" disabled selected>Select a rubric...</option>
+                            <option value="IB Internal Assessment">IB Internal Assessment</option>
+                            <option value="AP English Argument">AP English Argument</option>
+                            <option value="AP Calculus">AP Calculus</option>
+                            <option value="Higher Ed General Essay">Higher Ed General Essay</option>
+                            <option value="Harvard Biology Lab Report">Harvard Biology Lab Report</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                        <button id="add-rubric-to-prompt-btn" class="nav-button !rounded-full !px-6 !py-3">Add to Prompt</button>
+                    </div>
+                </div>
+
+                <textarea id="extra-instructions" placeholder="E.g., 'Pay close attention to originality.' or 'Focus only on grammar and spelling.'"></textarea>
+                <p class="description-text mt-2">Provide any final, specific instructions for the AI on how to approach the grading. This step is optional.</p>
+            </div>
+
+            <div id="step-strictness" class="step-content hidden">
+                <div class="step-header">
+                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <label class="title">5. Set Strictness & Grade</label>
+                    <div class="btn-container text-right"><button type="button" class="nav-button opacity-0 pointer-events-none">Next</button></div>
+                </div>
+                <div class="mt-4">
+                    <label for="strictness-meter" class="block text-lg font-semibold mb-2 text-center">
+                        Grading Strictness: <span id="strictness-value" class="font-bold text-xl" style="color: var(--accent);">3</span>
+                    </label>
+                    <input type="range" id="strictness-meter" min="1" max="5" value="3" step="1" class="w-full">
+                    <div class="flex justify-between text-sm mt-2 px-1">
+                        <span>Lenient</span><span>Normal</span><span>Strict</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="action-area" class="mt-6 space-y-4">
+                <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
+                <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
+                <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
+                <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
+                <div id="loading-bar-container" class="loading-bar-container hidden">
+                    <div class="loading-bar"></div>
+                </div>
+            </div>
+
+            <div id="grade-result" class="hidden">
+                <h2 class="text-2xl font-bold mb-4 text-center">Grading Results</h2>
+                <div id="result-content" class="prose max-w-none leading-relaxed"></div>
+            </div>
+        </div>
+    </div>
+</main>
+    <footer class="main-footer">
+        &copy; 2025 Shkspr. All rights reserved.
+    </footer>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js';
+        
+        async function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
+                if (file.type.startsWith('image/')) {
+                    reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    reader.onload = async (e) => {
+                        try {
+                            const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+                            let fullText = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                            }
+                            resolve({ type: 'text', content: fullText, filename: file.name });
+                        } catch (error) {
+                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else if (file.type.startsWith('text/')) {
+                    reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
+                    reader.readAsText(file);
+                } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
+                } else {
+                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
+                }
+            });
+        }
+
+        async function getProcessedSectionContent(textarea, files) {
+            let combinedText = textarea.value.trim();
+            const parts = [];
+            const errors = [];
+
+            for (const file of files) {
+                try {
+                    const result = await readFileContent(file);
+                    if (result.type === 'text') {
+                        combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
+                    } else if (result.type === 'image') {
+                        parts.push({ inlineData: result.imageData });
+                    }
+                } catch (error) {
+                    errors.push(error.message);
+                }
+            }
+
+            if (errors.length > 0) throw new Error(errors.join('\n'));
+            
+            if (combinedText) {
+                parts.unshift({ text: combinedText });
+            }
+            
+            return parts;
+        }
+
+        async function loadHeader() {
+            try {
+                const response = await fetch('../Structure/header.html');
+                if (!response.ok) throw new Error('Failed to load header');
+                const text = await response.text();
+                
+                const container = document.getElementById('header-container');
+                container.innerHTML = text;
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const scriptElement = doc.querySelector('script');
+                if (scriptElement) {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = scriptElement.textContent;
+                    document.body.appendChild(newScript);
+                }
+
+                if (window.setTheme && window.initParticles) {
+                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                    window.setTheme(savedTheme);
+
+                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+
+                    window.initParticles(document.body);
+                }
+
+            } catch (error) {
+                console.error('Error loading header:', error);
+                document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ALL_GEMINI_MODELS = [
+              'gemini-1.5-flash',
+              'gemini-1.5-pro'
+            ];
+
+            const dom = {
+                steps: Array.from(document.querySelectorAll('.step-content')),
+                actionArea: document.getElementById('action-area'),
+                gradeButton: document.getElementById('grade-button'),
+                clearButton: document.getElementById('clear-button'),
+                loadingBarContainer: document.getElementById('loading-bar-container'),
+                errorMessageDiv: document.getElementById('error-message'),
+                successMessageDiv: document.getElementById('success-message'),
+                gradeResultDiv: document.getElementById('grade-result'),
+                resultContentDiv: document.getElementById('result-content'),
+                strictnessMeter: document.getElementById('strictness-meter'),
+                strictnessValueDisplay: document.getElementById('strictness-value'),
+                gradeLevelButtons: document.querySelectorAll('.grade-level-btn'),
+                rubricQuickAddArea: document.getElementById('rubric-quick-add'),
+                rubricSelect: document.getElementById('rubric-select'),
+                addRubricBtn: document.getElementById('add-rubric-to-prompt-btn'),
+                extraInstructions: document.getElementById('extra-instructions'),
+                subjectQuickAddArea: document.getElementById('subject-quick-add'),
+                subjectSelect: document.getElementById('subject-select'),
+                addSubjectBtn: document.getElementById('add-subject-to-prompt-btn'),
+                instructions: document.getElementById('instructions'),
+                rubric: document.getElementById('rubric'),
+                essay: document.getElementById('essay'),
+            };
+
+            let instructionsFiles = [];
+            let rubricFiles = [];
+            let essayFiles = [];
+
+            const rubricTexts = {
+                'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
+                'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`,
+                'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`,
+                'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`,
+                'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n`
+            };
+
+            const AP_SUBJECTS = [ "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP Chinese Language & Culture","AP Comparative Government & Politics", "AP Computer Science A","AP Computer Science Principles", "AP Drawing","AP 2-D Art and Design","AP 3-D Art and Design", "AP English Language & Composition","AP English Literature & Composition", "AP Environmental Science","AP European History","AP French Language & Culture", "AP German Language & Culture","AP Human Geography","AP Italian Language & Culture", "AP Japanese Language & Culture","AP Latin","AP Macroeconomics","AP Microeconomics", "AP Music Theory","AP Physics 1","AP Physics 2","AP Physics C: Electricity & Magnetism", "AP Physics C: Mechanics","AP Precalculus","AP Psychology","AP Research","AP Seminar", "AP Spanish Language & Culture","AP Spanish Literature & Culture","AP Statistics", "AP United States Government & Politics","AP United States History","AP World History: Modern" ];
+            const HIGHER_ED_SUBJECTS = [ "Mathematics (Calculus)","Mathematics (Linear Algebra)","Mathematics (Probability & Statistics)","Statistics", "Physics (Mechanics)","Physics (Electricity & Magnetism)","Physics (Thermodynamics)","Physics (Quantum/Modern)", "Chemistry (General)","Chemistry (Organic)","Biology (General)","Biology (Genetics)", "Computer Science (Programming)","Computer Science (Data Structures)","Computer Science (Algorithms)","Computer Science (Databases)", "Data Science","Machine Learning","Economics (Micro)","Economics (Macro)","Finance","Accounting", "Business Administration","Marketing","Operations Management","Management/Organizational Behavior", "Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition", "Communication Studies","Civil Engineering","Mechanical Engineering","Electrical Engineering","Chemical Engineering", "Biomedical Engineering","Environmental Engineering","Law/Legal Studies","Nursing","Medicine (Premed)","Anthropology","Geography","Art History" ];
+            const IB_SUBJECTS = [ "IB English A: Literature (SL/HL)","IB English A: Language & Literature (SL/HL)", "IB Language B: Spanish (SL/HL)","IB Language B: French (SL/HL)","IB Language B: Mandarin (SL/HL)", "IB Global Politics (SL/HL)","IB History (SL/HL)","IB Economics (SL/HL)","IB Psychology (SL/HL)", "IB Business Management (SL/HL)","IB Geography (SL/HL)","IB Philosophy (SL/HL)", "IB Biology (SL/HL)","IB Chemistry (SL/HL)","IB Physics (SL/HL)","IB Computer Science (SL/HL)", "IB Environmental Systems and Societies (SL)","IB Mathematics: Analysis & Approaches (SL/HL)", "IB Mathematics: Applications & Interpretation (SL/HL)","IB Visual Arts (SL/HL)","IB Music (SL/HL)", "IB Theatre (SL/HL)","IB Film (SL/HL)","IB Theory of Knowledge (TOK)","IB Extended Essay (EE)" ];
+
+            const SUBJECT_TEMPLATES = {
+                AP: (subject) => `--- Start of Subject Guidance (AP) ---\nSubject: ${subject}\nUse AP scoring practices and, where applicable, FRQ-style criteria. Emphasize:\n- Content accuracy and correct application of ${subject.replace(/^AP\\s*/,'')} concepts.\n- Clear reasoning/justification, proper notation/terminology.\n- Evidence quality, organization, and clarity.\nApply point deductions for conceptual errors; allow partial credit for correct setup.\n--- End of Subject Guidance ---`,
+                "Higher Ed": (subject) => `--- Start of Subject Guidance (Higher Ed) ---\nSubject: ${subject}\nEvaluate on:\n- Conceptual correctness and methodological rigor for ${subject}.\n- Clarity, structure, and academic tone.\n- Use of credible sources (if relevant) and proper citation.\n- Depth of analysis, originality, and correctness of calculations/derivations (when applicable).\n--- End of Subject Guidance ---`,
+                IB: (subject) => `--- Start of Subject Guidance (IB) ---\nSubject: ${subject}\nAlign feedback with IB descriptors: knowledge & understanding, application/analysis, synthesis/evaluation, and communication.\n- Reference subject-specific criteria where applicable (SL/HL).\n- Highlight academic honesty and proper citation.\n- Comment on global/contextual understanding if relevant.\n--- End of Subject Guidance ---`
+            };
+
+            let currentStep = 0;
+            let selectedGrade = 'None';
+
+            const saveState = () => {
+                localStorage.setItem('graderInstructions', dom.instructions.value);
+                localStorage.setItem('graderRubric', dom.rubric.value);
+                localStorage.setItem('graderEssay', dom.essay.value);
+                localStorage.setItem('graderExtraInstructions', dom.extraInstructions.value);
+                localStorage.setItem('graderSelectedGrade', selectedGrade);
+                if (dom.gradeResultDiv.classList.contains('hidden') === false) {
+                    localStorage.setItem('graderResultHTML', dom.resultContentDiv.innerHTML);
+                }
+            };
+
+            const loadState = () => {
+                dom.instructions.value = localStorage.getItem('graderInstructions') || '';
+                dom.rubric.value = localStorage.getItem('graderRubric') || '';
+                dom.essay.value = localStorage.getItem('graderEssay') || '';
+                dom.extraInstructions.value = localStorage.getItem('graderExtraInstructions') || '';
+
+                const savedGrade = localStorage.getItem('graderSelectedGrade');
+                if (savedGrade && savedGrade !== 'None') {
+                    const btn = document.querySelector(`.grade-level-btn[data-grade="${savedGrade}"]`);
+                    if (btn) {
+                        btn.classList.add('selected');
+                        selectedGrade = savedGrade;
+                        refreshSubjectAreas();
+                    }
+                }
+
+                const savedResult = localStorage.getItem('graderResultHTML');
+                if (savedResult) {
+                    dom.resultContentDiv.innerHTML = savedResult;
+                    dom.gradeResultDiv.classList.remove('hidden');
+                }
+            };
+
+            const clearState = () => {
+                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
+                instructionsFiles = [];
+                rubricFiles = [];
+                essayFiles = [];
+                updateFileList('instructions-file', instructionsFiles);
+                updateFileList('rubric-file', rubricFiles);
+                updateFileList('essay-file', essayFiles);
+                dom.strictnessMeter.value = 3;
+                dom.strictnessValueDisplay.textContent = '3';
+                dom.gradeResultDiv.classList.add('hidden');
+                dom.errorMessageDiv.classList.add('hidden');
+                dom.successMessageDiv.classList.add('hidden');
+                dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
+                dom.rubricQuickAddArea.classList.add('hidden');
+                dom.subjectQuickAddArea.classList.add('hidden');
+                dom.rubricSelect.value = 'none';
+                dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
+                selectedGrade = 'None';
+                
+                localStorage.removeItem('graderInstructions');
+                localStorage.removeItem('graderRubric');
+                localStorage.removeItem('graderEssay');
+                localStorage.removeItem('graderExtraInstructions');
+                localStorage.removeItem('graderSelectedGrade');
+                localStorage.removeItem('graderResultHTML');
+
+                showStep(0);
+            };
+
+            function showStep(index) {
+                dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
+                dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
+                currentStep = index;
+            }
+
+            window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
+            window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
+
+            function displayMessage(element, message, isError = false) {
+                element.innerHTML = message;
+                element.classList.remove('hidden');
+                setTimeout(() => element.classList.add('hidden'), isError ? 8000 : 5000);
+            }
+
+            function toggleLoading(isLoading) {
+                dom.loadingBarContainer.classList.toggle('hidden', !isLoading);
+                dom.gradeButton.disabled = isLoading;
+                dom.clearButton.disabled = isLoading;
+            }
+
+            function populateSubjectOptions(gradeCategory) {
+                const select = dom.subjectSelect;
+                select.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
+                let list = [];
+                if (gradeCategory === 'AP Courses') list = AP_SUBJECTS;
+                else if (gradeCategory === 'Higher Ed') list = HIGHER_ED_SUBJECTS;
+                else if (gradeCategory === 'IB') list = IB_SUBJECTS;
+                list.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    select.appendChild(opt);
+                });
+                dom.addSubjectBtn.disabled = true;
+            }
+
+            function refreshSubjectAreas() {
+                const showSubject = ['AP Courses', 'Higher Ed', 'IB'].includes(selectedGrade);
+                dom.subjectQuickAddArea.classList.toggle('hidden', !showSubject);
+                dom.rubricQuickAddArea.classList.toggle('hidden', !showSubject);
+                if (showSubject) populateSubjectOptions(selectedGrade);
+            }
+
+            dom.subjectSelect.addEventListener('change', () => {
+                dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none');
+            });
+
+            dom.addSubjectBtn.addEventListener('click', () => {
+                const subject = dom.subjectSelect.value;
+                if (!subject || subject === 'none') return;
+                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) : selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) : selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
+                if (tmpl) {
+                    dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
+                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
+                    saveState();
+                }
+            });
+
+            dom.gradeLevelButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const isAlreadySelected = btn.classList.contains('selected');
+                    
+                    dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
+
+                    if (isAlreadySelected) {
+                        selectedGrade = 'None';
+                    } else {
+                        btn.classList.add('selected');
+                        selectedGrade = btn.dataset.grade;
+                    }
+                    
+                    refreshSubjectAreas();
+                    saveState();
+                });
+            });
+
+            dom.addRubricBtn.addEventListener('click', () => {
+                const selectedValue = dom.rubricSelect.value;
+                if (selectedValue !== 'none' && selectedValue !== 'Custom') {
+                    const rubricText = rubricTexts[selectedValue];
+                    if (rubricText) {
+                        dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
+                        displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
+                        saveState();
+                    }
+                }
+            });
+
+            function updateFileList(fileInputId, filesArray) {
+                const listEl = document.getElementById(`${fileInputId}-list`);
+                listEl.innerHTML = '';
+                filesArray.forEach((file, index) => {
+                    const item = document.createElement('li');
+                    item.className = 'file-list-item';
+                    item.innerHTML = `<span>${file.name}</span><button data-index="${index}" data-input-id="${fileInputId}">&times;</button>`;
+                    listEl.appendChild(item);
+                });
+                listEl.classList.toggle('expanded', filesArray.length > 0);
+            }
+
+            function setupFileInput(fileInputId, filesArray) {
+                const inputEl = document.getElementById(fileInputId);
+                const listEl = document.getElementById(`${fileInputId}-list`);
+                const toggleBtn = inputEl.closest('.step-content').querySelector('.toggle-file-list-button');
+                
+                inputEl.addEventListener('change', (e) => {
+                    // THIS IS THE FIX: Appends new files to the existing array.
+                    filesArray.push(...Array.from(e.target.files));
+                    updateFileList(fileInputId, filesArray);
+                    e.target.value = ''; // Clear the input to allow re-selecting the same file
+                });
+
+                listEl.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON' && e.target.dataset.inputId === fileInputId) {
+                        filesArray.splice(e.target.dataset.index, 1);
+                        updateFileList(fileInputId, filesArray);
+                    }
+                });
+
+                toggleBtn.addEventListener('click', () => {
+                    listEl.classList.toggle('expanded');
+                    toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
+                });
+            }
+
+            setupFileInput('instructions-file', instructionsFiles);
+            setupFileInput('rubric-file', rubricFiles);
+            setupFileInput('essay-file', essayFiles);
+
+            dom.clearButton.addEventListener('click', clearState);
+
+            dom.strictnessMeter.addEventListener('input', (e) => {
+                dom.strictnessValueDisplay.textContent = e.target.value;
+            });
+            
+            async function callApiWithRetries(payload) {
+                let modelsToTry = [...ALL_GEMINI_MODELS];
+                let lastError = null;
+
+                for (const model of modelsToTry) {
+                    console.log(`Attempting API call with model: ${model}`);
+                    try {
+                        // THIS IS THE FIX: Calls the correct backend endpoint.
+                        const response = await fetch('/api/Grader_API', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...payload, model })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.error || `Server error (${response.status}) with no JSON body`);
+                        }
+
+                        const result = await response.json();
+                        if (result.text) {
+                            return result.text;
+                        }
+                        lastError = new Error(`Model ${model} returned no valid text.`);
+                    } catch (error) {
+                        console.warn(error.message);
+                        lastError = error;
+                    }
+                }
+                throw lastError || new Error("All API models failed.");
+            }
+
+            window.gradeEssay = async () => {
+                dom.errorMessageDiv.classList.add('hidden');
+                dom.successMessageDiv.classList.add('hidden');
+                dom.gradeResultDiv.classList.add('hidden');
+                toggleLoading(true);
+                
+                localStorage.removeItem('graderResultHTML');
+
+                try {
+                    const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
+                    const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
+                    const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
+
+                    if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
+                    if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
+                    if (essayParts.length === 0) throw new Error("Please provide the Student's Assignment.");
+
+                    const extraInstructions = document.getElementById('extra-instructions').value.trim();
+                    const strictness = dom.strictnessMeter.value;
+                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
+
+                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
+                    
+                    const parts = [
+                        { text: systemPrompt },
+                        { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
+                        ...instructionsParts,
+                        { text: "\n\n--- GRADING RUBRIC ---\n" },
+                        ...rubricParts,
+                        { text: "\n\n--- STUDENT'S SUBMISSION ---\n" },
+                        ...essayParts
+                    ];
+                    
+                    const payload = { contents: [{ parts: parts }] };
+                    const resultText = await callApiWithRetries(payload);
+
+                    dom.resultContentDiv.innerHTML = marked.parse(resultText);
+                    dom.gradeResultDiv.classList.remove('hidden');
+                    displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
+                    dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
+                    
+                    saveState();
+
+                } catch (error) {
+                    console.error("Grading Error:", error);
+                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
+                } finally {
+                    toggleLoading(false);
+                }
+            };
+
+            const addPasteListener = (textarea, filesArray, fileInputId) => {
+                textarea.addEventListener('paste', (e) => {
+                    for (const item of e.clipboardData.items) {
+                        if (item.kind === 'file' && item.type.startsWith('image/')) {
+                            e.preventDefault();
+                            const blob = item.getAsFile();
+                            blob.name = `Pasted Image ${Date.now()}`;
+                            filesArray.push(blob);
+                            updateFileList(fileInputId, filesArray);
+                            displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
+                            return;
+                        }
+                    }
+                });
+            };
+
+            addPasteListener(dom.instructions, instructionsFiles, 'instructions-file');
+            addPasteListener(dom.rubric, rubricFiles, 'rubric-file');
+            addPasteListener(dom.essay, essayFiles, 'essay-file');
+
+            ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
+                document.getElementById(id).addEventListener('input', saveState);
+            });
+
+            showStep(0);
+            loadState();
+        });
+
+        document.addEventListener('DOMContentLoaded', loadHeader);
+    </script>
+
 </body>
 </html>
