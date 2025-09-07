@@ -683,10 +683,9 @@
                 const toggleBtn = inputEl.closest('.step-content').querySelector('.toggle-file-list-button');
                 
                 inputEl.addEventListener('change', (e) => {
-                    // THIS IS THE FIX: Appends new files to the existing array.
                     filesArray.push(...Array.from(e.target.files));
                     updateFileList(fileInputId, filesArray);
-                    e.target.value = ''; // Clear the input to allow re-selecting the same file
+                    e.target.value = '';
                 });
 
                 listEl.addEventListener('click', (e) => {
@@ -719,7 +718,6 @@
                 for (const model of modelsToTry) {
                     console.log(`Attempting API call with model: ${model}`);
                     try {
-                        // THIS IS THE FIX: Calls the correct backend endpoint.
                         const response = await fetch('/api/Grader_API', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -753,13 +751,20 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
+                    // THIS IS THE FIX: Explicitly check for text OR files before proceeding.
+                    if (dom.instructions.value.trim() === '' && instructionsFiles.length === 0) {
+                        throw new Error("Please provide Assignment Instructions, either by typing text or uploading a file.");
+                    }
+                    if (dom.rubric.value.trim() === '' && rubricFiles.length === 0) {
+                        throw new Error("Please provide a Grading Rubric, either by typing text or uploading a file.");
+                    }
+                    if (dom.essay.value.trim() === '' && essayFiles.length === 0) {
+                        throw new Error("Please provide the Student's Assignment, either by typing text or uploading a file.");
+                    }
+
                     const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
                     const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
                     const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
-
-                    if (instructionsParts.length === 0) throw new Error("Please provide Assignment Instructions.");
-                    if (rubricParts.length === 0) throw new Error("Please provide a Grading Rubric.");
-                    if (essayParts.length === 0) throw new Error("Please provide the Student's Assignment.");
 
                     const extraInstructions = document.getElementById('extra-instructions').value.trim();
                     const strictness = dom.strictnessMeter.value;
@@ -826,6 +831,12 @@
         document.addEventListener('DOMContentLoaded', loadHeader);
     </script>
 
+<!-- Vercel Analytics -->
+<script>
+  window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
+  window.va('set', 'mode', 'auto');
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+    
 </body>
 </html>
-```
