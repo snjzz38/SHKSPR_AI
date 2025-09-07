@@ -357,7 +357,43 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js';
         
-        // THIS IS THE CRITICAL FUNCTION THAT WAS MISSING. IT IS NOW RESTORED.
+        async function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+
+                if (file.type.startsWith('image/')) {
+                    reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    reader.onload = async (e) => {
+                        try {
+                            // THIS IS THE FIX: Convert ArrayBuffer to Uint8Array for robust processing.
+                            const typedarray = new Uint8Array(e.target.result);
+                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                            let fullText = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                            }
+                            resolve({ type: 'text', content: fullText, filename: file.name });
+                        } catch (error) {
+                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else if (file.type.startsWith('text/')) {
+                    reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
+                    reader.readAsText(file);
+                } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
+                } else {
+                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
+                }
+            });
+        }
+
         async function getProcessedSectionContent(textarea, files) {
             let combinedText = textarea.value.trim();
             const parts = [];
@@ -383,41 +419,6 @@
             }
             
             return parts;
-        }
-
-        async function readFileContent(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-
-                if (file.type.startsWith('image/')) {
-                    reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
-                    reader.readAsDataURL(file);
-                } else if (file.type === 'application/pdf') {
-                    reader.onload = async (e) => {
-                        try {
-                            const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
-                            let fullText = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const textContent = await page.getTextContent();
-                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                            }
-                            resolve({ type: 'text', content: fullText, filename: file.name });
-                        } catch (error) {
-                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else if (file.type.startsWith('text/')) {
-                    reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
-                    reader.readAsText(file);
-                } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
-                } else {
-                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
-                }
-            });
         }
 
         async function loadHeader() {
