@@ -171,7 +171,6 @@
             width: 100%; text-align: center; padding: 20px; font-size: 0.9rem;
             background-color: var(--bg-secondary); position: relative; z-index: 10;
         }
-        /* --- NEW: Styles for small copy button --- */
         .copy-button.small {
             background-color: var(--bg-secondary);
             color: var(--text-primary);
@@ -239,9 +238,20 @@
             </div>
 
             <div id="inputStep2" class="input-step">
-                <h2>Step 2: Custom Instructions (Optional)</h2>
+                <h2>Step 2: Custom Instructions</h2>
                 <p class="subtitle">Guide the AI on the type and difficulty of the quiz.</p>
                 <textarea id="customInstructions" placeholder="e.g., 'Generate 10 multiple-choice questions with 4 options each', 'Focus on advanced concepts', 'Use a mix of true/false and short answer.'"></textarea>
+                
+                <!-- NEW: API Key Input Section -->
+                <div class="advanced-options-container" style="width: 100%; margin-top: 15px;">
+                    <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
+                    <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
+                        <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
+                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
+                        <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
+                        <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
+                    </div>
+                </div>
             </div>
 
             <div class="input-navigation-buttons">
@@ -263,7 +273,6 @@
         </div>
         <div id="startQuizArea" class="start-quiz-area hidden mt-4">
             <button id="startQuizButton" class="start-quiz-button">Start Interactive Quiz</button>
-            <!-- NEW: Copy button added here -->
             <button id="copyQuizButton" class="copy-button">Copy Quiz</button>
         </div>
     </div>
@@ -340,8 +349,13 @@ function initializeQuizApp() {
         clearFileButton: document.getElementById('clearFileButton'),
         fileList: document.getElementById('fileList'),
         toggleFileListButton: document.getElementById('toggleFileListButton'),
-        // --- NEW: Add copy button to DOM object ---
         copyQuizButton: document.getElementById('copyQuizButton'),
+        // NEW: DOM elements for API Key input
+        toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
+        advancedOptions: document.getElementById('advancedOptions'),
+        customApiKeyInput: document.getElementById('customApiKeyInput'),
+        saveApiKeyButton: document.getElementById('saveApiKeyButton'),
+        apiKeyMessage: document.getElementById('apiKeyMessage'),
     };
 
     let uploadedFilesData = [];
@@ -349,8 +363,10 @@ function initializeQuizApp() {
     let userAnswers = [];
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
+    let customApiKey = ''; // Variable to hold the custom API key for the session
 
     const saveState = () => {
+        // IMPORTANT: Do not save the API key to localStorage
         localStorage.setItem('quizInput', dom.inputText.value);
         localStorage.setItem('quizInstructions', dom.customInstructions.value);
         if (quizData && quizData.length > 0) {
@@ -388,6 +404,8 @@ function initializeQuizApp() {
         uploadedFilesData = [];
         quizData = [];
         userAnswers = [];
+        customApiKey = ''; // Clear the session API key as well
+        dom.customApiKeyInput.value = '';
         
         localStorage.removeItem('quizInput');
         localStorage.removeItem('quizInstructions');
@@ -477,10 +495,16 @@ function initializeQuizApp() {
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
+                // MODIFIED: Construct the final payload, adding the API key if it exists
+                const apiPayload = { ...payload, model };
+                if (customApiKey) {
+                    apiPayload.apiKey = customApiKey;
+                }
+
                 const response = await fetch('/api/quiz', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...payload, model })
+                    body: JSON.stringify(apiPayload) // Use the constructed payload
                 });
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -618,7 +642,6 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.innerHTML = '';
         const questionData = quizData[index];
 
-        // --- NEW: Create a header for the question and copy button ---
         const quizHeader = document.createElement('div');
         quizHeader.className = 'quiz-header';
         quizHeader.innerHTML = `<h3>Question ${index + 1} of ${quizData.length}</h3>`;
@@ -749,7 +772,6 @@ function initializeQuizApp() {
         dom.interactiveQuizContainer.appendChild(resultsDiv);
     };
 
-    // --- NEW: Function to format and copy the quiz ---
     const copyQuiz = async (event) => {
         if (!quizData || quizData.length === 0) return;
         
@@ -827,8 +849,26 @@ function initializeQuizApp() {
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
     
-    // --- NEW: Add event listener for the main copy button ---
     dom.copyQuizButton.addEventListener('click', copyQuiz);
+
+    // NEW: Event listeners for the Advanced Options / API Key section
+    dom.toggleAdvancedButton.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent form submission if it's ever wrapped in a form
+        dom.advancedOptions.classList.toggle('hidden');
+    });
+
+    dom.saveApiKeyButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        customApiKey = dom.customApiKeyInput.value.trim();
+        if (customApiKey) {
+            dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
+            dom.customApiKeyInput.value = ''; // Clear for security
+        } else {
+            dom.apiKeyMessage.textContent = 'API Key cleared.';
+        }
+        setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
+    });
+
 
     // Initialization
     showInputStep(0);
