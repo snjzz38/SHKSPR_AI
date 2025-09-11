@@ -9,7 +9,7 @@ import random
 # You can add more good ones you find here.
 PROXY_LIST = [
     "http://179.96.28.58:80",
-    "http://104.222.32.98:80"
+    "http://1.130.3.138:1080"
     # Add another proxy here, e.g., "http://IP_ADDRESS:PORT"
     # Add a third one here...
 ]
