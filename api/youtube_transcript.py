@@ -1,78 +1,95 @@
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import GenericProxyConfig
-import json
-import random
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import TimeoutException
 
-# --- A manually curated list of promising proxies from free-proxy-list.net ---
-# You can add more good ones you find here.
-PROXY_LIST = [
-    "http://184.168.47.22:80",
-    "http://1.130.3.138:1080"
-    # Add another proxy here, e.g., "http://IP_ADDRESS:PORT"
-    # Add a third one here...
-]
+# --- Configuration ---
+VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-class handler(BaseHTTPRequestHandler):
+# --- Main Script ---
+print("Starting the definitive YouTube scraper...")
 
-    def do_GET(self):
-        query_components = parse_qs(urlparse(self.path).query)
-        video_id = query_components.get('video_id', [None])[0]
+# Set up the Chrome driver automatically
+try:
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    print("Chrome driver started successfully.")
+except Exception as e:
+    print(f"Error setting up Chrome driver: {e}")
+    exit()
 
-        if not video_id:
-            self.send_response(400)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
-            return
+# Navigate to the YouTube video page
+driver.get(VIDEO_URL)
+print(f"Navigated to: {VIDEO_URL}")
 
-        transcript_data = None
-        last_error = None
+# Use WebDriverWait for robustly waiting for elements
+wait = WebDriverWait(driver, 20) # Increased wait time for more reliability
 
-        try:
-            # Shuffle our curated list of proxies
-            random.shuffle(PROXY_LIST)
+try:
+    # STEP 1: Handle the Cookie Consent Pop-up
+    print("Looking for the cookie consent pop-up...")
+    try:
+        # This XPath finds the button with the specific "Accept all" label.
+        consent_button_xpath = '//button[@aria-label="Accept all"]'
+        consent_button = WebDriverWait(driver, 7).until(
+            EC.element_to_be_clickable((By.XPATH, consent_button_xpath))
+        )
+        print("Cookie consent pop-up found. Clicking 'Accept all'.")
+        consent_button.click()
+        time.sleep(1.5) # Give the page a moment to react after closing the pop-up
+    except TimeoutException:
+        print("Cookie consent pop-up not found, continuing...")
 
-            # Try every proxy in our list
-            for proxy_url in PROXY_LIST:
-                try:
-                    clean_proxy_url = proxy_url.strip()
-                    if not clean_proxy_url:
-                        continue
-                    
-                    print(f"Attempting to use proxy: {clean_proxy_url}")
+    # STEP 2: Click the "...more" button in the description box
+    print("Waiting for the '...more' button to expand the description...")
+    # The button to expand the description has the ID 'expand'
+    more_button = wait.until(EC.element_to_be_clickable((By.ID, "expand")))
+    more_button.click()
+    print("Clicked the '...more' button.")
+    time.sleep(1) # Wait for the description to finish its expanding animation
 
-                    proxy_config = GenericProxyConfig(
-                        http_url=clean_proxy_url,
-                        https_url=clean_proxy_url
-                    )
-                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
-                    
-                    transcript_data = api.fetch(video_id)
-                    
-                    print("Proxy successful!")
-                    break 
+    # STEP 3: Scroll down and click the "Show transcript" button using its unique ID
+    print("Waiting for the 'Show transcript' button...")
+    
+    # THIS IS THE KEY CHANGE: Using the button's unique ID for reliability.
+    show_transcript_button_id = "show-transcript-button"
+    show_transcript_button = wait.until(
+        EC.presence_of_element_located((By.ID, show_transcript_button_id))
+    )
+    
+    # Scroll the button into the center of the view to ensure it's clickable
+    print("Scrolling to the 'Show transcript' button...")
+    driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", show_transcript_button)
+    time.sleep(1.5) # A pause to ensure scrolling and animations are finished
+    
+    # Now, wait for it to be clickable and click it
+    wait.until(EC.element_to_be_clickable((By.ID, show_transcript_button_id))).click()
+    print("Clicked the 'Show transcript' button.")
 
-                except Exception as e:
-                    last_error = str(e)
-                    print(f"Proxy {clean_proxy_url} failed: {last_error}")
-                    continue
+    # STEP 4: Wait for transcript and extract text
+    print("Waiting for the transcript to load...")
+    transcript_segment_selector = "ytd-transcript-segment-renderer yt-formatted-string"
+    wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, transcript_segment_selector))
+    )
+    print("Transcript loaded. Extracting text...")
 
-            if not transcript_data:
-                raise Exception(f"All curated proxies failed. Last error: {last_error}" if last_error else "Proxy list is empty.")
+    transcript_elements = driver.find_elements(By.CSS_SELECTOR, transcript_segment_selector)
+    full_transcript = "\n".join([elem.text for elem in transcript_elements if elem.text])
 
-            full_transcript = " ".join([segment.text for segment in transcript_data])
+    # STEP 5: Print the final result
+    print("\n--- FULL TRANSCRIPT ---")
+    print(full_transcript)
+    print("-------------------------\n")
 
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'transcript': full_transcript}).encode('utf-8'))
+except Exception as e:
+    print(f"\nAn error occurred: {e}")
+    print("Could not retrieve the transcript. If this still fails, the video may not have a transcript or YouTube's layout has fundamentally changed.")
 
-        except Exception as e:
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
-            
-        return
+finally:
+    # STEP 6: Clean up
+    print("Closing the browser.")
+    driver.quit()
