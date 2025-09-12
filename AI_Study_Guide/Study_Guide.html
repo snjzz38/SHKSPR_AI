@@ -122,58 +122,28 @@
         .exit-quiz-button:hover { box-shadow: 0 6px 20px rgba(var(--destructive-glow-rgb), 0.6); }
         .study-guide-area, .interactive-quiz-container { margin-top: 30px; text-align: left; width: 100%; }
         
-        /* --- NEW: Styles for the study guide header --- */
         .study-guide-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 1rem;
         }
-        .study-guide-header h2 {
-            margin: 0;
-            font-size: 1.5rem;
-        }
-        .copy-button.small {
-            padding: 6px 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
+        .study-guide-header h2 { margin: 0; font-size: 1.5rem; }
+        .copy-button.small { padding: 6px 15px; font-size: 0.9rem; font-weight: bold; }
 
         .study-guide-content { 
-            padding: 1rem; 
-            border: 1px solid var(--accent); 
-            border-radius: 8px; 
-            background-color: var(--card-bg); 
-            overflow-wrap: break-word;
+            padding: 1rem; border: 1px solid var(--accent); border-radius: 8px; 
+            background-color: var(--card-bg); overflow-wrap: break-word;
         }
-        
         .study-guide-content h1, .study-guide-content h2, .study-guide-content h3 { 
-            color: var(--accent); 
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
+            color: var(--accent); margin-top: 1.5rem; margin-bottom: 0.75rem;
         }
-        .study-guide-content p {
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-        .study-guide-content ul, .study-guide-content ol { 
-            list-style-position: inside; 
-            padding-left: 1rem; 
-            margin-bottom: 1rem;
-        }
-        .study-guide-content li {
-            margin-bottom: 0.5rem;
-        }
-        .study-guide-content li:last-child {
-            margin-bottom: 0;
-        }
+        .study-guide-content p { line-height: 1.6; margin-bottom: 1rem; }
+        .study-guide-content ul, .study-guide-content ol { list-style-position: inside; padding-left: 1rem; margin-bottom: 1rem; }
+        .study-guide-content li { margin-bottom: 0.5rem; }
+        .study-guide-content li:last-child { margin-bottom: 0; }
 
         .quiz-question {
-            background-color: var(--card-bg);
-            border: 1px solid var(--accent);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            background-color: var(--card-bg); border: 1px solid var(--accent);
+            padding: 15px; border-radius: 8px; margin-bottom: 20px;
         }
         .quiz-question h3 { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 10px; }
         .quiz-question p { margin-bottom: 0.5rem; }
@@ -188,10 +158,7 @@
         .quiz-results { text-align: left; }
         .quiz-results h2 { font-size: 1.8rem; color: var(--accent); text-align: center; margin-bottom: 1.5rem; }
         .result-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--card-bg); }
-        .result-item p { 
-            margin-bottom: 0.5rem; 
-            overflow-wrap: break-word;
-        }
+        .result-item p { margin-bottom: 0.5rem; overflow-wrap: break-word; }
         .result-item.correct { border-left: 4px solid #4ade80; padding-left: 10px; }
         .result-item.incorrect { border-left: 4px solid #f87171; padding-left: 10px; }
         .start-quiz-area { text-align: center; }
@@ -201,14 +168,12 @@
         }
         .message-box.info {
             background-color: rgba(var(--accent-rgb), 0.1);
-            border-color: var(--accent);
-            color: var(--text-primary);
+            border-color: var(--accent); color: var(--text-primary);
         }
         .message-box.error {
             --error-rgb: 239, 68, 68;
             background-color: rgba(var(--error-rgb), 0.1);
-            border-color: rgb(var(--error-rgb));
-            color: #fecaca;
+            border-color: rgb(var(--error-rgb)); color: #fecaca;
         }
         .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
@@ -265,9 +230,20 @@
             </div>
 
             <div id="inputStep2" class="input-step">
-                <h2>Step 2: Custom Instructions (Optional)</h2>
+                <h2>Step 2: Custom Instructions</h2>
                 <p class="subtitle">Guide the AI on how to create your study guide and quiz.</p>
                 <textarea id="customInstructions" placeholder="e.g., 'Focus on the key historical dates.', 'Create a 10-question multiple-choice quiz.'"></textarea>
+                
+                <!-- NEW: API Key Input Section -->
+                <div class="advanced-options-container" style="width: 100%; margin-top: 15px;">
+                    <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
+                    <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
+                        <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
+                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
+                        <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
+                        <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
+                    </div>
+                </div>
             </div>
 
             <div class="input-navigation-buttons">
@@ -285,7 +261,6 @@
         </div>
         <div id="messageBox" class="message-box"></div>
         <div id="studyGuideArea" class="study-guide-area hidden">
-            <!-- NEW: Header for the study guide with a copy button -->
             <div class="study-guide-header">
                 <h2>Your Study Guide</h2>
                 <button id="copyGuideButton" class="copy-button small">Copy Guide</button>
@@ -338,18 +313,14 @@ async function loadHeader() {
     }
   } catch (error) {
     console.error('Error loading header:', error);
-    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header. Make sure ../Structure/header.html exists.</p>';
+    document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
   }
 }
 
 function initializeStudyGuideApp() {
     const ALL_GEMINI_MODELS = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash',
+      'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-8b',
     ];
     
     const dom = {
@@ -374,8 +345,13 @@ function initializeStudyGuideApp() {
         clearFileButton: document.getElementById('clearFileButton'),
         fileList: document.getElementById('fileList'),
         toggleFileListButton: document.getElementById('toggleFileListButton'),
-        // --- NEW: Add copy button to DOM object ---
         copyGuideButton: document.getElementById('copyGuideButton'),
+        // NEW: DOM elements for API Key input
+        toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
+        advancedOptions: document.getElementById('advancedOptions'),
+        customApiKeyInput: document.getElementById('customApiKeyInput'),
+        saveApiKeyButton: document.getElementById('saveApiKeyButton'),
+        apiKeyMessage: document.getElementById('apiKeyMessage'),
     };
 
     let uploadedFilesData = [];
@@ -384,6 +360,7 @@ function initializeStudyGuideApp() {
     let currentQuestionIndex = 0;
     let currentInputStepIndex = 0;
     let studyGuideMarkdown = '';
+    let customApiKey = ''; // Variable to hold the custom API key for the session
 
     const saveState = () => {
         localStorage.setItem('studyGuideInput', dom.inputText.value);
@@ -434,6 +411,8 @@ function initializeStudyGuideApp() {
         quizData = [];
         userAnswers = [];
         studyGuideMarkdown = '';
+        customApiKey = ''; // Clear the session API key
+        dom.customApiKeyInput.value = '';
         
         localStorage.removeItem('studyGuideInput');
         localStorage.removeItem('studyGuideInstructions');
@@ -451,14 +430,6 @@ function initializeStudyGuideApp() {
         updateFileListDisplay();
         showInputStep(0);
         showMessage('All content cleared.');
-    };
-
-    const shuffleArray = (array) => {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
     };
 
     const showMessage = (message, type = 'info') => {
@@ -519,26 +490,31 @@ function initializeStudyGuideApp() {
     };
     
     const callApiWithRetries = async (payload) => {
-        let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
+        let modelsToTry = [...ALL_GEMINI_MODELS];
         let lastError = null;
 
         for (const model of modelsToTry) {
             console.log(`Attempting API call with model: ${model}`);
             try {
+                const apiPayload = { ...payload, model };
+                if (customApiKey) {
+                    apiPayload.apiKey = customApiKey;
+                }
+
                 const response = await fetch('/api/Study_Guide_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...payload, model })
+                    body: JSON.stringify(apiPayload)
                 });
 
                 if (!response.ok) {
-                    const errorBody = await response.json();
+                    const errorBody = await response.json().catch(() => ({ error: `Server error (${response.status}) with no JSON body` }));
                     throw new Error(errorBody.error || `Server error (${response.status}) with model ${model}`);
                 }
 
                 const result = await response.json();
                 
-                if (result.studyGuide !== null && result.quizQuestions) {
+                if (typeof result.studyGuide === 'string' && Array.isArray(result.quizQuestions)) {
                     return result;
                 }
                 
@@ -572,7 +548,7 @@ function initializeStudyGuideApp() {
 
         try {
             let promptParts = [];
-            const basePrompt = "You are an expert tutor and quiz designer. Your task is to perform two actions: First, create a well-structured study guide from the provided material using Markdown. It should include sections like 'Key Concepts', 'Important Definitions', and 'Core Principles'. Second, based ONLY on the study guide you just generated, create a quiz.";
+            const basePrompt = "You are an expert tutor and quiz designer. Your task is a two-step process: First, internally synthesize the provided material into a structured summary. Second, using ONLY that internal summary, perform two actions: create a well-structured study guide using Markdown (with sections like 'Key Concepts', 'Important Definitions', etc.), and create a quiz based on the guide.";
             
             promptParts.push({ text: basePrompt });
             if (text) promptParts.push({ text: `\n\nHere is the source text:\n"${text}"` });
@@ -600,7 +576,9 @@ function initializeStudyGuideApp() {
             }
 
             dom.studyGuideArea.classList.remove('hidden');
-            dom.startQuizArea.classList.remove('hidden');
+            if (quizData && quizData.length > 0) {
+                dom.startQuizArea.classList.remove('hidden');
+            }
             showMessage(`Study guide and quiz generated successfully!`, 'info');
             
             saveState();
@@ -686,7 +664,6 @@ function initializeStudyGuideApp() {
             nextBtn.addEventListener('click', () => renderInteractiveQuestion(index + 1));
         }
         
-        // --- NEW: Create and add the Copy Quiz and Exit Quiz buttons ---
         const buttonContainer = document.createElement('div');
         buttonContainer.style.marginTop = '1rem';
         buttonContainer.style.display = 'flex';
@@ -712,23 +689,10 @@ function initializeStudyGuideApp() {
 
     const gradeShortAnswer = (userAnswer, correctAnswer) => {
         if (!userAnswer || !correctAnswer) return false;
-
-        const normalizedUserAnswer = userAnswer
-            .toLowerCase()
-            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ")
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        const keywords = correctAnswer
-            .toLowerCase()
-            .split(',')
-            .map(k => k.trim())
-            .filter(k => k);
-
+        const normalizedUserAnswer = userAnswer.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ").replace(/\s+/g, ' ').trim();
+        const keywords = correctAnswer.toLowerCase().split(',').map(k => k.trim()).filter(k => k);
         if (keywords.length === 0) return false;
-
         const isComponentBased = keywords.every(k => k.length <= 3);
-
         if (isComponentBased) {
             const userAnswerParts = normalizedUserAnswer.split(' ');
             return keywords.every(key => userAnswerParts.includes(key));
@@ -755,29 +719,19 @@ function initializeStudyGuideApp() {
         resultsDiv.innerHTML = `<h2>Quiz Complete!</h2><p style="text-align: center; font-size: 1.2rem; margin-bottom: 2rem;">You scored ${score} out of ${quizData.length}</p>`;
         
         quizData.forEach((q, i) => {
-            const isCorrect = q.type === 'short_answer' 
-                ? gradeShortAnswer(userAnswers[i], q.answer) 
-                : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
-            
+            const isCorrect = q.type === 'short_answer' ? gradeShortAnswer(userAnswers[i], q.answer) : (userAnswers[i] && q.answer && userAnswers[i].toLowerCase() === q.answer.toLowerCase());
             const item = document.createElement('div');
             item.className = isCorrect ? 'result-item correct' : 'result-item incorrect';
-            
             let displayAnswer = q.answer;
             if (q.type === 'true_false') {
                 displayAnswer = displayAnswer.charAt(0).toUpperCase() + displayAnswer.slice(1);
             } else if (q.type === 'short_answer') {
                 displayAnswer = displayAnswer.replace(/,/g, ' / ');
             }
-
-            item.innerHTML = `
-                <p><strong>Q:</strong> ${q.question}</p>
-                <p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p>
-                <p><strong>Correct Answer:</strong> ${displayAnswer}</p>
-            `;
+            item.innerHTML = `<p><strong>Q:</strong> ${q.question}</p><p><strong>Your Answer:</strong> ${userAnswers[i] || 'No answer'}</p><p><strong>Correct Answer:</strong> ${displayAnswer}</p>`;
             resultsDiv.appendChild(item);
         });
 
-        // --- NEW: Add Copy Quiz and Exit buttons to the results page ---
         const buttonContainer = document.createElement('div');
         buttonContainer.style.marginTop = '1rem';
         buttonContainer.style.display = 'flex';
@@ -800,42 +754,31 @@ function initializeStudyGuideApp() {
         dom.interactiveQuizContainer.appendChild(resultsDiv);
     };
 
-    // --- NEW: Function to copy the study guide ---
     const copyStudyGuide = async () => {
         if (!studyGuideMarkdown) return;
         try {
             await navigator.clipboard.writeText(studyGuideMarkdown);
             dom.copyGuideButton.textContent = 'Copied!';
             setTimeout(() => dom.copyGuideButton.textContent = 'Copy Guide', 2000);
-        } catch (err) {
-            showMessage('Failed to copy guide.', 'error');
-        }
+        } catch (err) { showMessage('Failed to copy guide.', 'error'); }
     };
 
-    // --- NEW: Function to format and copy the quiz ---
     const copyQuiz = async (event) => {
         if (!quizData || quizData.length === 0) return;
-        
         let quizText = "Study Guide Quiz\n====================\n\n";
         quizData.forEach((q, index) => {
             quizText += `Question ${index + 1}: ${q.question}\n`;
             if (q.type === 'multiple_choice' && q.options) {
-                q.options.forEach(opt => {
-                    quizText += `- ${opt}\n`;
-                });
+                q.options.forEach(opt => { quizText += `- ${opt}\n`; });
             }
-            quizText += `\nCorrect Answer: ${q.answer}\n`;
-            quizText += "--------------------\n\n";
+            quizText += `\nCorrect Answer: ${q.answer}\n--------------------\n\n`;
         });
-
         try {
             await navigator.clipboard.writeText(quizText);
             const button = event.target;
             button.textContent = 'Copied!';
             setTimeout(() => button.textContent = 'Copy Quiz', 2000);
-        } catch (err) {
-            showMessage('Failed to copy quiz.', 'error');
-        }
+        } catch (err) { showMessage('Failed to copy quiz.', 'error'); }
     };
 
     // --- Event Listeners ---
@@ -880,13 +823,28 @@ function initializeStudyGuideApp() {
     dom.inputNextButton.addEventListener('click', () => showInputStep(currentInputStepIndex + 1));
     dom.generateButton.addEventListener('click', generateStudyGuide);
     dom.startQuizButton.addEventListener('click', startQuiz);
-    
     dom.clearButton.addEventListener('click', clearState);
     dom.inputText.addEventListener('input', saveState);
     dom.customInstructions.addEventListener('input', saveState);
-    
-    // --- NEW: Add event listener for the copy guide button ---
     dom.copyGuideButton.addEventListener('click', copyStudyGuide);
+
+    // NEW: Event listeners for the Advanced Options / API Key section
+    dom.toggleAdvancedButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        dom.advancedOptions.classList.toggle('hidden');
+    });
+
+    dom.saveApiKeyButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        customApiKey = dom.customApiKeyInput.value.trim();
+        if (customApiKey) {
+            dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
+            dom.customApiKeyInput.value = ''; // Clear for security
+        } else {
+            dom.apiKeyMessage.textContent = 'API Key cleared.';
+        }
+        setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
+    });
 
     // Initialization
     showInputStep(0);
