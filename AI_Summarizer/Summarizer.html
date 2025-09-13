@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
     <title>AI Media Summarizer</title>
-    <!-- Tailwind CSS CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <!-- Marked.js CDN for Markdown rendering -->
@@ -231,6 +229,17 @@
                     </div>
                     <textarea id="summarizationPrompt" rows="5"></textarea>
                 </div>
+                
+                <!-- NEW: API Key Input Section -->
+                <div class="advanced-options-container" style="width: 100%; margin-top: 1.5rem;">
+                    <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
+                    <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
+                        <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
+                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
+                        <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
+                        <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
+                    </div>
+                </div>
             </div>
 
             <div id="action-buttons-container" class="hidden">
@@ -268,11 +277,13 @@
     </footer>
 
     <script>
-        let GEMINI_API_KEY = null;
+        let GEMINI_API_KEY = null; // Default key loaded from file
+        let customApiKey = ''; // User-provided key
+        
         const ALL_GEMINI_MODELS = [
             'gemini-1.5-flash', 'gemini-1.5-pro',
             'gemini-2.5-flash-preview-05-20', 'gemini-2.5-flash',
-            'gemini-2.5-flash-lite-preview-06-17', 'gemini-2.0-flash',
+            'gemini-2.5-flash-lite-preview-06-17', 'gem-2.0-flash',
         ];
         
         const shuffleArray = (array) => {
@@ -359,6 +370,12 @@
                 concisenessValueSpan: document.getElementById('concisenessValue'),
                 copyTranscriptBtn: document.getElementById('copyTranscriptBtn'),
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
+                // NEW: DOM elements for API Key input
+                toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
+                advancedOptions: document.getElementById('advancedOptions'),
+                customApiKeyInput: document.getElementById('customApiKeyInput'),
+                saveApiKeyButton: document.getElementById('saveApiKeyButton'),
+                apiKeyMessage: document.getElementById('apiKeyMessage'),
             };
             
             let currentStep = 0;
@@ -409,38 +426,17 @@
                 let specificInstruction = '';
 
                 switch (level) {
-                    case 1:
-                        specificInstruction = "Identify the single most important keyword or concept from the text. Output only that single word or short phrase.";
-                        break;
-                    case 2:
-                        specificInstruction = "Generate a compelling, clickbait-style headline (6-12 words) for the text. It should be intriguing and capture the main point.";
-                        break;
-                    case 3:
-                        specificInstruction = "Condense the entire text into a single, concise sentence (a logline or elevator pitch).";
-                        break;
-                    case 4:
-                        specificInstruction = "Provide a concise executive summary (2-3 sentences). Focus on the main conclusion and the most critical supporting points.";
-                        break;
-                    case 5:
-                        specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown. Each bullet point should clearly state a main argument or finding.";
-                        break;
-                    case 6:
-                        specificInstruction = "Create a list of 'Expanded Bullet Points'. For each of the 3-4 main points, provide the point as a bolded title, followed by a 1-2 sentence explanation.";
-                        break;
-                    case 7:
-                        specificInstruction = "Create a detailed summary with two sections using Markdown. First, a summary paragraph (4-6 sentences). Second, a bulleted list of 'Key Takeaways'.";
-                        break;
-                    case 8:
-                        specificInstruction = "Generate a summary in a 'Frequently Asked Questions' (FAQ) format. Create 3-5 relevant questions that the text answers, and provide concise answers for each.";
-                        break;
-                    case 9:
-                        specificInstruction = "Provide a 'Detailed Analysis' of the text using Markdown. Include three sections: **Main Arguments**, **Supporting Evidence**, and **Overall Conclusion**.";
-                        break;
-                    case 10:
-                        specificInstruction = "Generate a comprehensive briefing document from the text, formatted in Markdown. It must include the following sections:\n- **Headline:** A compelling title.\n- **Abstract:** A one-paragraph (4-5 sentences) summary.\n- **Key Points:** A detailed bulleted list covering all significant arguments and conclusions.\n- **Action Items:** (If applicable) A bulleted list of any tasks or recommendations mentioned.";
-                        break;
-                    default:
-                        specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown.";
+                    case 1: specificInstruction = "Identify the single most important keyword or concept from the text. Output only that single word or short phrase."; break;
+                    case 2: specificInstruction = "Generate a compelling, clickbait-style headline (6-12 words) for the text. It should be intriguing and capture the main point."; break;
+                    case 3: specificInstruction = "Condense the entire text into a single, concise sentence (a logline or elevator pitch)."; break;
+                    case 4: specificInstruction = "Provide a concise executive summary (2-3 sentences). Focus on the main conclusion and the most critical supporting points."; break;
+                    case 5: specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown. Each bullet point should clearly state a main argument or finding."; break;
+                    case 6: specificInstruction = "Create a list of 'Expanded Bullet Points'. For each of the 3-4 main points, provide the point as a bolded title, followed by a 1-2 sentence explanation."; break;
+                    case 7: specificInstruction = "Create a detailed summary with two sections using Markdown. First, a summary paragraph (4-6 sentences). Second, a bulleted list of 'Key Takeaways'."; break;
+                    case 8: specificInstruction = "Generate a summary in a 'Frequently Asked Questions' (FAQ) format. Create 3-5 relevant questions that the text answers, and provide concise answers for each."; break;
+                    case 9: specificInstruction = "Provide a 'Detailed Analysis' of the text using Markdown. Include three sections: **Main Arguments**, **Supporting Evidence**, and **Overall Conclusion**."; break;
+                    case 10: specificInstruction = "Generate a comprehensive briefing document from the text, formatted in Markdown. It must include the following sections:\n- **Headline:** A compelling title.\n- **Abstract:** A one-paragraph (4-5 sentences) summary.\n- **Key Points:** A detailed bulleted list covering all significant arguments and conclusions.\n- **Action Items:** (If applicable) A bulleted list of any tasks or recommendations mentioned."; break;
+                    default: specificInstruction = "Summarize the text into 3-5 key bullet points using Markdown.";
                 }
                 return `${basePrompt}\n\n--- SPECIFIC INSTRUCTION ---\n${specificInstruction}`;
             }
@@ -468,11 +464,14 @@
             }
             
             async function callGeminiApi(payload) {
-                if (!GEMINI_API_KEY) throw new Error("API Key is not configured.");
+                // NEW: Determine which API key to use
+                const apiKeyToUse = customApiKey || GEMINI_API_KEY;
+                if (!apiKeyToUse) throw new Error("API Key is not configured.");
+
                 let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
                 let lastError = null;
                 for (const currentModel of modelsToTry) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKeyToUse}`;
                     console.log(`Attempting API call with model: ${currentModel}`);
                     try {
                         const response = await fetch(apiUrl, {
@@ -508,6 +507,7 @@
             }
 
             async function fetchYouTubeTranscript(videoId) {
+                // This still uses the serverless function, which is fine as it doesn't need a key
                 const response = await fetch(`/api/youtube_transcript?video_id=${videoId}`);
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -587,7 +587,11 @@
                     clearMessages();
 
                 } catch (error) {
-                    displayMessage(error.message, true);
+                    let errorMessage = error.message;
+                    if (errorMessage.includes('API key not valid')) {
+                        errorMessage = "The provided API key is invalid. Please check the key and try again.";
+                    }
+                    displayMessage(errorMessage, true);
                 } finally {
                     hideElement(dom.processLoadingIndicator);
                     dom.processBtn.disabled = false;
@@ -603,10 +607,10 @@
                 } else if (currentMode === 'youtube') {
                     isReady = dom.inputs.youtube.value.trim() !== '';
                 }
-                dom.processBtn.disabled = !GEMINI_API_KEY || !isReady;
+                // NEW: Check against either key being present
+                dom.processBtn.disabled = !(customApiKey || GEMINI_API_KEY) || !isReady;
             }
             
-            // MODIFIED: Added localStorage saving
             function showStep(index) {
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 currentStep = index;
@@ -617,7 +621,6 @@
             window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
             window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
 
-            // MODIFIED: Added localStorage saving
             function setMode(mode) {
                 localStorage.setItem('summarizerMode', mode);
                 currentMode = mode;
@@ -668,11 +671,12 @@
                 dom.fileList.classList.toggle('expanded', uploadedFilesData.length > 0 && dom.fileList.classList.contains('expanded'));
             }
 
-            // MODIFIED: Added localStorage clearing
             function clearState() {
                 dom.inputs.text.value = '';
                 dom.inputs.youtube.value = '';
                 uploadedFilesData = [];
+                customApiKey = ''; // NEW: Clear the session API key
+                dom.customApiKeyInput.value = ''; // NEW: Clear the input field
                 updateFileListDisplay();
                 clearAllResults();
                 localStorage.removeItem('summarizerTextInput');
@@ -681,7 +685,7 @@
                 localStorage.removeItem('summarizerSummary');
                 localStorage.removeItem('summarizerMode');
                 localStorage.removeItem('summarizerStep');
-                setMode('text'); // Reset to default mode
+                setMode('text');
                 showStep(0);
             }
 
@@ -728,7 +732,6 @@
                 });
             }
 
-            // NEW: This function sets the UI on page load without clearing data
             function applyInitialStateUI() {
                 const savedMode = localStorage.getItem('summarizerMode') || 'text';
                 const savedStep = parseInt(localStorage.getItem('summarizerStep') || '0', 10);
@@ -795,15 +798,34 @@
             dom.copyTranscriptBtn.addEventListener('click', () => copyToClipboard(dom.transcribedTextOutput.textContent, dom.copyTranscriptBtn));
             dom.copySummaryBtn.addEventListener('click', () => copyToClipboard(dom.summaryOutput.textContent, dom.copySummaryBtn));
 
+            // NEW: Event listeners for the Advanced Options / API Key section
+            dom.toggleAdvancedButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                dom.advancedOptions.classList.toggle('hidden');
+            });
+
+            dom.saveApiKeyButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                customApiKey = dom.customApiKeyInput.value.trim();
+                if (customApiKey) {
+                    dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
+                    dom.customApiKeyInput.value = ''; // Clear for security
+                } else {
+                    dom.apiKeyMessage.textContent = 'API Key cleared.';
+                }
+                updateButtonState(); // Re-check if the process button should be enabled
+                setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
+            });
+
             // Initial setup
             updateSummarizationPrompt();
-            applyInitialStateUI(); // MODIFIED: Apply saved UI state first
+            applyInitialStateUI();
             loadSavedResults();
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
                 if (GEMINI_API_KEY) { clearMessages(); updateButtonState(); }
-                else { displayMessage("Failed to load API key. Application cannot function.", true); }
+                else { displayMessage("Failed to load default API key. Please provide a custom key in Step 3.", true); }
             })();
         }
 
