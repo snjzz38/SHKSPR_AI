@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
 
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <!-- Marked.js CDN for Markdown rendering -->
@@ -336,7 +338,7 @@
                         <span>Lenient</span><span>Normal</span><span>Strict</span>
                     </div>
                 </div>
-
+                
                 <!-- NEW: API Key Input Section -->
                 <div class="advanced-options-container" style="width: 100%; margin-top: 2rem;">
                     <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
@@ -502,7 +504,6 @@
                 instructions: document.getElementById('instructions'),
                 rubric: document.getElementById('rubric'),
                 essay: document.getElementById('essay'),
-                // NEW: DOM elements for API Key input
                 toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
                 advancedOptions: document.getElementById('advancedOptions'),
                 customApiKeyInput: document.getElementById('customApiKeyInput'),
@@ -513,7 +514,7 @@
             let instructionsFiles = [];
             let rubricFiles = [];
             let essayFiles = [];
-            let customApiKey = ''; // Variable to hold the custom API key for the session
+            let customApiKey = '';
 
             const rubricTexts = {
                 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
@@ -589,7 +590,7 @@
                 dom.rubricSelect.value = 'none';
                 dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
                 selectedGrade = 'None';
-                customApiKey = ''; // Clear the session API key
+                customApiKey = '';
                 dom.customApiKeyInput.value = '';
                 
                 localStorage.removeItem('graderInstructions');
@@ -757,9 +758,7 @@
                             }
 
                             const result = await response.json();
-                            const responseText = result.candidates[0]?.content?.parts[0]?.text || '';
-                            // Grader API expects raw text, so we return it directly
-                            return responseText;
+                            return result.candidates[0]?.content?.parts[0]?.text || '';
 
                         } catch (error) {
                             console.warn(`Direct call with model ${model} failed:`, error.message);
@@ -887,7 +886,6 @@
                 document.getElementById(id).addEventListener('input', saveState);
             });
 
-            // NEW: Event listeners for the Advanced Options / API Key section
             dom.toggleAdvancedButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 dom.advancedOptions.classList.toggle('hidden');
@@ -898,7 +896,7 @@
                 customApiKey = dom.customApiKeyInput.value.trim();
                 if (customApiKey) {
                     dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
-                    dom.customApiKeyInput.value = ''; // Clear for security
+                    dom.customApiKeyInput.value = '';
                 } else {
                     dom.apiKeyMessage.textContent = 'API Key cleared.';
                 }
