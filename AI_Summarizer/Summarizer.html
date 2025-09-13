@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
     <title>AI Media Summarizer</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- PDF.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <!-- Marked.js CDN for Markdown rendering -->
@@ -229,7 +231,7 @@
                     </div>
                     <textarea id="summarizationPrompt" rows="5"></textarea>
                 </div>
-                
+
                 <!-- NEW: API Key Input Section -->
                 <div class="advanced-options-container" style="width: 100%; margin-top: 1.5rem;">
                     <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
@@ -279,11 +281,11 @@
     <script>
         let GEMINI_API_KEY = null; // Default key loaded from file
         let customApiKey = ''; // User-provided key
-        
+
         const ALL_GEMINI_MODELS = [
             'gemini-1.5-flash', 'gemini-1.5-pro',
             'gemini-2.5-flash-preview-05-20', 'gemini-2.5-flash',
-            'gemini-2.5-flash-lite-preview-06-17', 'gem-2.0-flash',
+            'gemini-2.5-flash-lite-preview-06-17', 'gemini-2.0-flash',
         ];
         
         const shuffleArray = (array) => {
@@ -370,7 +372,6 @@
                 concisenessValueSpan: document.getElementById('concisenessValue'),
                 copyTranscriptBtn: document.getElementById('copyTranscriptBtn'),
                 copySummaryBtn: document.getElementById('copySummaryBtn'),
-                // NEW: DOM elements for API Key input
                 toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
                 advancedOptions: document.getElementById('advancedOptions'),
                 customApiKeyInput: document.getElementById('customApiKeyInput'),
@@ -464,9 +465,8 @@
             }
             
             async function callGeminiApi(payload) {
-                // NEW: Determine which API key to use
                 const apiKeyToUse = customApiKey || GEMINI_API_KEY;
-                if (!apiKeyToUse) throw new Error("API Key is not configured.");
+                if (!apiKeyToUse) throw new Error("API Key is not configured. Please provide one in Advanced Options.");
 
                 let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
                 let lastError = null;
@@ -507,7 +507,6 @@
             }
 
             async function fetchYouTubeTranscript(videoId) {
-                // This still uses the serverless function, which is fine as it doesn't need a key
                 const response = await fetch(`/api/youtube_transcript?video_id=${videoId}`);
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -607,7 +606,6 @@
                 } else if (currentMode === 'youtube') {
                     isReady = dom.inputs.youtube.value.trim() !== '';
                 }
-                // NEW: Check against either key being present
                 dom.processBtn.disabled = !(customApiKey || GEMINI_API_KEY) || !isReady;
             }
             
@@ -675,8 +673,8 @@
                 dom.inputs.text.value = '';
                 dom.inputs.youtube.value = '';
                 uploadedFilesData = [];
-                customApiKey = ''; // NEW: Clear the session API key
-                dom.customApiKeyInput.value = ''; // NEW: Clear the input field
+                customApiKey = '';
+                dom.customApiKeyInput.value = '';
                 updateFileListDisplay();
                 clearAllResults();
                 localStorage.removeItem('summarizerTextInput');
@@ -798,7 +796,6 @@
             dom.copyTranscriptBtn.addEventListener('click', () => copyToClipboard(dom.transcribedTextOutput.textContent, dom.copyTranscriptBtn));
             dom.copySummaryBtn.addEventListener('click', () => copyToClipboard(dom.summaryOutput.textContent, dom.copySummaryBtn));
 
-            // NEW: Event listeners for the Advanced Options / API Key section
             dom.toggleAdvancedButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 dom.advancedOptions.classList.toggle('hidden');
@@ -809,11 +806,11 @@
                 customApiKey = dom.customApiKeyInput.value.trim();
                 if (customApiKey) {
                     dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
-                    dom.customApiKeyInput.value = ''; // Clear for security
+                    dom.customApiKeyInput.value = '';
                 } else {
                     dom.apiKeyMessage.textContent = 'API Key cleared.';
                 }
-                updateButtonState(); // Re-check if the process button should be enabled
+                updateButtonState();
                 setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
             });
 
