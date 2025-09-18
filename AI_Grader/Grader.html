@@ -79,6 +79,11 @@
             border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%;
             min-height: 120px; resize: vertical;
         }
+        textarea:disabled {
+            background-color: #2d3748; /* A slightly different background for disabled state */
+            color: #a0aec0; /* Lighter text color for disabled state */
+            cursor: not-allowed;
+        }
         input[type="text"], input[type="file"] {
             background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
             border-radius: 8px; padding: 12px; width: 100%;
@@ -516,6 +521,13 @@
             let essayFiles = [];
             let customApiKey = '';
 
+            // --- NEW: Store original placeholders ---
+            const originalPlaceholders = {
+                instructions: dom.instructions.placeholder,
+                rubric: dom.rubric.placeholder,
+                essay: dom.essay.placeholder
+            };
+
             const rubricTexts = {
                 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
                 'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`,
@@ -572,7 +584,15 @@
             };
 
             const clearState = () => {
-                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
+                // --- MODIFIED: Loop to reset textareas properly ---
+                ['instructions', 'rubric', 'essay'].forEach(id => {
+                    const textarea = document.getElementById(id);
+                    textarea.value = '';
+                    textarea.disabled = false;
+                    textarea.placeholder = originalPlaceholders[id];
+                });
+                dom.extraInstructions.value = '';
+
                 instructionsFiles = [];
                 rubricFiles = [];
                 essayFiles = [];
@@ -689,6 +709,7 @@
                 }
             });
 
+            // --- MODIFIED: This function now controls the textarea state ---
             function updateFileList(fileInputId, filesArray) {
                 const listEl = document.getElementById(`${fileInputId}-list`);
                 listEl.innerHTML = '';
@@ -699,6 +720,19 @@
                     listEl.appendChild(item);
                 });
                 listEl.classList.toggle('expanded', filesArray.length > 0);
+
+                // --- NEW LOGIC ---
+                const textareaId = fileInputId.replace('-file', '');
+                const textareaEl = document.getElementById(textareaId);
+                if (textareaEl) {
+                    if (filesArray.length > 0) {
+                        textareaEl.disabled = true;
+                        textareaEl.placeholder = `${filesArray.length} file(s) uploaded. Text input is now optional and disabled.`;
+                    } else {
+                        textareaEl.disabled = false;
+                        textareaEl.placeholder = originalPlaceholders[textareaId];
+                    }
+                }
             }
 
             function setupFileInput(fileInputId, filesArray) {
@@ -804,6 +838,7 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
+                    // This validation logic is now implicitly correct because disabled textareas have an empty value.
                     if (dom.instructions.value.trim() === '' && instructionsFiles.length === 0) {
                         throw new Error("Please provide Assignment Instructions, either by typing text or uploading a file.");
                     }
