@@ -79,11 +79,6 @@
             border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%;
             min-height: 120px; resize: vertical;
         }
-        textarea:disabled {
-            background-color: #2d3748; /* A slightly different background for disabled state */
-            color: #a0aec0; /* Lighter text color for disabled state */
-            cursor: not-allowed;
-        }
         input[type="text"], input[type="file"] {
             background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
             border-radius: 8px; padding: 12px; width: 100%;
@@ -199,7 +194,6 @@
         }
         .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
         .hidden { display: none; }
-        /* Copied from other files for consistency */
         .file-list-toggle-button {
             background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
             padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
@@ -344,7 +338,6 @@
                     </div>
                 </div>
                 
-                <!-- NEW: API Key Input Section -->
                 <div class="advanced-options-container" style="width: 100%; margin-top: 2rem;">
                     <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
                     <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
@@ -521,13 +514,6 @@
             let essayFiles = [];
             let customApiKey = '';
 
-            // --- NEW: Store original placeholders ---
-            const originalPlaceholders = {
-                instructions: dom.instructions.placeholder,
-                rubric: dom.rubric.placeholder,
-                essay: dom.essay.placeholder
-            };
-
             const rubricTexts = {
                 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
                 'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`,
@@ -584,15 +570,7 @@
             };
 
             const clearState = () => {
-                // --- MODIFIED: Loop to reset textareas properly ---
-                ['instructions', 'rubric', 'essay'].forEach(id => {
-                    const textarea = document.getElementById(id);
-                    textarea.value = '';
-                    textarea.disabled = false;
-                    textarea.placeholder = originalPlaceholders[id];
-                });
-                dom.extraInstructions.value = '';
-
+                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
                 instructionsFiles = [];
                 rubricFiles = [];
                 essayFiles = [];
@@ -709,7 +687,6 @@
                 }
             });
 
-            // --- MODIFIED: This function now controls the textarea state ---
             function updateFileList(fileInputId, filesArray) {
                 const listEl = document.getElementById(`${fileInputId}-list`);
                 listEl.innerHTML = '';
@@ -720,19 +697,6 @@
                     listEl.appendChild(item);
                 });
                 listEl.classList.toggle('expanded', filesArray.length > 0);
-
-                // --- NEW LOGIC ---
-                const textareaId = fileInputId.replace('-file', '');
-                const textareaEl = document.getElementById(textareaId);
-                if (textareaEl) {
-                    if (filesArray.length > 0) {
-                        textareaEl.disabled = true;
-                        textareaEl.placeholder = `${filesArray.length} file(s) uploaded. Text input is now optional and disabled.`;
-                    } else {
-                        textareaEl.disabled = false;
-                        textareaEl.placeholder = originalPlaceholders[textareaId];
-                    }
-                }
             }
 
             function setupFileInput(fileInputId, filesArray) {
@@ -774,33 +738,27 @@
                 let lastError = null;
 
                 if (customApiKey) {
-                    // --- PATH 1: Direct call to Google AI with user's key ---
                     console.log(`Attempting DIRECT API call with user-provided key.`);
                     for (const model of modelsToTry) {
                         try {
                             const GOOGLE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${customApiKey}`;
-                            
                             const response = await fetch(GOOGLE_API_URL, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ contents: payload.contents })
                             });
-
                             if (!response.ok) {
                                 const errorData = await response.json();
                                 throw new Error(errorData.error?.message || `HTTP error ${response.status}`);
                             }
-
                             const result = await response.json();
                             return result.candidates[0]?.content?.parts[0]?.text || '';
-
                         } catch (error) {
                             console.warn(`Direct call with model ${model} failed:`, error.message);
                             lastError = error;
                         }
                     }
                 } else {
-                    // --- PATH 2: Call our serverless function (default behavior) ---
                     console.log(`Attempting API call via serverless function.`);
                     for (const model of modelsToTry) {
                         try {
@@ -809,16 +767,12 @@
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ ...payload, model })
                             });
-
                             if (!response.ok) {
                                 const errorData = await response.json().catch(() => ({}));
                                 throw new Error(errorData.error || `Server error (${response.status}) with no JSON body`);
                             }
-
                             const result = await response.json();
-                            if (result.text) {
-                                return result.text;
-                            }
+                            if (result.text) return result.text;
                             lastError = new Error(`Model ${model} returned no valid text.`);
                         } catch (error) {
                             console.warn(`Serverless call with model ${model} failed:`, error.message);
@@ -838,7 +792,6 @@
                 localStorage.removeItem('graderResultHTML');
 
                 try {
-                    // This validation logic is now implicitly correct because disabled textareas have an empty value.
                     if (dom.instructions.value.trim() === '' && instructionsFiles.length === 0) {
                         throw new Error("Please provide Assignment Instructions, either by typing text or uploading a file.");
                     }
