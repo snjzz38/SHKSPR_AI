@@ -2,60 +2,164 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Citation Generator</title>
+    <title>AI Citation Generator *BETA*</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
     <style>
+        /* --- THEME VARIABLES & GLOBAL STYLES --- */
         :root {
             --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
+            --destructive-bg: #7f1d1d; --destructive-text: #fecaca; --destructive-glow-rgb: 239, 68, 68;
         }
-        body.theme-cyan { --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff; --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255; }
-        body.theme-purple { --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff; --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255; }
-        body.theme-green { --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6; --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102; }
-        body.theme-blackwhite { --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff; --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224; }
-        body.theme-red { --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6; --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51; }
+        body.theme-cyan {
+            --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
+            --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
+            --destructive-bg: #0e7490; --destructive-text: #a5f3fc; --destructive-glow-rgb: 6, 182, 212;
+        }
+        body.theme-purple {
+            --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
+            --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
+            --destructive-bg: #6b21a8; --destructive-text: #f3e8ff; --destructive-glow-rgb: 168, 85, 247;
+        }
+        body.theme-green {
+            --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6;
+            --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102;
+            --destructive-bg: #166534; --destructive-text: #dcfce7; --destructive-glow-rgb: 34, 197, 94;
+        }
+        body.theme-blackwhite {
+            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
+            --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
+        }
+        body.theme-red {
+            --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
+            --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: background-color 0.6s, color 0.6s; display: flex; flex-direction: column; overflow-x: hidden; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background-color 0.6s, color 0.6s;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        .particles-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+        .particle { position: absolute; border-radius: 50%; background: var(--accent); opacity: 0.7; pointer-events: none; will-change: transform; }
+
+        /* --- LAYOUT & HERO STYLES --- */
         .main-content { width: 100%; display: flex; flex-direction: column; align-items: center; flex-grow: 1; }
         .hero { text-align: center; padding: 50px 20px 30px; position: relative; z-index: 5; }
         .hero h1 { font-size: 3.2rem; text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent); margin-bottom: 20px; }
         .hero p { font-size: 1.2rem; margin: 0 auto 30px; max-width: 600px; }
-        .container { max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px; background-color: var(--bg-secondary); border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 20px; position: relative; }
+        .container {
+            max-width: 900px; width: 90%; margin: 20px auto 40px auto; padding: 20px;
+            background-color: var(--bg-secondary); border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;
+            gap: 20px; position: relative;
+        }
         .container h2 { font-size: 1.5rem; color: var(--text-primary); text-align: center; margin-bottom: 5px; }
+        
+        /* --- FORM & INPUT STYLES --- */
         .form-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
         .form-group { flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px; }
         .form-group label { font-size: 0.9rem; font-weight: bold; }
-        textarea, select, input[type="number"] { width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px; background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem; resize: vertical; min-height: 54px; transition: border-color 0.3s, background-color 0.3s; }
+        
+        textarea, select, input[type="number"] {
+            width: 100%; padding: 15px; border: 1px solid var(--accent); border-radius: 8px;
+            background-color: var(--card-bg); color: var(--text-primary); font-size: 1rem;
+            resize: vertical; min-height: 54px; transition: border-color 0.3s, background-color 0.3s;
+        }
         textarea { min-height: 150px; }
         textarea:focus, select:focus, input[type="number"]:focus { outline: none; border-color: var(--text-primary); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); }
-        .radio-group { display: flex; gap: 15px; background-color: var(--card-bg); border: 1px solid var(--accent); padding: 10px 15px; border-radius: 8px; align-items: center; height: 54px; }
+        
+        .radio-group {
+            display: flex; gap: 15px; background-color: var(--card-bg); border: 1px solid var(--accent);
+            padding: 10px 15px; border-radius: 8px; align-items: center; height: 54px;
+        }
         .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+        /* --- BUTTON STYLES --- */
         .action-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .generate-button, .secondary-button { background-color: var(--accent); color: var(--bg-primary); border: none; padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4); }
+        .generate-button, .secondary-button {
+            background-color: var(--accent); color: var(--bg-primary); border: none;
+            padding: 12px 25px; border-radius: 25px; font-size: 1.1rem; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(var(--accent-rgb), 0.4);
+        }
         .generate-button:hover, .secondary-button:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
+        .generate-button:active, .secondary-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.3); }
         .generate-button:disabled { background-color: var(--card-bg); color: rgba(var(--accent-rgb), 0.5); cursor: not-allowed; box-shadow: none; }
-        .secondary-button { background-color: transparent; color: var(--accent); border: 2px solid var(--accent); box-shadow: none; }
-        .secondary-button:hover { background-color: var(--accent); color: var(--bg-primary); box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6); }
-        .message-box { padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px; font-size: 1rem; display: none; border: 1px solid; }
-        .message-box.info { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
-        .message-box.error { background-color: rgba(239, 68, 68, 0.1); border-color: #fecaca; color: #fecaca; }
+        
+        .secondary-button {
+            background-color: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            box-shadow: none;
+        }
+        .secondary-button:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.6);
+        }
+
+        /* --- OUTPUT & STATUS STYLES --- */
+        .message-box {
+            padding: 15px; border-radius: 8px; text-align: center;
+            margin-top: 20px; font-size: 1rem; display: none; border: 1px solid;
+        }
+        .message-box.info {
+            background-color: rgba(var(--accent-rgb), 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        .message-box.error {
+            background-color: rgba(var(--destructive-glow-rgb), 0.1);
+            border-color: var(--destructive-text);
+            color: var(--destructive-text);
+        }
+
         .loading-bar-container { width: 100%; height: 8px; background-color: var(--card-bg); border-radius: 4px; overflow: hidden; margin-top: 10px; display: none; }
         .loading-bar { height: 100%; width: 0%; background-color: var(--accent); border-radius: 4px; transition: width 0.4s ease-in-out; }
+        
         #output-section { margin-top: 20px; display: none; }
-        #output-area { list-style: none; padding: 0; }
-        .citation-item { background-color: var(--card-bg); border: 1px solid var(--accent); border-radius: 8px; padding: 15px; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.6; }
+        #output-area {
+            list-style: none;
+            padding: 0;
+        }
+        .citation-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* --- FOOTER --- */
         footer.main-footer { width: 100%; text-align: center; padding: 20px; font-size: 0.9rem; background-color: var(--bg-secondary); position: relative; z-index: 10; }
+
+        @media (max-width: 768px) {
+            .container { width: 95%; padding: 15px; }
+            .hero h1 { font-size: 2.2rem; }
+            .generate-button, .secondary-button { width: 100%; font-size: 1rem; padding: 10px 20px; }
+            .action-buttons { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
+    <div class="particles-container" id="particles"></div>
     <div id="header-container"></div>
-    <main class="main-content">
+
+    <main class="main-content animate-on-load">
         <section class="hero">
-            <h1>AI Citation Generator</h1>
+            <h1>AI Citation Generator *BETA*</h1>
             <p>Paste your essay, and this tool will find sources and generate citations for you.</p>
         </section>
+
         <div class="container">
             <div class="form-row">
                 <div class="form-group" style="flex: 2 1 200px;">
@@ -69,108 +173,147 @@
                 <div class="form-group" style="flex: 1 1 150px;">
                     <label for="citation-count">Max Citations</label>
                     <select id="citation-count">
-                        <option value="auto">Auto</option>
+                        <option value="auto">Auto (Max 10)</option>
                         <option value="custom">Custom...</option>
                     </select>
                 </div>
                 <div class="form-group" style="flex: 2 1 200px;">
                     <label>Output Type</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="output-type" value="bibliography" checked><span>Bibliography</span></label>
-                        <label><input type="radio" name="output-type" value="in-text"><span>In-text</span></label>
+                        <label>
+                            <input type="radio" name="output-type" value="bibliography" checked>
+                            <span>Bibliography</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="output-type" value="in-text">
+                            <span>In-text</span>
+                        </label>
                     </div>
                 </div>
             </div>
+            
             <div id="custom-count-container" style="display: none; margin-top: -10px;">
                 <div class="form-group" id="custom-count-group">
                     <label for="custom-citation-count">Custom Number of Citations</label>
-                    <input type="number" id="custom-citation-count" min="1" value="5" placeholder="Enter number...">
+                    <input type="number" id="custom-citation-count" min="1" value="3" placeholder="Enter number...">
                 </div>
             </div>
+
             <div class="form-group">
                 <label for="essay-input">Paste your essay here</label>
                 <textarea id="essay-input" rows="10" placeholder="Paste your text here..."></textarea>
             </div>
+
             <div class="action-buttons">
                 <button id="generate-btn" class="generate-button">Generate Citations</button>
                 <button id="clear-btn" class="secondary-button">Clear All</button>
             </div>
+
             <div id="loading-bar-container" class="loading-bar-container">
                 <div id="loading-bar" class="loading-bar"></div>
             </div>
             <div id="messageBox" class="message-box"></div>
+
             <div id="output-section">
                 <div id="in-text-output-container" style="display: none; margin-bottom: 30px;">
                     <h2>Essay with In-Text Citations</h2>
                     <div id="in-text-output-area" class="citation-item" style="white-space: pre-wrap; line-height: 1.8; text-align: left;"></div>
-                    <div class="action-buttons" style="margin-top: 15px;"><button id="copy-essay-btn" class="secondary-button">Copy Essay</button></div>
+                    <div class="action-buttons" style="margin-top: 15px;">
+                        <button id="copy-essay-btn" class="secondary-button">Copy Essay</button>
+                    </div>
                 </div>
+
                 <h2 id="output-heading">Bibliography</h2>
                 <ul id="output-area"></ul>
-                <div class="action-buttons" style="margin-top: 15px;"><button id="copy-biblio-btn" class="secondary-button">Copy Bibliography</button></div>
+                <div class="action-buttons" style="margin-top: 15px;">
+                    <button id="copy-biblio-btn" class="secondary-button">Copy Bibliography</button>
+                </div>
             </div>
         </div>
     </main>
-    <footer class="main-footer"><p>&copy; 2025 Shkspr. All rights reserved.</p></footer>
+    
+    <footer class="main-footer">
+        <p>&copy; 2025 Shkspr. All rights reserved.</p>
+    </footer>
 
     <script>
-        // --- CONFIGURATION & SYSTEM PROMPTS ---
-        const ALL_GEMINI_MODELS = [
-            'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
-            'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
-        ];
+        // --- IMPROVEMENT 1: Prompts moved to frontend ---
+        const PROMPTS = {
+            summary: (essayText) => `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`,
+            extraction: `
+                You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
+                RULES:
+                1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
+                2.  The 'author' can be a person or a credible organization (use 'site_name' if a person's name is not available).
+                3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
+                4.  **CRITICAL QUALITY RULE:** If a source is missing a clear author OR a title, you MUST DISCARD it. Do not include incomplete sources.
+                5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
 
-        const PROMPT_GENERATE_SEARCH_QUERY = (essayText) => `
-            Summarize the following text into a single, concise search query of 10-15 words. 
-            The query should be ideal for finding academic and authoritative sources related to the text's main arguments.
-            Return ONLY the search query string.
-            Text: "${essayText}"
-        `;
+                Webpage Data:
+                \${JSON_PLACEHOLDER}
+            `,
+            formatting: `
+                You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
+                RULES:
+                1.  Format ALL citations in **\${STYLE_PLACEHOLDER}** style.
+                2.  Order the final citations **alphabetically** by author.
+                3.  Return citations for as many sources as possible, up to a maximum of \${COUNT_PLACEHOLDER}.
+                4.  Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
 
-        const PROMPT_EXTRACT_CITATION_DATA = (fetchedContents) => `
-            You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
-            RULES:
-            1. Analyze the "Webpage Data" to find the author, title, and publication year for each source.
-            2. CRITICAL RULE: You MUST make a best effort to find an author. If a person's name is not available, use the organization or website name (e.g., 'World Health Organization', 'BBC News'). Do NOT leave the author field blank.
-            3. For the 'year', extract it from the 'published_date' field or the text. If no year can be found, use "n.d.".
-            4. CRITICAL QUALITY RULE: If a source is missing a clear title, you MUST DISCARD it. A source without a title is not citable.
-            5. Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
+                Source Data:
+                \${JSON_PLACEHOLDER}
+            `,
+            inText: `
+                You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
+                RULES:
+                1.  Carefully read the "Original Essay" and the "Bibliography" provided.
+                2.  Your main task is to connect the claims in the essay to the sources in the bibliography.
+                3.  You MUST insert an in-text citation (e.g., (Author, Year)) for **EVERY** source in the bibliography that is relevant to the essay's content. Be comprehensive.
+                4.  The in-text citations MUST be in the correct **\${STYLE_PLACEHOLDER}** format.
+                5.  **CRITICAL:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
+                6.  Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
+                7.  Return ONLY the modified essay text as a single string.
 
-            Webpage Data:
-            ${JSON.stringify(fetchedContents, null, 2)}
-        `;
+                Bibliography:
+                \${BIBLIOGRAPHY_PLACEHOLDER}
 
-        const PROMPT_FORMAT_BIBLIOGRAPHY = (structuredCitations, citationStyle, countInstruction) => `
-            You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
-            RULES:
-            1. Format ALL citations in **${citationStyle.toUpperCase()}** style.
-            2. Order the final citations **alphabetically** by author.
-            3. ${countInstruction}
-            4. Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
+                Original Essay:
+                "\${ESSAY_PLACEHOLDER}"
+            `
+        };
 
-            Source Data:
-            ${JSON.stringify(structuredCitations, null, 2)}
-        `;
+        async function loadHeader() {
+            try {
+                const response = await fetch('../Structure/header.html');
+                if (!response.ok) throw new Error('Failed to load header');
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const headElements = doc.querySelectorAll('head > *');
+                headElements.forEach(el => { document.head.appendChild(el.cloneNode(true)); });
+                const headerContent = doc.querySelector('header.main-header');
+                if (headerContent) { document.getElementById('header-container').appendChild(headerContent); }
+                const scriptElement = doc.querySelector('script');
+                if (scriptElement) {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = scriptElement.textContent;
+                    document.body.appendChild(newScript);
+                }
+                if (window.setTheme && window.initParticles) {
+                    const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
+                    window.setTheme(savedTheme);
+                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
+                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
+                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
+                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
+                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
+                }
+            } catch (error) {
+                console.error('Error loading header:', error);
+                document.getElementById('header-container').innerHTML = '<p style="color:red; text-align:center; padding:20px;">Error loading header.</p>';
+            }
+        }
 
-        const PROMPT_INSERT_IN_TEXT_CITATIONS = (citations, essayText, citationStyle) => `
-            You are an expert academic editor. Your primary goal is to insert correct and comprehensive in-text citations into an essay.
-            RULES:
-            1. Carefully read the "Original Essay" and the "Bibliography" provided.
-            2. Your main task is to connect the claims in the essay to the sources in the bibliography.
-            3. **CRITICAL CITATION RULE:** You MUST insert an in-text citation for **EVERY** source in the bibliography wherever its information could possibly apply. Be generous and comprehensive with citations. It is better to over-cite than to under-cite.
-            4. The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
-            5. **CRITICAL PRESERVATION RULE:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
-            6. Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
-            7. Return ONLY the modified essay text as a single string.
-
-            Bibliography:
-            ${JSON.stringify(citations, null, 2)}
-
-            Original Essay:
-            "${essayText}"
-        `;
-
-        // --- APPLICATION LOGIC ---
         function initializeCitationApp() {
             const dom = {
                 essayInput: document.getElementById('essay-input'),
@@ -196,7 +339,7 @@
                 dom.messageBox.className = `message-box ${type}`;
                 dom.messageBox.textContent = message;
                 dom.messageBox.style.display = 'block';
-                setTimeout(() => { dom.messageBox.style.display = 'none'; }, 4000);
+                setTimeout(() => { dom.messageBox.style.display = 'none'; }, 3000);
             }
 
             function startLoadingBar() {
@@ -207,102 +350,20 @@
 
             function stopLoadingBar(success = true) {
                 dom.loadingBar.style.width = '100%';
-                dom.loadingBar.style.backgroundColor = success ? 'var(--accent)' : '#fecaca';
+                dom.loadingBar.style.backgroundColor = success ? 'var(--accent)' : 'var(--destructive-text)';
                 setTimeout(() => {
                     dom.loadingBarContainer.style.display = 'none';
                     dom.loadingBar.style.backgroundColor = 'var(--accent)';
                 }, 500);
             }
 
-            async function callBackendProxy(action, data) {
-                const response = await fetch('/api/Citation_API', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action, ...data })
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'An unknown backend error occurred.' }));
-                    throw new Error(errorData.error || `Backend proxy failed for action: ${action}`);
-                }
-                return response.json();
-            }
-
-            async function processAndGenerate() {
-                const essayText = dom.essayInput.value.trim();
-                if (!essayText) {
-                    showMessage('Please paste an essay into the input area.', 'error');
-                    return;
-                }
-                dom.generateBtn.disabled = true;
-                dom.outputSection.style.display = 'none';
-                startLoadingBar();
-                saveState();
-
-                try {
-                    // Step 1: Generate Search Query via Gemini (using the proxy)
-                    showMessage('Step 1/5: Generating search query...', 'info');
-                    const queryPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_GENERATE_SEARCH_QUERY(essayText) }] }] };
-                    const queryResult = await callBackendProxy('callGemini', { payload: queryPayload, models: ALL_GEMINI_MODELS });
-                    const searchQuery = queryResult.candidates[0].content.parts[0].text.trim();
-
-                    // Step 2: Search for sources via Backend Proxy
-                    showMessage('Step 2/5: Finding relevant sources...', 'info');
-                    const searchResult = await callBackendProxy('search', { query: searchQuery });
-                    if (!searchResult.urls || searchResult.urls.length === 0) throw new Error("No relevant sources were found.");
-
-                    // Step 3: Fetch content for each source via Backend Proxy
-                    showMessage('Step 3/5: Fetching content from sources...', 'info');
-                    const fetchedContents = (await Promise.all(
-                        searchResult.urls.map(url => callBackendProxy('fetch', { url }))
-                    )).filter(Boolean);
-                    if (fetchedContents.length === 0) throw new Error("Could not fetch content from any sources.");
-
-                    // Step 4: Extract structured data via Gemini (using the proxy)
-                    showMessage('Step 4/5: Analyzing sources for citation data...', 'info');
-                    const extractionPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_EXTRACT_CITATION_DATA(fetchedContents) }] }], generationConfig: { responseMimeType: "application/json" } };
-                    const extractionResult = await callBackendProxy('callGemini', { payload: extractionPayload, models: ALL_GEMINI_MODELS });
-                    const structuredCitations = JSON.parse(extractionResult.candidates[0].content.parts[0].text);
-                    if (!structuredCitations || structuredCitations.length === 0) throw new Error("Could not extract citable data from sources.");
-
-                    // Step 5: Format bibliography and optionally add in-text citations
-                    showMessage('Step 5/5: Generating final citations...', 'info');
-                    const citationStyle = dom.citationStyleSelect.value;
-                    const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                    let citationCount = dom.citationCountSelect.value;
-                    if (citationCount === 'custom') citationCount = dom.customCitationCountInput.value || 5;
-                    const countInstruction = citationCount === 'auto' ? `Return citations for all the provided sources.` : `Return exactly ${citationCount} citations. If there are fewer sources than requested, return all of them.`;
-
-                    const formattingPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_FORMAT_BIBLIOGRAPHY(structuredCitations, citationStyle, countInstruction) }] }], generationConfig: { responseMimeType: "application/json" } };
-                    const formattingResult = await callBackendProxy('callGemini', { payload: formattingPayload, models: ALL_GEMINI_MODELS });
-                    const citations = JSON.parse(formattingResult.candidates[0].content.parts[0].text);
-
-                    let inTextCitedEssay = null;
-                    if (outputType === 'in-text') {
-                        const inTextPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_INSERT_IN_TEXT_CITATIONS(citations, essayText, citationStyle) }] }] };
-                        const inTextResult = await callBackendProxy('callGemini', { payload: inTextPayload, models: ALL_GEMINI_MODELS });
-                        inTextCitedEssay = inTextResult.candidates[0].content.parts[0].text;
-                    }
-
-                    renderOutput({ citations, inTextCitedEssay }, outputType);
-                    stopLoadingBar(true);
-                    saveState();
-
-                } catch (error) {
-                    console.error('An error occurred:', error);
-                    showMessage(`Error: ${error.message}`, 'error');
-                    stopLoadingBar(false);
-                } finally {
-                    dom.generateBtn.disabled = false;
-                }
-            }
-            
             function renderOutput(result, outputType) {
                 dom.outputArea.innerHTML = '';
                 dom.inTextOutputArea.textContent = '';
                 dom.inTextOutputContainer.style.display = 'none';
 
                 if (!Array.isArray(result.citations) || result.citations.length === 0) {
-                    showMessage('No citable sources were found.', 'info');
+                    showMessage('No relevant sources were found for the provided text.', 'info');
                     dom.outputSection.style.display = 'none';
                     return;
                 }
@@ -310,11 +371,23 @@
                 if (outputType === 'in-text' && result.inTextCitedEssay) {
                     dom.inTextOutputArea.textContent = result.inTextCitedEssay;
                     dom.inTextOutputContainer.style.display = 'block';
+                    dom.outputHeading.textContent = 'Bibliography';
+                } else {
+                    dom.outputHeading.textContent = 'Bibliography';
                 }
 
                 result.citations.forEach(item => {
-                    let citationText = (typeof item === 'string') ? item : (Object.values(item)[0] || '');
-                    if (citationText.trim()) {
+                    let citationText = '';
+                    if (typeof item === 'string') {
+                        citationText = item;
+                    } else if (typeof item === 'object' && item !== null) {
+                        const keys = Object.keys(item);
+                        if (keys.length > 0) {
+                            citationText = item[keys[0]];
+                        }
+                    }
+
+                    if (citationText && typeof citationText === 'string' && citationText.trim() !== '') {
                         const listItem = document.createElement('li');
                         listItem.className = 'citation-item';
                         listItem.textContent = citationText;
@@ -326,67 +399,111 @@
                 showMessage('Citations generated successfully!', 'info');
             }
 
-            // --- LOCALSTORAGE & STATE MANAGEMENT ---
-            function saveState() {
+            async function processAndGenerate(payload) {
                 try {
-                    const state = {
-                        essayText: dom.essayInput.value,
-                        inTextCitedEssay: dom.inTextOutputArea.textContent,
-                        citations: Array.from(dom.outputArea.querySelectorAll('.citation-item')).map(li => li.textContent)
-                    };
-                    localStorage.setItem('citationGeneratorState', JSON.stringify(state));
-                } catch (e) {
-                    console.error("Failed to save state to localStorage:", e);
-                }
-            }
-
-            function loadState() {
-                try {
-                    const savedState = localStorage.getItem('citationGeneratorState');
-                    if (!savedState) return;
-
-                    const state = JSON.parse(savedState);
-                    if (state.essayText) dom.essayInput.value = state.essayText;
-                    
-                    if (state.citations && state.citations.length > 0) {
-                        const outputType = state.inTextCitedEssay ? 'in-text' : 'bibliography';
-                        renderOutput({ citations: state.citations, inTextCitedEssay: state.inTextCitedEssay }, outputType);
+                    const response = await fetch('/api/Citation_API', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.details || errorData.error || 'An unknown server error occurred.');
                     }
-                } catch (e) {
-                    console.error("Failed to load state from localStorage:", e);
+                    const result = await response.json();
+                    renderOutput(result, payload.outputType);
+                    stopLoadingBar(true);
+                } catch (error) {
+                    console.error('An error occurred:', error);
+                    showMessage(`Error: ${error.message}`, 'error');
+                    stopLoadingBar(false);
+                } finally {
+                    dom.generateBtn.disabled = false;
                 }
             }
 
-            function clearState() {
-                dom.essayInput.value = '';
-                dom.outputSection.style.display = 'none';
-                dom.inTextOutputArea.textContent = '';
-                dom.outputArea.innerHTML = '';
-                localStorage.removeItem('citationGeneratorState');
-                showMessage('All content cleared.', 'info');
-            }
-
-            // --- EVENT LISTENERS ---
             dom.citationCountSelect.addEventListener('change', () => {
                 dom.customCountContainer.style.display = (dom.citationCountSelect.value === 'custom') ? 'block' : 'none';
             });
-            dom.generateBtn.addEventListener('click', processAndGenerate);
-            dom.clearBtn.addEventListener('click', clearState);
-            dom.essayInput.addEventListener('input', saveState);
-            dom.copyEssayBtn.addEventListener('click', () => navigator.clipboard.writeText(dom.inTextOutputArea.textContent).then(() => showMessage('Essay copied!', 'info')));
-            dom.copyBiblioBtn.addEventListener('click', () => {
-                const text = Array.from(dom.outputArea.querySelectorAll('.citation-item')).map(li => li.textContent).join('\n\n');
-                navigator.clipboard.writeText(text).then(() => showMessage('Bibliography copied!', 'info'));
+
+            dom.generateBtn.addEventListener('click', () => {
+                const essayText = dom.essayInput.value.trim();
+                if (!essayText) {
+                    showMessage('Please paste an essay into the input area.', 'error');
+                    return;
+                }
+                const citationStyle = dom.citationStyleSelect.value;
+                const outputType = document.querySelector('input[name="output-type"]:checked').value;
+                
+                // --- IMPROVEMENT 2: Handle citation count logic ---
+                let citationCount = (dom.citationCountSelect.value === 'custom')
+                    ? (dom.customCitationCountInput.value || 1)
+                    : 10; // Default 'auto' to 10
+
+                dom.outputSection.style.display = 'none';
+                dom.messageBox.style.display = 'none';
+                dom.generateBtn.disabled = true;
+                startLoadingBar();
+
+                // --- IMPROVEMENT 1: Build the full payload on the frontend ---
+                const apiPayload = {
+                    essayText,
+                    citationStyle,
+                    outputType,
+                    citationCount,
+                    summaryPrompt: PROMPTS.summary(essayText),
+                    extractionPromptTemplate: PROMPTS.extraction,
+                    formattingPromptTemplate: PROMPTS.formatting,
+                    inTextPromptTemplate: PROMPTS.inText
+                };
+
+                processAndGenerate(apiPayload);
             });
 
-            // --- INITIAL SETUP ---
-            loadState();
+            dom.clearBtn.addEventListener('click', () => {
+                dom.essayInput.value = '';
+                dom.outputSection.style.display = 'none';
+                dom.messageBox.style.display = 'none';
+                dom.inTextOutputArea.textContent = '';
+                dom.inTextOutputContainer.style.display = 'none';
+            });
+
+            dom.copyEssayBtn.addEventListener('click', () => {
+                const essayText = dom.inTextOutputArea.textContent;
+                if (essayText) {
+                    navigator.clipboard.writeText(essayText).then(() => {
+                        showMessage('Essay copied to clipboard!', 'info');
+                    }).catch(err => {
+                        showMessage('Failed to copy essay.', 'error');
+                    });
+                }
+            });
+
+            dom.copyBiblioBtn.addEventListener('click', () => {
+                const citations = Array.from(dom.outputArea.querySelectorAll('.citation-item'));
+                const textToCopy = citations.map(item => item.textContent).join('\n\n');
+                if (textToCopy) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        showMessage('Bibliography copied to clipboard!', 'info');
+                    }).catch(err => {
+                        showMessage('Failed to copy bibliography.', 'error');
+                    });
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // loadHeader(); // You can uncomment this if you have a shared header file
+            loadHeader();
             initializeCitationApp();
         });
     </script>
+
+  <!-- Vercel Analytics -->
+  <script>
+    window.va = window.va || function () { (window.va.q = window.va.q || []).push(arguments); };
+    window.va('set', 'mode', 'auto');
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  
 </body>
 </html>
