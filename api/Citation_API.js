@@ -1,11 +1,6 @@
 const fetch = require('node-fetch');
 
-// --- IMPROVEMENT 3: Updated Gemini Models ---
-const ALL_GEMINI_MODELS = [
-  'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
-  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
-];
-
+// This function is now self-contained and doesn't rely on a global models list.
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -36,11 +31,13 @@ async function fetchAndCleanContent(url) {
     } catch (error) { return null; }
 }
 
-async function callGeminiApi(payload, apiKey) {
-    let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
+// --- IMPROVEMENT: Now accepts the list of models as a parameter ---
+async function callGeminiApi(payload, apiKey, models) {
+    let modelsToTry = shuffleArray([...models]);
     let lastError = null;
     for (const currentModel of modelsToTry) {
-        const apiUrl = `httpshttps://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+        // --- FIX: Corrected URL from 'httpshttps://' to 'https://' ---
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
@@ -75,16 +72,19 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // --- IMPROVEMENT 1: Backend now receives prompts and data from the frontend ---
-        const { summaryPrompt, extractionPromptTemplate, formattingPromptTemplate, inTextPromptTemplate, essayText, citationStyle, outputType, citationCount } = req.body;
-        if (!essayText || !summaryPrompt) return res.status(400).json({ error: 'Missing required fields from frontend.' });
+        // --- IMPROVEMENT: Now receives the models list from the frontend ---
+        const { summaryPrompt, extractionPromptTemplate, formattingPromptTemplate, inTextPromptTemplate, essayText, citationStyle, outputType, citationCount, models } = req.body;
+        if (!essayText || !summaryPrompt || !Array.isArray(models) || models.length === 0) {
+            return res.status(400).json({ error: 'Missing required fields or models list from frontend.' });
+        }
 
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
-        const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
+        const summaryData = await callGeminiApi(summaryPayload, geminiApiKey, models);
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
         if (!searchQuery) throw new Error("AI failed to generate a search query.");
 
-        const searchUrl = `httpshttps://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
+        // --- FIX: Corrected URL from 'httpshttps://' to 'https://' ---
+        const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
         const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
 
         const extractionPrompt = extractionPromptTemplate.replace('${JSON_PLACEHOLDER}', JSON.stringify(fetchedContents, null, 2));
         const extractionPayload = { contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey);
+        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey, models);
         const structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
 
         if (!structuredCitations || structuredCitations.length === 0) {
@@ -107,7 +107,7 @@ module.exports = async (req, res) => {
             .replace('${COUNT_PLACEHOLDER}', citationCount)
             .replace('${JSON_PLACEHOLDER}', JSON.stringify(structuredCitations, null, 2));
         const formattingPayload = { contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey);
+        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey, models);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
         if (outputType === 'bibliography') {
@@ -120,7 +120,7 @@ module.exports = async (req, res) => {
                 .replace('${BIBLIOGRAPHY_PLACEHOLDER}', JSON.stringify(citations, null, 2))
                 .replace('${ESSAY_PLACEHOLDER}', essayText);
             const inTextPayload = { contents: [{ role: 'user', parts: [{ text: inTextPrompt }] }] };
-            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey);
+            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey, models);
             const inTextCitedEssay = inTextData.candidates[0].content.parts[0].text;
 
             return res.status(200).json({ citations, inTextCitedEssay });
