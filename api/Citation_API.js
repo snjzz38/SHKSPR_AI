@@ -1,7 +1,6 @@
 // api/Citation_API.js
 const fetch = require('node-fetch');
 
-// The list of models is part of the backend's core logic and configuration.
 const ALL_GEMINI_MODELS = [
   'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
   'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
@@ -41,8 +40,9 @@ async function callGeminiApi(payload, apiKey) {
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
     for (const currentModel of modelsToTry) {
-        // FIX: Corrected URL from 'httpshttps://' to 'https://'
-        const apiUrl = `https://generativelen/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+        // --- THIS IS THE FIX ---
+        // Corrected 'generativelen' to 'generativelanguage.googleapis.com'
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
@@ -86,7 +86,6 @@ module.exports = async (req, res) => {
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
         if (!searchQuery) throw new Error("AI failed to generate a search query.");
 
-        // FIX: Corrected URL from 'httpshttps://' to 'https://'
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
