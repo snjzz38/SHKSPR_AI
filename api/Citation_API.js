@@ -1,6 +1,12 @@
+// api/Citation_API.js
 const fetch = require('node-fetch');
 
-// This function is now self-contained and doesn't rely on a global models list.
+// The list of models is part of the backend's core logic and configuration.
+const ALL_GEMINI_MODELS = [
+  'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
+  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+];
+
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -31,13 +37,12 @@ async function fetchAndCleanContent(url) {
     } catch (error) { return null; }
 }
 
-// --- IMPROVEMENT: Now accepts the list of models as a parameter ---
-async function callGeminiApi(payload, apiKey, models) {
-    let modelsToTry = shuffleArray([...models]);
+async function callGeminiApi(payload, apiKey) {
+    let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
     for (const currentModel of modelsToTry) {
-        // --- FIX: Corrected URL from 'httpshttps://' to 'https://' ---
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+        // FIX: Corrected URL from 'httpshttps://' to 'https://'
+        const apiUrl = `https://generativelen/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
@@ -72,18 +77,16 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // --- IMPROVEMENT: Now receives the models list from the frontend ---
-        const { summaryPrompt, extractionPromptTemplate, formattingPromptTemplate, inTextPromptTemplate, essayText, citationStyle, outputType, citationCount, models } = req.body;
-        if (!essayText || !summaryPrompt || !Array.isArray(models) || models.length === 0) {
-            return res.status(400).json({ error: 'Missing required fields or models list from frontend.' });
-        }
+        const { essayText, citationStyle, outputType, citationCount } = req.body;
+        if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
 
+        const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
-        const summaryData = await callGeminiApi(summaryPayload, geminiApiKey, models);
+        const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
         if (!searchQuery) throw new Error("AI failed to generate a search query.");
 
-        // --- FIX: Corrected URL from 'httpshttps://' to 'https://' ---
+        // FIX: Corrected URL from 'httpshttps://' to 'https://'
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
@@ -93,21 +96,40 @@ module.exports = async (req, res) => {
         const fetchedContents = (await Promise.all(searchResults.map(url => fetchAndCleanContent(url)))).filter(Boolean);
         if (fetchedContents.length === 0) return res.status(200).json({ citations: ["Could not fetch content from any relevant sources."] });
 
-        const extractionPrompt = extractionPromptTemplate.replace('${JSON_PLACEHOLDER}', JSON.stringify(fetchedContents, null, 2));
+        const extractionPrompt = `
+            You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
+            RULES:
+            1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
+            2.  The 'author' can be a person or a credible organization (use 'site_name' if a person's name is not available).
+            3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
+            4.  **CRITICAL QUALITY RULE:** If a source is missing a clear author OR a title, you MUST DISCARD it. Do not include incomplete sources.
+            5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
+
+            Webpage Data:
+            ${JSON.stringify(fetchedContents, null, 2)}
+        `;
         const extractionPayload = { contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey, models);
+        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey);
         const structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
 
         if (!structuredCitations || structuredCitations.length === 0) {
             return res.status(200).json({ citations: ["No high-quality, citable sources were found."] });
         }
 
-        const formattingPrompt = formattingPromptTemplate
-            .replace('${STYLE_PLACEHOLDER}', citationStyle.toUpperCase())
-            .replace('${COUNT_PLACEHOLDER}', citationCount)
-            .replace('${JSON_PLACEHOLDER}', JSON.stringify(structuredCitations, null, 2));
+        const countInstruction = `Return citations for as many sources as possible, up to a maximum of ${citationCount}.`;
+        const formattingPrompt = `
+            You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
+            RULES:
+            1.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
+            2.  Order the final citations **alphabetically** by author.
+            3.  ${countInstruction}
+            4.  Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
+
+            Source Data:
+            ${JSON.stringify(structuredCitations, null, 2)}
+        `;
         const formattingPayload = { contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey, models);
+        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey);
         const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
 
         if (outputType === 'bibliography') {
@@ -115,12 +137,25 @@ module.exports = async (req, res) => {
         }
 
         if (outputType === 'in-text') {
-            const inTextPrompt = inTextPromptTemplate
-                .replace('${STYLE_PLACEHOLDER}', citationStyle.toUpperCase())
-                .replace('${BIBLIOGRAPHY_PLACEHOLDER}', JSON.stringify(citations, null, 2))
-                .replace('${ESSAY_PLACEHOLDER}', essayText);
+            const inTextPrompt = `
+                You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
+                RULES:
+                1.  Carefully read the "Original Essay" and the "Bibliography" provided.
+                2.  Your main task is to connect the claims in the essay to the sources in the bibliography.
+                3.  You MUST insert an in-text citation (e.g., (Author, Year)) for **EVERY** source in the bibliography that is relevant to the essay's content. Be comprehensive.
+                4.  The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
+                5.  **CRITICAL:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
+                6.  Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
+                7.  Return ONLY the modified essay text as a single string.
+
+                Bibliography:
+                ${JSON.stringify(citations, null, 2)}
+
+                Original Essay:
+                "${essayText}"
+            `;
             const inTextPayload = { contents: [{ role: 'user', parts: [{ text: inTextPrompt }] }] };
-            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey, models);
+            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey);
             const inTextCitedEssay = inTextData.candidates[0].content.parts[0].text;
 
             return res.status(200).json({ citations, inTextCitedEssay });
