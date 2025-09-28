@@ -237,57 +237,6 @@
     </footer>
 
     <script>
-        // --- IMPROVEMENT: All configuration is now on the frontend ---
-        const APP_CONFIG = {
-            MODELS: [
-                'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
-                'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
-            ],
-            PROMPTS: {
-                summary: (essayText) => `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`,
-                extraction: `
-                    You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
-                    RULES:
-                    1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
-                    2.  The 'author' can be a person or a credible organization (use 'site_name' if a person's name is not available).
-                    3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
-                    4.  **CRITICAL QUALITY RULE:** If a source is missing a clear author OR a title, you MUST DISCARD it. Do not include incomplete sources.
-                    5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
-
-                    Webpage Data:
-                    \${JSON_PLACEHOLDER}
-                `,
-                formatting: `
-                    You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
-                    RULES:
-                    1.  Format ALL citations in **\${STYLE_PLACEHOLDER}** style.
-                    2.  Order the final citations **alphabetically** by author.
-                    3.  Return citations for as many sources as possible, up to a maximum of \${COUNT_PLACEHOLDER}.
-                    4.  Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
-
-                    Source Data:
-                    \${JSON_PLACEHOLDER}
-                `,
-                inText: `
-                    You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
-                    RULES:
-                    1.  Carefully read the "Original Essay" and the "Bibliography" provided.
-                    2.  Your main task is to connect the claims in the essay to the sources in the bibliography.
-                    3.  You MUST insert an in-text citation (e.g., (Author, Year)) for **EVERY** source in the bibliography that is relevant to the essay's content. Be comprehensive.
-                    4.  The in-text citations MUST be in the correct **\${STYLE_PLACEHOLDER}** format.
-                    5.  **CRITICAL:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
-                    6.  Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
-                    7.  Return ONLY the modified essay text as a single string.
-
-                    Bibliography:
-                    \${BIBLIOGRAPHY_PLACEHOLDER}
-
-                    Original Essay:
-                    "\${ESSAY_PLACEHOLDER}"
-                `
-            }
-        };
-
         async function loadHeader() {
             try {
                 const response = await fetch('../Structure/header.html');
@@ -436,35 +385,33 @@
                 const essayText = dom.essayInput.value.trim();
                 if (!essayText) {
                     showMessage('Please paste an essay into the input area.', 'error');
-                    return;
+                    return; // This frontend check prevents the API call
                 }
                 const citationStyle = dom.citationStyleSelect.value;
                 const outputType = document.querySelector('input[name="output-type"]:checked').value;
                 
                 let citationCount = (dom.citationCountSelect.value === 'custom')
                     ? (dom.customCitationCountInput.value || 1)
-                    : 10;
+                    : 10; // Default 'auto' to 10
 
                 dom.outputSection.style.display = 'none';
                 dom.messageBox.style.display = 'none';
                 dom.generateBtn.disabled = true;
                 startLoadingBar();
 
+                // The payload is now simple again, making the system robust.
                 const apiPayload = {
                     essayText,
                     citationStyle,
                     outputType,
-                    citationCount,
-                    models: APP_CONFIG.MODELS,
-                    summaryPrompt: APP_CONFIG.PROMPTS.summary(essayText),
-                    extractionPromptTemplate: APP_CONFIG.PROMPTS.extraction,
-                    formattingPromptTemplate: APP_CONFIG.PROMPTS.formatting,
-                    inTextPromptTemplate: APP_CONFIG.PROMPTS.inText
+                    citationCount
                 };
 
                 processAndGenerate(apiPayload);
             });
 
+            // This function is simple and only manipulates the local page.
+            // It does not and cannot trigger an API call.
             dom.clearBtn.addEventListener('click', () => {
                 dom.essayInput.value = '';
                 dom.outputSection.style.display = 'none';
