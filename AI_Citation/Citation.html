@@ -115,7 +115,6 @@
 
     <script>
         // --- CONFIGURATION & SYSTEM PROMPTS ---
-        let GEMINI_API_KEY = null; // This will be fetched from a file
         const ALL_GEMINI_MODELS = [
             'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
             'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
@@ -223,42 +222,14 @@
                 }, 500);
             }
 
-            async function callGeminiApi(payload) {
-                if (!GEMINI_API_KEY) throw new Error("API Key is not configured.");
-                let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
-                let lastError = null;
-                for (const currentModel of modelsToTry) {
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
-                    try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            throw new Error(`API call with ${currentModel} failed: ${errorData.error?.message || response.statusText}`);
-                        }
-                        const result = await response.json();
-                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text && text.trim() !== '') return result;
-                        throw new Error(`Model ${currentModel} returned an empty response.`);
-                    } catch (error) {
-                        console.warn(error.message);
-                        lastError = error;
-                    }
-                }
-                throw lastError || new Error("All API models failed.");
-            }
-
             async function callBackendProxy(action, data) {
-                const response = await fetch('/api/citation_proxy', {
+                const response = await fetch('/api/Citation_API', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, ...data })
                 });
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({ error: 'An unknown backend error occurred.' }));
                     throw new Error(errorData.error || `Backend proxy failed for action: ${action}`);
                 }
                 return response.json();
@@ -276,10 +247,10 @@
                 saveState();
 
                 try {
-                    // Step 1: Generate Search Query via Gemini
+                    // Step 1: Generate Search Query via Gemini (using the proxy)
                     showMessage('Step 1/5: Generating search query...', 'info');
                     const queryPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_GENERATE_SEARCH_QUERY(essayText) }] }] };
-                    const queryResult = await callGeminiApi(queryPayload);
+                    const queryResult = await callBackendProxy('callGemini', { payload: queryPayload, models: ALL_GEMINI_MODELS });
                     const searchQuery = queryResult.candidates[0].content.parts[0].text.trim();
 
                     // Step 2: Search for sources via Backend Proxy
@@ -291,13 +262,13 @@
                     showMessage('Step 3/5: Fetching content from sources...', 'info');
                     const fetchedContents = (await Promise.all(
                         searchResult.urls.map(url => callBackendProxy('fetch', { url }))
-                    )).filter(Boolean); // Filter out nulls from failed fetches
+                    )).filter(Boolean);
                     if (fetchedContents.length === 0) throw new Error("Could not fetch content from any sources.");
 
-                    // Step 4: Extract structured data via Gemini
+                    // Step 4: Extract structured data via Gemini (using the proxy)
                     showMessage('Step 4/5: Analyzing sources for citation data...', 'info');
                     const extractionPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_EXTRACT_CITATION_DATA(fetchedContents) }] }], generationConfig: { responseMimeType: "application/json" } };
-                    const extractionResult = await callGeminiApi(extractionPayload);
+                    const extractionResult = await callBackendProxy('callGemini', { payload: extractionPayload, models: ALL_GEMINI_MODELS });
                     const structuredCitations = JSON.parse(extractionResult.candidates[0].content.parts[0].text);
                     if (!structuredCitations || structuredCitations.length === 0) throw new Error("Could not extract citable data from sources.");
 
@@ -310,19 +281,19 @@
                     const countInstruction = citationCount === 'auto' ? `Return citations for all the provided sources.` : `Return exactly ${citationCount} citations. If there are fewer sources than requested, return all of them.`;
 
                     const formattingPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_FORMAT_BIBLIOGRAPHY(structuredCitations, citationStyle, countInstruction) }] }], generationConfig: { responseMimeType: "application/json" } };
-                    const formattingResult = await callGeminiApi(formattingPayload);
+                    const formattingResult = await callBackendProxy('callGemini', { payload: formattingPayload, models: ALL_GEMINI_MODELS });
                     const citations = JSON.parse(formattingResult.candidates[0].content.parts[0].text);
 
                     let inTextCitedEssay = null;
                     if (outputType === 'in-text') {
                         const inTextPayload = { contents: [{ role: 'user', parts: [{ text: PROMPT_INSERT_IN_TEXT_CITATIONS(citations, essayText, citationStyle) }] }] };
-                        const inTextResult = await callGeminiApi(inTextPayload);
+                        const inTextResult = await callBackendProxy('callGemini', { payload: inTextPayload, models: ALL_GEMINI_MODELS });
                         inTextCitedEssay = inTextResult.candidates[0].content.parts[0].text;
                     }
 
                     renderOutput({ citations, inTextCitedEssay }, outputType);
                     stopLoadingBar(true);
-                    saveState(); // Save the successful results
+                    saveState();
 
                 } catch (error) {
                     console.error('An error occurred:', error);
@@ -365,24 +336,32 @@
 
             // --- LOCALSTORAGE & STATE MANAGEMENT ---
             function saveState() {
-                const state = {
-                    essayText: dom.essayInput.value,
-                    inTextCitedEssay: dom.inTextOutputArea.textContent,
-                    citations: Array.from(dom.outputArea.querySelectorAll('.citation-item')).map(li => li.textContent)
-                };
-                localStorage.setItem('citationGeneratorState', JSON.stringify(state));
+                try {
+                    const state = {
+                        essayText: dom.essayInput.value,
+                        inTextCitedEssay: dom.inTextOutputArea.textContent,
+                        citations: Array.from(dom.outputArea.querySelectorAll('.citation-item')).map(li => li.textContent)
+                    };
+                    localStorage.setItem('citationGeneratorState', JSON.stringify(state));
+                } catch (e) {
+                    console.error("Failed to save state to localStorage:", e);
+                }
             }
 
             function loadState() {
-                const savedState = localStorage.getItem('citationGeneratorState');
-                if (!savedState) return;
+                try {
+                    const savedState = localStorage.getItem('citationGeneratorState');
+                    if (!savedState) return;
 
-                const state = JSON.parse(savedState);
-                if (state.essayText) dom.essayInput.value = state.essayText;
-                
-                if (state.citations && state.citations.length > 0) {
-                    const outputType = state.inTextCitedEssay ? 'in-text' : 'bibliography';
-                    renderOutput({ citations: state.citations, inTextCitedEssay: state.inTextCitedEssay }, outputType);
+                    const state = JSON.parse(savedState);
+                    if (state.essayText) dom.essayInput.value = state.essayText;
+                    
+                    if (state.citations && state.citations.length > 0) {
+                        const outputType = state.inTextCitedEssay ? 'in-text' : 'bibliography';
+                        renderOutput({ citations: state.citations, inTextCitedEssay: state.inTextCitedEssay }, outputType);
+                    }
+                } catch (e) {
+                    console.error("Failed to load state from localStorage:", e);
                 }
             }
 
@@ -409,23 +388,9 @@
             });
 
             // --- INITIAL SETUP ---
-            (async () => {
-                try {
-                    const response = await fetch('Grok4.txt'); // Fetching API key from a local file
-                    if (!response.ok) throw new Error('API key file not found.');
-                    const key = (await response.text()).trim();
-                    let output = "";
-                    for (let i = 0; i < key.length; i++) { if ((i + 1) % 5 === 1) output += key[i]; }
-                    GEMINI_API_KEY = output;
-                } catch (error) {
-                    showMessage('Could not load API Key. The application will not work.', 'error');
-                    console.error(error);
-                }
-            })();
             loadState();
         }
 
-        async function loadHeader() { /* Function to load shared header */ }
         document.addEventListener('DOMContentLoaded', () => {
             // loadHeader(); // You can uncomment this if you have a shared header file
             initializeCitationApp();
