@@ -30,8 +30,8 @@ async function fetchAndCleanContent(url) {
         const site_name = getMetaContent('og:site_name');
         const published_date = getMetaContent('article:published_time') || getMetaContent('publish_date') || getMetaContent('date');
         return {
-            url: url, title: titleMatch ? titleMatch[1] : 'No title found', author: author,
-            site_name: site_name, published_date: published_date, body_snippet: cleanText.substring(0, 2500)
+            url: url, title: titleMatch ? titleMatch[1] : null, // Return null if no title is found
+            author: author, site_name: site_name, published_date: published_date, body_snippet: cleanText.substring(0, 2500)
         };
     } catch (error) { return null; }
 }
@@ -40,8 +40,6 @@ async function callGeminiApi(payload, apiKey) {
     let modelsToTry = shuffleArray([...ALL_GEMINI_MODELS]);
     let lastError = null;
     for (const currentModel of modelsToTry) {
-        // --- THIS IS THE FIX ---
-        // Corrected 'generativelen' to 'generativelanguage.googleapis.com'
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -80,7 +78,7 @@ module.exports = async (req, res) => {
         const { essayText, citationStyle, outputType, citationCount } = req.body;
         if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
 
-        const summaryPrompt = `Summarize the following text into a single, concise search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
+        const summaryPrompt = `Summarize the following text into a single, effective search query of 10-15 words. The query should blend specific keywords with the broader theme to find a good variety of sources. Return ONLY the search query string. Text: "${essayText}"`;
         const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
         const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
         const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
@@ -95,13 +93,14 @@ module.exports = async (req, res) => {
         const fetchedContents = (await Promise.all(searchResults.map(url => fetchAndCleanContent(url)))).filter(Boolean);
         if (fetchedContents.length === 0) return res.status(200).json({ citations: ["Could not fetch content from any relevant sources."] });
 
+        // --- THIS IS THE KEY CHANGE: The AI's rules are now extremely lenient ---
         const extractionPrompt = `
             You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
             RULES:
             1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
-            2.  The 'author' can be a person or a credible organization (use 'site_name' if a person's name is not available).
-            3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
-            4.  **CRITICAL QUALITY RULE:** If a source is missing a clear author OR a title, you MUST DISCARD it. Do not include incomplete sources.
+            2.  **NEW TITLE RULE:** If a usable title is found, use it. If the 'title' field is null or empty, you MUST use the source's 'url' as the title and append the string ' (NO TITLE)' to it. NEVER discard a source for lacking a title.
+            3.  **LENIENT AUTHOR RULE:** If a specific person's name is not found for 'author', you MUST use the 'site_name' as a fallback. Do not leave the author blank if a site_name exists.
+            4.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
             5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
 
             Webpage Data:
@@ -112,10 +111,10 @@ module.exports = async (req, res) => {
         const structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
 
         if (!structuredCitations || structuredCitations.length === 0) {
-            return res.status(200).json({ citations: ["No high-quality, citable sources were found."] });
+            return res.status(200).json({ citations: ["No usable sources were found after filtering."] });
         }
 
-        const countInstruction = `Return citations for as many sources as possible, up to a maximum of ${citationCount}.`;
+        const countInstruction = `Return citations for as many sources as possible, up to a maximum of ${citationCount}. If you have fewer sources than the maximum, return all of them.`;
         const formattingPrompt = `
             You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
             RULES:
