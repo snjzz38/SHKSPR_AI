@@ -1,10 +1,10 @@
 // api/Citation_API.js
 const fetch = require('node-fetch');
 
-    const ALL_GEMINI_MODELS = [
-      'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
-      'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'
-    ];
+const ALL_GEMINI_MODELS = [
+  'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
+  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
+];
 
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
