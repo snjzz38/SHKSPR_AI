@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 
 const ALL_GEMINI_MODELS = [
   'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
-  'gemini-2.0-flash-lite', 'gemini-2.5-pro',
+  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
 ];
 
 const shuffleArray = (array) => {
@@ -24,14 +24,13 @@ async function fetchAndCleanContent(url) {
             return metaMatch ? metaMatch[1] : '';
         };
         const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        const cleanText = (bodyMatch ? bodyMatch[1] : html).replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
-        const author = getMetaContent('author') || getMetaContent('og:author');
         const site_name = getMetaContent('og:site_name');
-        const published_date = getMetaContent('article:published_time') || getMetaContent('publish_date') || getMetaContent('date');
         return {
-            url: url, title: titleMatch ? titleMatch[1] : null, // Return null if no title is found
-            author: author, site_name: site_name, published_date: published_date, body_snippet: cleanText.substring(0, 2500)
+            url: url,
+            title: titleMatch ? titleMatch[1].trim() : null,
+            author: getMetaContent('author') || getMetaContent('og:author'),
+            site_name: site_name,
+            published_date: getMetaContent('article:published_time') || getMetaContent('publish_date') || getMetaContent('date')
         };
     } catch (error) { return null; }
 }
@@ -78,89 +77,118 @@ module.exports = async (req, res) => {
         const { essayText, citationStyle, outputType, citationCount } = req.body;
         if (!essayText) return res.status(400).json({ error: 'Missing required field: essayText.' });
 
-        const summaryPrompt = `Summarize the following text into a single, effective search query of 10-15 words. The query should blend specific keywords with the broader theme to find a good variety of sources. Return ONLY the search query string. Text: "${essayText}"`;
-        const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
-        const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
-        const searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
-        if (!searchQuery) throw new Error("AI failed to generate a search query.");
+        // --- SAFETY NET 1: GUARANTEED SEARCH QUERY ---
+        let searchQuery = '';
+        try {
+            const summaryPrompt = `Summarize the following text into a single, effective search query of 10-15 words. Return ONLY the search query string. Text: "${essayText}"`;
+            const summaryPayload = { contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }] };
+            const summaryData = await callGeminiApi(summaryPayload, geminiApiKey);
+            searchQuery = summaryData.candidates[0].content.parts[0].text.trim();
+            if (!searchQuery) throw new Error("AI returned empty query.");
+        } catch (error) {
+            console.warn("AI query generation failed. Using fallback.", error);
+            searchQuery = essayText.split(' ').slice(0, 20).join(' '); // Fallback to first 20 words
+        }
 
         const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${searchApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(searchQuery)}&num=10`;
         const searchApiResponse = await fetch(searchUrl);
         const searchData = await searchApiResponse.json();
         const searchResults = searchData.items ? searchData.items.map(item => item.link) : [];
-        if (searchResults.length === 0) return res.status(200).json({ citations: ["No relevant sources were found."] });
-
-        const fetchedContents = (await Promise.all(searchResults.map(url => fetchAndCleanContent(url)))).filter(Boolean);
-        if (fetchedContents.length === 0) return res.status(200).json({ citations: ["Could not fetch content from any relevant sources."] });
-
-        // --- THIS IS THE KEY CHANGE: The AI's rules are now extremely lenient ---
-        const extractionPrompt = `
-            You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
-            RULES:
-            1.  Analyze the "Webpage Data" to find the author, title, and publication year for each source.
-            2.  **NEW TITLE RULE:** If a usable title is found, use it. If the 'title' field is null or empty, you MUST use the source's 'url' as the title and append the string ' (NO TITLE)' to it. NEVER discard a source for lacking a title.
-            3.  **LENIENT AUTHOR RULE:** If a specific person's name is not found for 'author', you MUST use the 'site_name' as a fallback. Do not leave the author blank if a site_name exists.
-            4.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
-            5.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
-
-            Webpage Data:
-            ${JSON.stringify(fetchedContents, null, 2)}
-        `;
-        const extractionPayload = { contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const extractionData = await callGeminiApi(extractionPayload, geminiApiKey);
-        const structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
-
-        if (!structuredCitations || structuredCitations.length === 0) {
-            return res.status(200).json({ citations: ["No usable sources were found after filtering."] });
+        
+        // This is now the only condition that can result in this message.
+        if (searchResults.length === 0) {
+            return res.status(200).json({ citations: ["Could not find any web pages for the given text. Please try rephrasing."] });
         }
 
-        const countInstruction = `Return citations for as many sources as possible, up to a maximum of ${citationCount}. If you have fewer sources than the maximum, return all of them.`;
-        const formattingPrompt = `
-            You are an expert academic librarian. Your only task is to format the provided JSON data into a bibliography.
-            RULES:
-            1.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
-            2.  Order the final citations **alphabetically** by author.
-            3.  ${countInstruction}
-            4.  Return ONLY a valid JSON array of strings. Each string should be a complete, formatted citation.
+        const fetchedContents = (await Promise.all(searchResults.map(url => fetchAndCleanContent(url)))).filter(Boolean);
+        if (fetchedContents.length === 0) {
+            // If fetching fails, return the raw URLs so the user still gets something.
+            return res.status(200).json({ citations: searchResults.map(url => `Could not fetch content from: ${url}`) });
+        }
 
-            Source Data:
-            ${JSON.stringify(structuredCitations, null, 2)}
-        `;
-        const formattingPayload = { contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
-        const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey);
-        const citations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
+        // --- SAFETY NET 2: FALLBACK DATA EXTRACTION ---
+        let structuredCitations = [];
+        try {
+            const extractionPrompt = `
+                You are a data extraction expert. Your task is to extract citation information from the provided webpage data.
+                RULES:
+                1.  **NEW TITLE RULE:** If a usable title is found, use it. If the 'title' field is null or empty, you MUST use the source's 'url' as the title and append the string ' (NO TITLE)' to it. NEVER discard a source.
+                2.  **LENIENT AUTHOR RULE:** If a specific person's name is not found for 'author', you MUST use the 'site_name' as a fallback. If 'site_name' is also missing, use the website's domain name.
+                3.  The 'year' should be extracted from the 'published_date' field or the text. If no year is found, use "n.d.".
+                4.  Return ONLY a valid JSON array of objects. Each object must have these exact keys: "author", "title", "year", "url".
+                Webpage Data: ${JSON.stringify(fetchedContents, null, 2)}
+            `;
+            const extractionPayload = { contents: [{ role: 'user', parts: [{ text: extractionPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+            const extractionData = await callGeminiApi(extractionPayload, geminiApiKey);
+            structuredCitations = JSON.parse(extractionData.candidates[0].content.parts[0].text);
+        } catch (error) {
+            console.warn("AI data extraction failed. Using manual fallback.", error);
+            // Manually build the citation list if AI fails. This is Plan B.
+            structuredCitations = fetchedContents.map(item => ({
+                author: item.author || item.site_name || new URL(item.url).hostname,
+                title: item.title || `${item.url} (NO TITLE)`,
+                year: new Date(item.published_date).getFullYear() || "n.d.",
+                url: item.url
+            }));
+        }
 
+        // --- SAFETY NET 3: FALLBACK FORMATTING ---
+        let finalCitations = [];
+        try {
+            const formattingPrompt = `
+                You are an expert academic librarian. Format the provided JSON data into a bibliography.
+                RULES:
+                1.  Format ALL citations in **${citationStyle.toUpperCase()}** style.
+                2.  Order the final citations **alphabetically** by author.
+                3.  Return citations for as many sources as possible, up to a maximum of ${citationCount}.
+                4.  Return ONLY a valid JSON array of strings.
+                Source Data: ${JSON.stringify(structuredCitations, null, 2)}
+            `;
+            const formattingPayload = { contents: [{ role: 'user', parts: [{ text: formattingPrompt }] }], generationConfig: { responseMimeType: "application/json" } };
+            const bibliographyData = await callGeminiApi(formattingPayload, geminiApiKey);
+            finalCitations = JSON.parse(bibliographyData.candidates[0].content.parts[0].text);
+        } catch (error) {
+            console.warn("AI formatting failed. Using manual fallback.", error);
+            // Manually format the list if AI fails. This is Plan C.
+            finalCitations = structuredCitations.map(c => `${c.author} (${c.year}). ${c.title}. Retrieved from ${c.url}`);
+        }
+
+        // --- SAFETY NET 4: THE ULTIMATE FALLBACK ---
+        if (finalCitations.length === 0) {
+             console.warn("All steps failed. Returning raw URLs as last resort.");
+             finalCitations = searchResults;
+        }
+
+        // --- Final Output ---
         if (outputType === 'bibliography') {
-            return res.status(200).json({ citations });
+            return res.status(200).json({ citations: finalCitations });
         }
 
         if (outputType === 'in-text') {
-            const inTextPrompt = `
-                You are an expert academic editor. Your primary goal is to insert correct, thorough in-text citations into an essay.
-                RULES:
-                1.  Carefully read the "Original Essay" and the "Bibliography" provided.
-                2.  Your main task is to connect the claims in the essay to the sources in the bibliography.
-                3.  You MUST insert an in-text citation (e.g., (Author, Year)) for **EVERY** source in the bibliography that is relevant to the essay's content. Be comprehensive.
-                4.  The in-text citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
-                5.  **CRITICAL:** You must NOT change, rephrase, or alter the original essay text in any other way. Preserve it exactly as it is.
-                6.  Before finishing, review the essay one last time to ensure all relevant sources from the bibliography have been cited.
-                7.  Return ONLY the modified essay text as a single string.
-
-                Bibliography:
-                ${JSON.stringify(citations, null, 2)}
-
-                Original Essay:
-                "${essayText}"
-            `;
-            const inTextPayload = { contents: [{ role: 'user', parts: [{ text: inTextPrompt }] }] };
-            const inTextData = await callGeminiApi(inTextPayload, geminiApiKey);
-            const inTextCitedEssay = inTextData.candidates[0].content.parts[0].text;
-
-            return res.status(200).json({ citations, inTextCitedEssay });
+            // In-text is complex, so we'll only try it if the main formatting was successful.
+            // If not, we'll just return the bibliography to avoid further errors.
+            try {
+                const inTextPrompt = `
+                    You are an expert academic editor. Insert in-text citations into the following essay.
+                    RULES:
+                    1.  Insert citations for **EVERY** source in the bibliography where relevant.
+                    2.  Citations MUST be in the correct **${citationStyle.toUpperCase()}** format.
+                    3.  **CRITICAL:** You must NOT change or rephrase the original essay text in any other way.
+                    Bibliography: ${JSON.stringify(finalCitations, null, 2)}
+                    Original Essay: "${essayText}"
+                `;
+                const inTextPayload = { contents: [{ role: 'user', parts: [{ text: inTextPrompt }] }] };
+                const inTextData = await callGeminiApi(inTextPayload, geminiApiKey);
+                const inTextCitedEssay = inTextData.candidates[0].content.parts[0].text;
+                return res.status(200).json({ citations: finalCitations, inTextCitedEssay });
+            } catch (error) {
+                 console.warn("In-text generation failed. Returning bibliography only.", error);
+                 return res.status(200).json({ citations: finalCitations });
+            }
         }
 
     } catch (error) {
-        console.error('Error in serverless function:', error);
-        res.status(500).json({ error: 'Failed to generate citation.', details: error.message });
+        console.error('A critical error occurred in the serverless function:', error);
+        res.status(500).json({ error: 'An unexpected server error occurred.', details: error.message });
     }
 };
