@@ -1,50 +1,30 @@
 {
   "version": 2,
   "functions": {
-    "api/Grader_API.js": {
-      "maxDuration": 30
-    },
-    "api/Humanizer_API.js": {
-      "maxDuration": 30
-    },
-    "api/Flashcard_API.js": {
-      "maxDuration": 30
-    },
-    "api/Quiz_API.js": {
-      "maxDuration": 30
-    },
-    "api/Citation_API.js": {
-      "maxDuration": 30
-    }
+    "api/Grader_API.js": { "maxDuration": 30 },
+    "api/Humanizer_API.js": { "maxDuration": 30 },
+    "api/Flashcard_API.js": { "maxDuration": 30 },
+    "api/Quiz_API.js": { "maxDuration": 30 },
+    "api/Citation_API.js": { "maxDuration": 30 }
   },
   "rewrites": [
+    { "source": "/api/support", "destination": "/api/Support_API.js" },
+    { "source": "/api/humanizer", "destination": "/api/Humanizer_API.js" },
+    { "source": "/api/grader", "destination": "/api/Grader_API.js" },
+    { "source": "/api/flashcard", "destination": "/api/Flashcard_API.js" },
+    { "source": "/api/quiz", "destination": "/api/Quiz_API.js" },
+    { "source": "/api/citation", "destination": "/api/Citation_API.js" },
+    { "source": "/", "destination": "/index.html" }
+  ],
+  "headers": [
     {
-      "source": "/api/support",
-      "destination": "/api/Support_API.js"
-    },
-    {
-      "source": "/api/humanizer",
-      "destination": "/api/Humanizer_API.js"
-    },
-    {
-      "source": "/api/grader",
-      "destination": "/api/Grader_API.js"
-    },
-    {
-      "source": "/api/flashcard",
-      "destination": "/api/Flashcard_API.js"
-    },
-    {
-      "source": "/api/quiz",
-      "destination": "/api/Quiz_API.js"
-    },
-    {
-      "source": "/api/citation",
-      "destination": "/api/Citation_API.js"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": ""
+        }
+      ]
     }
   ]
 }
