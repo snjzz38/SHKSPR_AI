@@ -290,6 +290,48 @@
                 copyBiblioBtn: document.getElementById('copy-biblio-btn'),
             };
 
+            // --- NEW: Function to save the current state to localStorage ---
+            function saveState() {
+                try {
+                    localStorage.setItem('citationApp-essayText', dom.essayInput.value);
+                    localStorage.setItem('citationApp-citationStyle', dom.citationStyleSelect.value);
+                    localStorage.setItem('citationApp-citationCount', dom.citationCountSelect.value);
+                    localStorage.setItem('citationApp-customCount', dom.customCitationCountInput.value);
+                    const outputType = document.querySelector('input[name="output-type"]:checked').value;
+                    localStorage.setItem('citationApp-outputType', outputType);
+                } catch (e) {
+                    console.error("Could not save to localStorage:", e);
+                }
+            }
+
+            // --- NEW: Function to load the saved state from localStorage ---
+            function loadState() {
+                try {
+                    const essayText = localStorage.getItem('citationApp-essayText');
+                    if (essayText) dom.essayInput.value = essayText;
+
+                    const citationStyle = localStorage.getItem('citationApp-citationStyle');
+                    if (citationStyle) dom.citationStyleSelect.value = citationStyle;
+
+                    const citationCount = localStorage.getItem('citationApp-citationCount');
+                    if (citationCount) {
+                        dom.citationCountSelect.value = citationCount;
+                        dom.citationCountSelect.dispatchEvent(new Event('change')); // Trigger change to show/hide custom input
+                    }
+
+                    const customCount = localStorage.getItem('citationApp-customCount');
+                    if (customCount) dom.customCitationCountInput.value = customCount;
+
+                    const outputType = localStorage.getItem('citationApp-outputType');
+                    if (outputType) {
+                        const radio = document.querySelector(`input[name="output-type"][value="${outputType}"]`);
+                        if (radio) radio.checked = true;
+                    }
+                } catch (e) {
+                    console.error("Could not load from localStorage:", e);
+                }
+            }
+
             function showMessage(message, type = 'info') {
                 dom.messageBox.className = `message-box ${type}`;
                 dom.messageBox.textContent = message;
@@ -337,9 +379,7 @@
                         citationText = item;
                     } else if (typeof item === 'object' && item !== null) {
                         const keys = Object.keys(item);
-                        if (keys.length > 0) {
-                            citationText = item[keys[0]];
-                        }
+                        if (keys.length > 0) citationText = item[keys[0]];
                     }
 
                     if (citationText && typeof citationText === 'string' && citationText.trim() !== '') {
@@ -385,39 +425,38 @@
                 const essayText = dom.essayInput.value.trim();
                 if (!essayText) {
                     showMessage('Please paste an essay into the input area.', 'error');
-                    return; // This frontend check prevents the API call
+                    return;
                 }
                 const citationStyle = dom.citationStyleSelect.value;
                 const outputType = document.querySelector('input[name="output-type"]:checked').value;
-                
-                let citationCount = (dom.citationCountSelect.value === 'custom')
-                    ? (dom.customCitationCountInput.value || 1)
-                    : 10; // Default 'auto' to 10
+                let citationCount = (dom.citationCountSelect.value === 'custom') ? (dom.customCitationCountInput.value || 1) : 10;
 
                 dom.outputSection.style.display = 'none';
                 dom.messageBox.style.display = 'none';
                 dom.generateBtn.disabled = true;
                 startLoadingBar();
 
-                // The payload is now simple again, making the system robust.
-                const apiPayload = {
-                    essayText,
-                    citationStyle,
-                    outputType,
-                    citationCount
-                };
-
+                const apiPayload = { essayText, citationStyle, outputType, citationCount };
                 processAndGenerate(apiPayload);
             });
 
-            // This function is simple and only manipulates the local page.
-            // It does not and cannot trigger an API call.
+            // --- UPDATED: Clear button now also clears localStorage ---
             dom.clearBtn.addEventListener('click', () => {
                 dom.essayInput.value = '';
                 dom.outputSection.style.display = 'none';
                 dom.messageBox.style.display = 'none';
                 dom.inTextOutputArea.textContent = '';
                 dom.inTextOutputContainer.style.display = 'none';
+                try {
+                    localStorage.removeItem('citationApp-essayText');
+                    localStorage.removeItem('citationApp-citationStyle');
+                    localStorage.removeItem('citationApp-citationCount');
+                    localStorage.removeItem('citationApp-customCount');
+                    localStorage.removeItem('citationApp-outputType');
+                } catch (e) {
+                    console.error("Could not clear localStorage:", e);
+                }
+                showMessage('Cleared all text and settings.', 'info');
             });
 
             dom.copyEssayBtn.addEventListener('click', () => {
@@ -425,9 +464,7 @@
                 if (essayText) {
                     navigator.clipboard.writeText(essayText).then(() => {
                         showMessage('Essay copied to clipboard!', 'info');
-                    }).catch(err => {
-                        showMessage('Failed to copy essay.', 'error');
-                    });
+                    }).catch(err => showMessage('Failed to copy essay.', 'error'));
                 }
             });
 
@@ -437,11 +474,21 @@
                 if (textToCopy) {
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         showMessage('Bibliography copied to clipboard!', 'info');
-                    }).catch(err => {
-                        showMessage('Failed to copy bibliography.', 'error');
-                    });
+                    }).catch(err => showMessage('Failed to copy bibliography.', 'error'));
                 }
             });
+
+            // --- NEW: Add event listeners to all inputs to save state on change ---
+            dom.essayInput.addEventListener('input', saveState);
+            dom.citationStyleSelect.addEventListener('change', saveState);
+            dom.citationCountSelect.addEventListener('change', saveState);
+            dom.customCitationCountInput.addEventListener('input', saveState);
+            document.querySelectorAll('input[name="output-type"]').forEach(radio => {
+                radio.addEventListener('change', saveState);
+});
+
+            // --- NEW: Load any saved state when the app initializes ---
+            loadState();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
