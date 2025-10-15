@@ -20,196 +20,67 @@
             --accent: #fff; --card-bg: #222; --link-hover: #ffffff;
             --accent-rgb: 255, 255, 255;
         }
-        body.theme-cyan {
-            --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff;
-            --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255;
-        }
-        body.theme-purple {
-            --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff;
-            --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255;
-        }
-        body.theme-green {
-            --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6;
-            --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102;
-        }
-        body.theme-blackwhite {
-            --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff;
-            --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224;
-        }
-        body.theme-red {
-            --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6;
-            --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51;
-        }
+        body.theme-cyan { --bg-primary: #000; --bg-secondary: #0b0b0b; --text-primary: #e0ffff; --accent: #00f6ff; --card-bg: #072a2c; --accent-rgb: 0, 246, 255; }
+        body.theme-purple { --bg-primary: #0d001a; --bg-secondary: #14002b; --text-primary: #ffe6ff; --accent: #cc66ff; --card-bg: #1d0036; --accent-rgb: 204, 102, 255; }
+        body.theme-green { --bg-primary: #001a00; --bg-secondary: #002b00; --text-primary: #e6ffe6; --accent: #66ff66; --card-bg: #003600; --accent-rgb: 102, 255, 102; }
+        body.theme-blackwhite { --bg-primary: #000; --bg-secondary: #111; --text-primary: #fff; --accent: #e0e0e0; --card-bg: #222; --accent-rgb: 224, 224, 224; }
+        body.theme-red { --bg-primary: #1a0000; --bg-secondary: #2b0000; --text-primary: #ffe6e6; --accent: #ff3333; --card-bg: #360000; --accent-rgb: 255, 51, 51; }
 
         /* --- Global Styles --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            font-weight: bold;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            transition: background-color 0.6s, color 0.6s;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-weight: bold; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; transition: background-color 0.6s, color 0.6s; display: flex; flex-direction: column; overflow-x: hidden; }
 
         /* --- Styles specific to the Grader page --- */
-        .hero {
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5; 
-        }
-        .hero h1 {
-            font-size: 3.2rem; color: var(--text-primary);
-            margin-bottom: 20px; transition: all 0.6s ease;
-        }
-        .hero p {
-            font-size: 1.2rem; margin-bottom: 30px; text-shadow: 0 0 8px var(--accent);
-            max-width: 600px; color: var(--text-primary); transition: all 0.6s ease;
-        }
-        .grader-container {
-            max-width: 1000px; width: 95%; margin: 0 auto 2rem auto; background: var(--card-bg);
-            border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0, 0.5); padding: 1.5rem; position: relative; z-index: 5; color: var(--text-primary);
-        }
+        .hero { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 50px 20px 30px 20px; position: relative; z-index: 5; }
+        .hero h1 { font-size: 3.2rem; color: var(--text-primary); margin-bottom: 20px; transition: all 0.6s ease; }
+        .hero p { font-size: 1.2rem; margin-bottom: 30px; text-shadow: 0 0 8px var(--accent); max-width: 600px; color: var(--text-primary); transition: all 0.6s ease; }
+        .grader-container { max-width: 1000px; width: 95%; margin: 0 auto 2rem auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0, 0.5); padding: 1.5rem; position: relative; z-index: 5; color: var(--text-primary); }
         .step-content { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        textarea {
-            font-family: 'Fira Mono', monospace; background: var(--bg-secondary); color: var(--text-primary);
-            border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%;
-            min-height: 120px; resize: vertical;
-        }
-        input[type="text"], input[type="file"] {
-            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
-            border-radius: 8px; padding: 12px; width: 100%;
-        }
-        textarea:focus, input[type="text"]:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
-        .grade-level-btn, .rubric-btn {
-            background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary);
-            padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center;
-        }
-        .grade-level-btn.selected, .rubric-btn.selected {
-            background: var(--accent); color: var(--bg-primary); border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); font-weight: bold;
-        }
+        textarea { font-family: 'Fira Mono', monospace; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%; min-height: 120px; resize: vertical; }
+        input[type="text"], input[type="password"], input[type="file"] { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%; }
+        textarea:focus, input[type="text"]:focus, input[type="password"]:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
+        .grade-level-btn, .rubric-btn { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--text-primary); padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+        .grade-level-btn.selected, .rubric-btn.selected { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); font-weight: bold; }
         .grade-level-btn:hover, .rubric-btn:hover { opacity: 0.8; }
         input[type="file"] { display: none; }
-        .file-input-label {
-            display: inline-block; background: var(--bg-secondary); color: var(--accent);
-            border: 1px solid var(--accent); padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center;
-        }
+        .file-input-label { display: inline-block; background: var(--bg-secondary); color: var(--accent); border: 1px solid var(--accent); padding: 8px 16px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: all 0.3s; text-align: center; }
         .file-input-label:hover { background: var(--accent); color: var(--bg-primary); }
-        input[type="range"] {
-            -webkit-appearance: none; appearance: none; width: 100%; height: 10px; background: var(--bg-secondary);
-            border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s;
-        }
+        input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; background: var(--bg-secondary); border-radius: 50px; outline: none; opacity: 0.7; transition: opacity .2s; }
         input[type="range"]:hover { opacity: 1; }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%;
-            background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent);
-        }
-        .nav-button, button#grade-button, .clear-button {
-            background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem;
-            transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer;
-        }
-        .nav-button:hover, button#grade-button:hover, .clear-button:hover {
-            box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px);
-        }
-        .nav-button:disabled, button#grade-button:disabled {
-            background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important;
-        }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
+        input[type="range"]::-moz-range-thumb { width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
+        .nav-button, button#grade-button, .clear-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
+        .nav-button:hover, button#grade-button:hover, .clear-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
+        .nav-button:disabled, button#grade-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
-        #error-message, #success-message {
-            padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem;
-            text-align: center; border: 1px solid;
-        }
-        #error-message {
-            background-color: rgba(239, 68, 68, 0.1);
-            border-color: rgb(239, 68, 68);
-            color: #fecaca;
-        }
-        #success-message {
-            background-color: rgba(var(--accent-rgb), 0.1);
-            border-color: var(--accent);
-            color: var(--text-primary);
-        }
+        #error-message, #success-message { padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; text-align: center; border: 1px solid; }
+        #error-message { background-color: rgba(239, 68, 68, 0.1); border-color: rgb(239, 68, 68); color: #fecaca; }
+        #success-message { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
         #grade-result { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
         #grade-result h2 { color: var(--accent); }
-        .prose { color: var(--text-primary); word-break: break-word; }
-        .prose h1, .prose h2, .prose h3 { color: var(--accent); }
-        .prose a { color: var(--accent); text-decoration: underline; }
-        .prose strong { color: var(--text-primary); }
-        .prose ul > li::before { background-color: var(--accent); }
+        .prose { color: var(--text-primary); word-break: break-word; } .prose h1, .prose h2, .prose h3 { color: var(--accent); } .prose a { color: var(--accent); text-decoration: underline; } .prose strong { color: var(--text-primary); } .prose ul > li::before { background-color: var(--accent); }
         .file-list { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
         .file-list.expanded { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
-        .file-list-item {
-            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
-            padding: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem;
-        }
-        .file-list-item button {
-            background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem;
-        }
+        .file-list-item { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); padding: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .file-list-item button { background: none; border: none; color: var(--accent); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0.2rem; }
         .file-list-item button:hover { color: #ff4d4d; }
         .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .step-header .btn-container { flex: 1 0 0; }
         .step-header .title { flex: 2 1 auto; text-align: center; font-size: 1.25rem; font-weight: 600; margin: 0 1rem; }
         .description-text { min-height: 80px; line-height: 1.5; font-size: 0.875rem; color: #ccc; }
         .action-area { display: none; }
-        footer.main-footer {
-            text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary);
-            background-color: var(--bg-secondary);
-            position: relative; z-index: 10; margin-top: auto;
-        }
-        .loading-bar-container {
-            width: 100%;
-            height: 6px;
-            background-color: rgba(var(--accent-rgb), 0.2);
-            margin-top: 1.5rem;
-            border-radius: 3px;
-            position: relative;
-            overflow: hidden;
-        }
-        .loading-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            background-color: var(--accent);
-            width: 50%;
-            animation: indeterminate-loading 2s infinite ease-in-out;
-        }
-        @keyframes indeterminate-loading {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(200%); }
-        }
-        .rubric-select {
-            background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent);
-            border-radius: 8px; padding: 12px; width: 100%; cursor: pointer; appearance: none;
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%20164.2c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9L146.2%2063.2l-107.4%20101c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9c-9.1-10.4-8.1-26.6%202.3-35.7L130.4%2022.4c4.4-5.1%2010.4-7.9%2016.7-7.9s12.3%202.8%2016.7%207.9l118.8%20111.9c9.2%209.1%209.2%2024.1%200%2033.2z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px;
-        }
+        footer.main-footer { text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-primary); background-color: var(--bg-secondary); position: relative; z-index: 10; margin-top: auto; }
+        .loading-bar-container { width: 100%; height: 6px; background-color: rgba(var(--accent-rgb), 0.2); margin-top: 1.5rem; border-radius: 3px; position: relative; overflow: hidden; }
+        .loading-bar { position: absolute; top: 0; left: 0; bottom: 0; background-color: var(--accent); width: 50%; animation: indeterminate-loading 2s infinite ease-in-out; }
+        @keyframes indeterminate-loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+        .rubric-select { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%20164.2c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9L146.2%2063.2l-107.4%20101c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9c-9.1-10.4-8.1-26.6%202.3-35.7L130.4%2022.4c4.4-5.1%2010.4-7.9%2016.7-7.9s12.3%202.8%2016.7%207.9l118.8%20111.9c9.2%209.1%209.2%2024.1%200%2033.2z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px; }
         .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
         .hidden { display: none; }
-        .file-list-toggle-button {
-            background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent);
-            padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem;
-            transition: all 0.3s; margin-bottom: 10px; width: 100%;
-        }
-        .file-list-toggle-button:hover { background: var(--accent); color: var(--bg-primary); }
     </style>
     <script>
-        (function() {
-            try {
-                const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
-                document.documentElement.className = theme;
-            } catch (e) {
-                console.error("Failed to apply theme from localStorage", e);
-            }
-        })();
+        (function() { try { const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite'; document.documentElement.className = theme; } catch (e) { console.error("Failed to apply theme from localStorage", e); } })();
     </script>
 </head>
 <body>
@@ -225,57 +96,57 @@
         <div>
             <div id="step-instructions" class="step-content">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button opacity-0 pointer-events-none">Back</button></div>
                     <label class="title">1. Assignment Instructions</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="instructions" placeholder="E.g., 'Write a 500-word persuasive essay on renewable energy, with three supporting arguments.'"></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="instructions-file" class="file-input-label flex-grow">Upload Files</label>
                     <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
-                <input type="file" id="instructions-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <input type="file" id="instructions-file" accept=".txt,.md,.pdf,image/*" multiple>
                 <ul id="instructions-file-list" class="file-list"></ul>
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. Both text and file content will be used. <strong>Note:</strong> For PDFs, only text is extracted. If instructions are an image, upload it directly.</p>
             </div>
 
             <div id="step-rubric" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">2. Grading Rubric</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="rubric" placeholder="E.g., 'Content: 40%. Organization: 30%. Language: 20%. Originality: 10%.'"></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="rubric-file" class="file-input-label flex-grow">Upload Files</label>
                     <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
-                <input type="file" id="rubric-file" accept=".txt,.md,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <input type="file" id="rubric-file" accept=".txt,.md,.pdf,image/*" multiple>
                 <ul id="rubric-file-list" class="file-list"></ul>
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>Note:</strong> For PDFs, only text is extracted. If your rubric is an image, upload it as a JPG/PNG file.</p>
             </div>
 
             <div id="step-essay" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">3. Student's Assignment</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
                 <textarea id="essay" placeholder="Paste the student's assignment text here..."></textarea>
                 <div class="flex items-center justify-between mt-2 space-x-2">
                     <label for="essay-file" class="file-input-label flex-grow">Upload Files</label>
                     <button type="button" class="toggle-file-list-button nav-button text-sm !px-4 !py-2">Show Files</button>
                 </div>
-                <input type="file" id="essay-file" accept=".txt,.md,.doc,.docx,.pdf,image/jpeg,image/png,image/gif,image/webp" multiple>
+                <input type="file" id="essay-file" accept=".txt,.md,.pdf,image/*" multiple>
                 <ul id="essay-file-list" class="file-list"></ul>
                 <p class="description-text mt-2">Accepted: .txt, .md, .pdf, images. <strong>.doc/.docx files cannot be read by the browser.</strong> Please convert to PDF, TXT, or copy-paste the text.</p>
             </div>
 
             <div id="step-extra-instructions" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">4. Extra AI Instructions (Optional)</label>
-                    <div class="btn-container text-right"><button type="button" class="nav-button" onclick="nextStep()">Next</button></div>
+                    <div class="btn-container text-right"><button type="button" class="nav-button">Next</button></div>
                 </div>
 
                 <div class="mb-6">
@@ -324,7 +195,7 @@
 
             <div id="step-strictness" class="step-content hidden">
                 <div class="step-header">
-                    <div class="btn-container text-left"><button type="button" class="nav-button" onclick="prevStep()">Back</button></div>
+                    <div class="btn-container text-left"><button type="button" class="nav-button">Back</button></div>
                     <label class="title">5. Set Strictness & Grade</label>
                     <div class="btn-container text-right"><button type="button" class="nav-button opacity-0 pointer-events-none">Next</button></div>
                 </div>
@@ -338,11 +209,12 @@
                     </div>
                 </div>
                 
-                <div class="advanced-options-container" style="width: 100%; margin-top: 2rem;">
-                    <button id="toggleAdvancedButton" class="file-list-toggle-button">Advanced Options</button>
+                <!-- ADVANCED OPTIONS ADDED HERE -->
+                <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
+                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 8px;">Advanced Options</button>
                     <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
                         <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
-                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
+                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
                         <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
                         <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
                     </div>
@@ -350,7 +222,7 @@
             </div>
 
             <div id="action-area" class="mt-6 space-y-4">
-                <button id="grade-button" class="w-full py-3" onclick="gradeEssay()">Grade Assignment</button>
+                <button id="grade-button" class="w-full py-3">Grade Assignment</button>
                 <div id="error-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <div id="success-message" class="hidden p-4 rounded-lg relative text-center" role="alert"></div>
                 <button id="clear-button" class="w-full py-2.5 clear-button">Clear All &amp; Reset</button>
@@ -373,113 +245,39 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
         
-        // --- FIX #2: PDF PROCESSING ---
-        async function readFileContent(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-
-                if (file.type.startsWith('image/')) {
-                    reader.onload = (e) => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
-                    reader.readAsDataURL(file);
-                } else if (file.type === 'application/pdf') {
-                    reader.onload = async (e) => {
-                        try {
-                            // This conversion to Uint8Array is more robust for pdf.js
-                            const typedarray = new Uint8Array(e.target.result);
-                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                            let fullText = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                                const page = await pdf.getPage(i);
-                                const textContent = await page.getTextContent();
-                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                            }
-                            resolve({ type: 'text', content: fullText, filename: file.name });
-                        } catch (error) {
-                            reject(new Error(`Failed to process PDF '${file.name}': ${error.message}. It might be image-based or corrupted.`));
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else if (file.type.startsWith('text/')) {
-                    reader.onload = (e) => resolve({ type: 'text', content: e.target.result, filename: file.name });
-                    reader.readAsText(file);
-                } else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
-                    reject(new Error(`Word documents (.doc, .docx) like '${file.name}' cannot be read by the browser. Please convert to PDF or TXT.`));
-                } else {
-                    reject(new Error(`Unsupported file type: ${file.name}. Please use text, PDF, or image files.`));
-                }
-            });
-        }
-
-        async function getProcessedSectionContent(textarea, files) {
-            let combinedText = textarea.value.trim();
-            const parts = [];
-            const errors = [];
-
-            for (const file of files) {
-                try {
-                    const result = await readFileContent(file);
-                    if (result.type === 'text') {
-                        combinedText += `\n\n--- Start of File: ${result.filename} ---\n${result.content}\n--- End of File: ${result.filename} ---`;
-                    } else if (result.type === 'image') {
-                        parts.push({ inlineData: result.imageData });
-                    }
-                } catch (error) {
-                    errors.push(error.message);
-                }
-            }
-
-            if (errors.length > 0) throw new Error(errors.join('\n'));
-            
-            if (combinedText) {
-                parts.unshift({ text: combinedText });
-            }
-            
-            return parts;
-        }
-
         async function loadHeader() {
             try {
                 const response = await fetch('../Structure/header.html');
                 if (!response.ok) throw new Error('Failed to load header');
                 const text = await response.text();
-                
                 const container = document.getElementById('header-container');
                 container.innerHTML = text;
-
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                const scriptElement = doc.querySelector('script');
+                const scriptElement = new DOMParser().parseFromString(text, 'text/html').querySelector('script');
                 if (scriptElement) {
                     const newScript = document.createElement('script');
                     newScript.textContent = scriptElement.textContent;
                     document.body.appendChild(newScript);
                 }
-
-                if (window.setTheme && window.initParticles) {
+                if (window.setTheme) {
                     const savedTheme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
                     window.setTheme(savedTheme);
-
-                    document.getElementById('theme-blackwhite-btn').addEventListener('click', () => window.setTheme('theme-blackwhite'));
-                    document.getElementById('theme-cyan-btn').addEventListener('click', () => window.setTheme('theme-cyan'));
-                    document.getElementById('theme-purple-btn').addEventListener('click', () => window.setTheme('theme-purple'));
-                    document.getElementById('theme-green-btn').addEventListener('click', () => window.setTheme('theme-green'));
-                    document.getElementById('theme-red-btn').addEventListener('click', () => window.setTheme('theme-red'));
-
-                    window.initParticles(document.body);
+                    ['blackwhite', 'cyan', 'purple', 'green', 'red'].forEach(theme => {
+                        document.getElementById(`theme-${theme}-btn`).addEventListener('click', () => window.setTheme(`theme-${theme}`));
+                    });
                 }
-
-            } catch (error) {
-                console.error('Error loading header:', error);
-                document.getElementById('header-container').innerHTML = '<p style="color:red;">Error loading header.</p>';
-            }
+            } catch (error) { console.error('Error loading header:', error); }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-        const ALL_GEMINI_MODELS = [
-          'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
-          'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'
-        ];
+        function initializeGraderApp() {
+            // --- CONSTANTS & PRESETS ---
+            const ALL_GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            const RUBRIC_TEXTS = { 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`, 'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`, 'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`, 'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`, 'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n` };
+            const AP_SUBJECTS = [ "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP English Language & Composition","AP English Literature & Composition", "AP Environmental Science","AP European History","AP Human Geography", "AP Macroeconomics","AP Microeconomics", "AP Physics 1","AP Physics C: Mechanics","AP Psychology", "AP Statistics", "AP United States Government & Politics","AP United States History","AP World History: Modern" ];
+            const HIGHER_ED_SUBJECTS = [ "Mathematics (Calculus)","Physics (Mechanics)","Chemistry (General)","Biology (Genetics)", "Computer Science (Data Structures)","Data Science","Economics (Micro)","Finance","Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition", "Civil Engineering","Mechanical Engineering","Electrical Engineering","Law/Legal Studies","Nursing","Medicine (Premed)" ];
+            const IB_SUBJECTS = [ "IB English A: Literature (SL/HL)","IB English A: Language & Literature (SL/HL)", "IB Global Politics (SL/HL)","IB History (SL/HL)","IB Economics (SL/HL)","IB Psychology (SL/HL)", "IB Business Management (SL/HL)","IB Biology (SL/HL)","IB Chemistry (SL/HL)","IB Physics (SL/HL)","IB Computer Science (SL/HL)", "IB Mathematics: Analysis & Approaches (SL/HL)", "IB Mathematics: Applications & Interpretation (SL/HL)","IB Theory of Knowledge (TOK)","IB Extended Essay (EE)" ];
+            const SUBJECT_TEMPLATES = { AP: s => `--- Start of Subject Guidance (AP) ---\nSubject: ${s}\nUse AP scoring practices. Emphasize:\n- Content accuracy and correct application of ${s.replace(/^AP\\s*/,'')} concepts.\n- Clear reasoning/justification, proper notation/terminology.\n- Evidence quality, organization, and clarity.\n--- End of Subject Guidance ---`, "Higher Ed": s => `--- Start of Subject Guidance (Higher Ed) ---\nSubject: ${s}\nEvaluate on:\n- Conceptual correctness and methodological rigor for ${s}.\n- Clarity, structure, and academic tone.\n- Use of credible sources (if relevant) and proper citation.\n- Depth of analysis and originality.\n--- End of Subject Guidance ---`, IB: s => `--- Start of Subject Guidance (IB) ---\nSubject: ${s}\nAlign feedback with IB descriptors: knowledge & understanding, application/analysis, synthesis/evaluation, and communication.\n- Reference subject-specific criteria where applicable (SL/HL).\n- Highlight academic honesty and proper citation.\n--- End of Subject Guidance ---` };
+
+            // --- DOM ELEMENT COLLECTION ---
             const dom = {
                 steps: Array.from(document.querySelectorAll('.step-content')),
                 actionArea: document.getElementById('action-area'),
@@ -496,13 +294,13 @@
                 rubricQuickAddArea: document.getElementById('rubric-quick-add'),
                 rubricSelect: document.getElementById('rubric-select'),
                 addRubricBtn: document.getElementById('add-rubric-to-prompt-btn'),
-                extraInstructions: document.getElementById('extra-instructions'),
                 subjectQuickAddArea: document.getElementById('subject-quick-add'),
                 subjectSelect: document.getElementById('subject-select'),
                 addSubjectBtn: document.getElementById('add-subject-to-prompt-btn'),
-                instructions: document.getElementById('instructions'),
-                rubric: document.getElementById('rubric'),
-                essay: document.getElementById('essay'),
+                textareas: { instructions: document.getElementById('instructions'), rubric: document.getElementById('rubric'), essay: document.getElementById('essay'), extra: document.getElementById('extra-instructions') },
+                fileInputs: { instructions: document.getElementById('instructions-file'), rubric: document.getElementById('rubric-file'), essay: document.getElementById('essay-file') },
+                fileLists: { instructions: document.getElementById('instructions-file-list'), rubric: document.getElementById('rubric-file-list'), essay: document.getElementById('essay-file-list') },
+                // Advanced Options
                 toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
                 advancedOptions: document.getElementById('advancedOptions'),
                 customApiKeyInput: document.getElementById('customApiKeyInput'),
@@ -510,373 +308,277 @@
                 apiKeyMessage: document.getElementById('apiKeyMessage'),
             };
 
-            let instructionsFiles = [];
-            let rubricFiles = [];
-            let essayFiles = [];
-            let customApiKey = '';
-
-            const rubricTexts = {
-                'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`,
-                'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`,
-                'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`,
-                'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`,
-                'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n`
-            };
-
-            const AP_SUBJECTS = [ "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP Chinese Language & Culture","AP Comparative Government & Politics", "AP Computer Science A","AP Computer Science Principles", "AP Drawing","AP 2-D Art and Design","AP 3-D Art and Design", "AP English Language & Composition","AP English Literature & Composition", "AP Environmental Science","AP European History","AP French Language & Culture", "AP German Language & Culture","AP Human Geography","AP Italian Language & Culture", "AP Japanese Language & Culture","AP Latin","AP Macroeconomics","AP Microeconomics", "AP Music Theory","AP Physics 1","AP Physics 2","AP Physics C: Electricity & Magnetism", "AP Physics C: Mechanics","AP Precalculus","AP Psychology","AP Research","AP Seminar", "AP Spanish Language & Culture","AP Spanish Literature & Culture","AP Statistics", "AP United States Government & Politics","AP United States History","AP World History: Modern" ];
-            const HIGHER_ED_SUBJECTS = [ "Mathematics (Calculus)","Mathematics (Linear Algebra)","Mathematics (Probability & Statistics)","Statistics", "Physics (Mechanics)","Physics (Electricity & Magnetism)","Physics (Thermodynamics)","Physics (Quantum/Modern)", "Chemistry (General)","Chemistry (Organic)","Biology (General)","Biology (Genetics)", "Computer Science (Programming)","Computer Science (Data Structures)","Computer Science (Algorithms)","Computer Science (Databases)", "Data Science","Machine Learning","Economics (Micro)","Economics (Macro)","Finance","Accounting", "Business Administration","Marketing","Operations Management","Management/Organizational Behavior", "Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition", "Communication Studies","Civil Engineering","Mechanical Engineering","Electrical Engineering","Chemical Engineering", "Biomedical Engineering","Environmental Engineering","Law/Legal Studies","Nursing","Medicine (Premed)","Anthropology","Geography","Art History" ];
-            const IB_SUBJECTS = [ "IB English A: Literature (SL/HL)","IB English A: Language & Literature (SL/HL)", "IB Language B: Spanish (SL/HL)","IB Language B: French (SL/HL)","IB Language B: Mandarin (SL/HL)", "IB Global Politics (SL/HL)","IB History (SL/HL)","IB Economics (SL/HL)","IB Psychology (SL/HL)", "IB Business Management (SL/HL)","IB Geography (SL/HL)","IB Philosophy (SL/HL)", "IB Biology (SL/HL)","IB Chemistry (SL/HL)","IB Physics (SL/HL)","IB Computer Science (SL/HL)", "IB Environmental Systems and Societies (SL)","IB Mathematics: Analysis & Approaches (SL/HL)", "IB Mathematics: Applications & Interpretation (SL/HL)","IB Visual Arts (SL/HL)","IB Music (SL/HL)", "IB Theatre (SL/HL)","IB Film (SL/HL)","IB Theory of Knowledge (TOK)","IB Extended Essay (EE)" ];
-
-            const SUBJECT_TEMPLATES = {
-                AP: (subject) => `--- Start of Subject Guidance (AP) ---\nSubject: ${subject}\nUse AP scoring practices and, where applicable, FRQ-style criteria. Emphasize:\n- Content accuracy and correct application of ${subject.replace(/^AP\\s*/,'')} concepts.\n- Clear reasoning/justification, proper notation/terminology.\n- Evidence quality, organization, and clarity.\nApply point deductions for conceptual errors; allow partial credit for correct setup.\n--- End of Subject Guidance ---`,
-                "Higher Ed": (subject) => `--- Start of Subject Guidance (Higher Ed) ---\nSubject: ${subject}\nEvaluate on:\n- Conceptual correctness and methodological rigor for ${subject}.\n- Clarity, structure, and academic tone.\n- Use of credible sources (if relevant) and proper citation.\n- Depth of analysis, originality, and correctness of calculations/derivations (when applicable).\n--- End of Subject Guidance ---`,
-                IB: (subject) => `--- Start of Subject Guidance (IB) ---\nSubject: ${subject}\nAlign feedback with IB descriptors: knowledge & understanding, application/analysis, synthesis/evaluation, and communication.\n- Reference subject-specific criteria where applicable (SL/HL).\n- Highlight academic honesty and proper citation.\n- Comment on global/contextual understanding if relevant.\n--- End of Subject Guidance ---`
-            };
-
+            // --- STATE MANAGEMENT ---
             let currentStep = 0;
             let selectedGrade = 'None';
+            let files = { instructions: [], rubric: [], essay: [] };
+            let customApiKey = ''; // For session-only API key
 
             const saveState = () => {
-                localStorage.setItem('graderInstructions', dom.instructions.value);
-                localStorage.setItem('graderRubric', dom.rubric.value);
-                localStorage.setItem('graderEssay', dom.essay.value);
-                localStorage.setItem('graderExtraInstructions', dom.extraInstructions.value);
-                localStorage.setItem('graderSelectedGrade', selectedGrade);
-                if (dom.gradeResultDiv.classList.contains('hidden') === false) {
-                    localStorage.setItem('graderResultHTML', dom.resultContentDiv.innerHTML);
-                }
+                localStorage.setItem('graderData', JSON.stringify({
+                    texts: { instructions: dom.textareas.instructions.value, rubric: dom.textareas.rubric.value, essay: dom.textareas.essay.value, extra: dom.textareas.extra.value },
+                    selectedGrade: selectedGrade, strictness: dom.strictnessMeter.value,
+                    resultHTML: dom.gradeResultDiv.classList.contains('hidden') ? null : dom.resultContentDiv.innerHTML,
+                }));
             };
 
             const loadState = () => {
-                dom.instructions.value = localStorage.getItem('graderInstructions') || '';
-                dom.rubric.value = localStorage.getItem('graderRubric') || '';
-                dom.essay.value = localStorage.getItem('graderEssay') || '';
-                dom.extraInstructions.value = localStorage.getItem('graderExtraInstructions') || '';
-
-                const savedGrade = localStorage.getItem('graderSelectedGrade');
-                if (savedGrade && savedGrade !== 'None') {
-                    const btn = document.querySelector(`.grade-level-btn[data-grade="${savedGrade}"]`);
-                    if (btn) {
-                        btn.classList.add('selected');
-                        selectedGrade = savedGrade;
-                        refreshSubjectAreas();
-                    }
+                const data = JSON.parse(localStorage.getItem('graderData'));
+                if (!data) return;
+                dom.textareas.instructions.value = data.texts.instructions || ''; dom.textareas.rubric.value = data.texts.rubric || ''; dom.textareas.essay.value = data.texts.essay || ''; dom.textareas.extra.value = data.texts.extra || '';
+                dom.strictnessMeter.value = data.strictness || '3'; dom.strictnessValueDisplay.textContent = data.strictness || '3';
+                if (data.selectedGrade && data.selectedGrade !== 'None') {
+                    const btn = document.querySelector(`.grade-level-btn[data-grade="${data.selectedGrade}"]`);
+                    if (btn) btn.click();
                 }
-
-                const savedResult = localStorage.getItem('graderResultHTML');
-                if (savedResult) {
-                    dom.resultContentDiv.innerHTML = savedResult;
+                if (data.resultHTML) {
+                    dom.resultContentDiv.innerHTML = data.resultHTML;
                     dom.gradeResultDiv.classList.remove('hidden');
                 }
             };
 
             const clearState = () => {
-                document.querySelectorAll('textarea').forEach(ta => ta.value = '');
-                instructionsFiles = [];
-                rubricFiles = [];
-                essayFiles = [];
-                // --- FIX #1: CLEAR BUTTON ---
-                updateFileList('instructions-file', instructionsFiles);
-                updateFileList('rubric-file', rubricFiles);
-                updateFileList('essay-file', essayFiles);
-                
-                dom.strictnessMeter.value = 3;
-                dom.strictnessValueDisplay.textContent = '3';
+                Object.values(dom.textareas).forEach(ta => ta.value = '');
+                files = { instructions: [], rubric: [], essay: [] };
+                Object.values(dom.fileInputs).forEach(input => input.value = '');
+                updateAllFileListDisplays();
+                dom.strictnessMeter.value = 3; dom.strictnessValueDisplay.textContent = '3';
                 dom.gradeResultDiv.classList.add('hidden');
-                dom.errorMessageDiv.classList.add('hidden');
-                dom.successMessageDiv.classList.add('hidden');
+                dom.errorMessageDiv.classList.add('hidden'); dom.successMessageDiv.classList.add('hidden');
                 dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
-                dom.rubricQuickAddArea.classList.add('hidden');
-                dom.subjectQuickAddArea.classList.add('hidden');
-                dom.rubricSelect.value = 'none';
-                dom.subjectSelect.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
                 selectedGrade = 'None';
+                refreshQuickAddAreas();
+                // Clear API Key
                 customApiKey = '';
                 dom.customApiKeyInput.value = '';
-                
-                localStorage.removeItem('graderInstructions');
-                localStorage.removeItem('graderRubric');
-                localStorage.removeItem('graderEssay');
-                localStorage.removeItem('graderExtraInstructions');
-                localStorage.removeItem('graderSelectedGrade');
-                localStorage.removeItem('graderResultHTML');
-
+                dom.apiKeyMessage.textContent = '';
+                dom.advancedOptions.classList.add('hidden');
+                localStorage.removeItem('graderData');
                 showStep(0);
             };
 
-            function showStep(index) {
+            // --- UI & HELPER FUNCTIONS ---
+            const showStep = (index) => {
+                if (index < 0 || index >= dom.steps.length) return;
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
                 currentStep = index;
-            }
+            };
+            const nextStep = () => showStep(currentStep + 1);
+            const prevStep = () => showStep(currentStep - 1);
 
-            window.nextStep = () => { if (currentStep < dom.steps.length - 1) showStep(currentStep + 1); };
-            window.prevStep = () => { if (currentStep > 0) showStep(currentStep - 1); };
-
-            function displayMessage(element, message, isError = false) {
+            const displayMessage = (element, message, isError = false) => {
                 element.innerHTML = message;
                 element.classList.remove('hidden');
                 setTimeout(() => element.classList.add('hidden'), isError ? 8000 : 5000);
-            }
+            };
 
-            function toggleLoading(isLoading) {
+            const toggleLoading = (isLoading) => {
                 dom.loadingBarContainer.classList.toggle('hidden', !isLoading);
                 dom.gradeButton.disabled = isLoading;
                 dom.clearButton.disabled = isLoading;
-            }
+            };
 
-            function populateSubjectOptions(gradeCategory) {
-                const select = dom.subjectSelect;
-                select.innerHTML = '<option value="none" disabled selected>Select a subject...</option>';
-                let list = [];
-                if (gradeCategory === 'AP Courses') list = AP_SUBJECTS;
-                else if (gradeCategory === 'Higher Ed') list = HIGHER_ED_SUBJECTS;
-                else if (gradeCategory === 'IB') list = IB_SUBJECTS;
-                list.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s;
-                    opt.textContent = s;
-                    select.appendChild(opt);
-                });
+            const refreshQuickAddAreas = () => {
+                const show = ['AP Courses', 'Higher Ed', 'IB'].includes(selectedGrade);
+                dom.subjectQuickAddArea.classList.toggle('hidden', !show);
+                dom.rubricQuickAddArea.classList.toggle('hidden', !show);
+                if (!show) return;
+
+                const subjectList = selectedGrade === 'AP Courses' ? AP_SUBJECTS : selectedGrade === 'Higher Ed' ? HIGHER_ED_SUBJECTS : IB_SUBJECTS;
+                dom.subjectSelect.innerHTML = `<option value="none" disabled selected>Select a subject...</option>` + subjectList.map(s => `<option value="${s}">${s}</option>`).join('');
+                dom.rubricSelect.value = 'none';
                 dom.addSubjectBtn.disabled = true;
-            }
-
-            function refreshSubjectAreas() {
-                const showSubject = ['AP Courses', 'Higher Ed', 'IB'].includes(selectedGrade);
-                dom.subjectQuickAddArea.classList.toggle('hidden', !showSubject);
-                dom.rubricQuickAddArea.classList.toggle('hidden', !showSubject);
-                if (showSubject) populateSubjectOptions(selectedGrade);
-            }
-
-            dom.subjectSelect.addEventListener('change', () => {
-                dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none');
-            });
-
-            dom.addSubjectBtn.addEventListener('click', () => {
-                const subject = dom.subjectSelect.value;
-                if (!subject || subject === 'none') return;
-                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) : selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) : selectedGrade === 'IB' ? SUBJECT_TEMPLATES.IB(subject) : '';
-                if (tmpl) {
-                    dom.extraInstructions.value += (dom.extraInstructions.value ? '\n\n' : '') + tmpl;
-                    displayMessage(dom.successMessageDiv, `Added "${subject}" guidance to the prompt.`);
-                    saveState();
-                }
-            });
-
-            dom.gradeLevelButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const isAlreadySelected = btn.classList.contains('selected');
-                    dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
-                    if (isAlreadySelected) {
-                        selectedGrade = 'None';
-                    } else {
-                        btn.classList.add('selected');
-                        selectedGrade = btn.dataset.grade;
-                    }
-                    refreshSubjectAreas();
-                    saveState();
-                });
-            });
-
-            dom.addRubricBtn.addEventListener('click', () => {
-                const selectedValue = dom.rubricSelect.value;
-                if (selectedValue !== 'none' && selectedValue !== 'Custom') {
-                    const rubricText = rubricTexts[selectedValue];
-                    if (rubricText) {
-                        dom.extraInstructions.value += `\n\n--- Start of Rubric: ${selectedValue} ---${rubricText}--- End of Rubric: ${selectedValue} ---`;
-                        displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric to the prompt.`);
-                        saveState();
-                    }
-                }
-            });
-
-            function updateFileList(fileInputId, filesArray) {
-                const listEl = document.getElementById(`${fileInputId}-list`);
-                listEl.innerHTML = '';
-                filesArray.forEach((file, index) => {
-                    const item = document.createElement('li');
-                    item.className = 'file-list-item';
-                    item.innerHTML = `<span>${file.name}</span><button data-index="${index}" data-input-id="${fileInputId}">&times;</button>`;
-                    listEl.appendChild(item);
-                });
-                listEl.classList.toggle('expanded', filesArray.length > 0);
-            }
-
-            function setupFileInput(fileInputId, filesArray) {
-                const inputEl = document.getElementById(fileInputId);
-                const listEl = document.getElementById(`${fileInputId}-list`);
-                const toggleBtn = inputEl.closest('.step-content').querySelector('.toggle-file-list-button');
-                
-                inputEl.addEventListener('change', (e) => {
-                    filesArray.push(...Array.from(e.target.files));
-                    updateFileList(fileInputId, filesArray);
-                    e.target.value = '';
-                });
-
-                listEl.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'BUTTON' && e.target.dataset.inputId === fileInputId) {
-                        filesArray.splice(e.target.dataset.index, 1);
-                        updateFileList(fileInputId, filesArray);
-                    }
-                });
-
-                toggleBtn.addEventListener('click', () => {
-                    listEl.classList.toggle('expanded');
-                    toggleBtn.textContent = listEl.classList.contains('expanded') ? 'Hide Files' : 'Show Files';
-                });
-            }
-
-            setupFileInput('instructions-file', instructionsFiles);
-            setupFileInput('rubric-file', rubricFiles);
-            setupFileInput('essay-file', essayFiles);
-
-            dom.clearButton.addEventListener('click', clearState);
-
-            dom.strictnessMeter.addEventListener('input', (e) => {
-                dom.strictnessValueDisplay.textContent = e.target.value;
-            });
+            };
             
-            async function callApiWithRetries(payload) {
-                let modelsToTry = [...ALL_GEMINI_MODELS];
-                let lastError = null;
-
-                if (customApiKey) {
-                    console.log(`Attempting DIRECT API call with user-provided key.`);
-                    for (const model of modelsToTry) {
-                        try {
-                            const GOOGLE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${customApiKey}`;
-                            const response = await fetch(GOOGLE_API_URL, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: payload.contents })
-                            });
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error?.message || `HTTP error ${response.status}`);
-                            }
-                            const result = await response.json();
-                            return result.candidates[0]?.content?.parts[0]?.text || '';
-                        } catch (error) {
-                            console.warn(`Direct call with model ${model} failed:`, error.message);
-                            lastError = error;
-                        }
-                    }
-                } else {
-                    console.log(`Attempting API call via serverless function.`);
-                    for (const model of modelsToTry) {
-                        try {
-                            const response = await fetch('/api/Grader_API', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ ...payload, model })
-                            });
-                            if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}));
-                                throw new Error(errorData.error || `Server error (${response.status}) with no JSON body`);
-                            }
-                            const result = await response.json();
-                            if (result.text) return result.text;
-                            lastError = new Error(`Model ${model} returned no valid text.`);
-                        } catch (error) {
-                            console.warn(`Serverless call with model ${model} failed:`, error.message);
-                            lastError = error;
-                        }
-                    }
+            const updateAllFileListDisplays = () => {
+                for (const key in files) {
+                    const listEl = dom.fileLists[key];
+                    listEl.innerHTML = '';
+                    files[key].forEach((file, index) => {
+                        const item = document.createElement('li');
+                        item.className = 'file-list-item';
+                        item.innerHTML = `<span>${file.name}</span><button data-key="${key}" data-index="${index}">&times;</button>`;
+                        listEl.appendChild(item);
+                    });
+                    listEl.classList.toggle('expanded', files[key].length > 0);
                 }
-                throw lastError || new Error("All API models failed.");
-            }
+            };
 
-            window.gradeEssay = async () => {
+            // --- CORE LOGIC ---
+            const readFileContent = (file) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+                if (file.type.startsWith('image/')) {
+                    reader.onload = e => resolve({ type: 'image', imageData: { mimeType: file.type, data: e.target.result.split(',')[1] }, filename: file.name });
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    reader.onload = async e => {
+                        try {
+                            const typedarray = new Uint8Array(e.target.result);
+                            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                            let fullText = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                            }
+                            resolve({ type: 'text', content: fullText, filename: file.name });
+                        } catch (error) { reject(new Error(`PDF Error '${file.name}': ${error.message}`)); }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
+                    reader.onload = e => resolve({ type: 'text', content: e.target.result, filename: file.name });
+                    reader.readAsText(file);
+                } else {
+                    reject(new Error(`Unsupported file: ${file.name}`));
+                }
+            });
+
+            const getProcessedSectionContent = async (textarea, fileArray) => {
+                let combinedText = textarea.value.trim();
+                const parts = [];
+                const errors = [];
+                for (const file of fileArray) {
+                    try {
+                        const result = await readFileContent(file);
+                        if (result.type === 'text') {
+                            combinedText += `\n\n--- File: ${result.filename} ---\n${result.content}`;
+                        } else if (result.type === 'image') {
+                            parts.push({ inlineData: result.imageData });
+                        }
+                    } catch (error) { errors.push(error.message); }
+                }
+                if (errors.length > 0) throw new Error(errors.join('\n'));
+                if (combinedText) parts.unshift({ text: combinedText });
+                return parts;
+            };
+
+            const callApiWithRetries = async (payload) => {
+                for (const model of ALL_GEMINI_MODELS) {
+                    try {
+                        const apiPayload = { ...payload, model };
+                        if (customApiKey) {
+                            apiPayload.apiKey = customApiKey;
+                        }
+                        const response = await fetch('/api/Grader_API', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.error || `Server error (${response.status})`);
+                        }
+                        const result = await response.json();
+                        if (result.text) return result.text;
+                    } catch (error) { console.warn(`Model ${model} failed: ${error.message}`); }
+                }
+                throw new Error("All API models failed.");
+            };
+
+            const gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
-                
                 localStorage.removeItem('graderResultHTML');
 
                 try {
-                    if (dom.instructions.value.trim() === '' && instructionsFiles.length === 0) {
-                        throw new Error("Please provide Assignment Instructions, either by typing text or uploading a file.");
-                    }
-                    if (dom.rubric.value.trim() === '' && rubricFiles.length === 0) {
-                        throw new Error("Please provide a Grading Rubric, either by typing text or uploading a file.");
-                    }
-                    if (dom.essay.value.trim() === '' && essayFiles.length === 0) {
-                        throw new Error("Please provide the Student's Assignment, either by typing text or uploading a file.");
-                    }
+                    if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
+                    if (!dom.textareas.rubric.value.trim() && files.rubric.length === 0) throw new Error("Please provide a Grading Rubric.");
+                    if (!dom.textareas.essay.value.trim() && files.essay.length === 0) throw new Error("Please provide the Student's Assignment.");
 
-                    const instructionsParts = await getProcessedSectionContent(dom.instructions, instructionsFiles);
-                    const rubricParts = await getProcessedSectionContent(dom.rubric, rubricFiles);
-                    const essayParts = await getProcessedSectionContent(dom.essay, essayFiles);
+                    const [instructionsParts, rubricParts, essayParts] = await Promise.all([
+                        getProcessedSectionContent(dom.textareas.instructions, files.instructions),
+                        getProcessedSectionContent(dom.textareas.rubric, files.rubric),
+                        getProcessedSectionContent(dom.textareas.essay, files.essay)
+                    ]);
 
-                    const extraInstructions = document.getElementById('extra-instructions').value.trim();
-                    const strictness = dom.strictnessMeter.value;
-                    const selectedGrade = document.querySelector('.grade-level-btn.selected')?.dataset.grade || 'None';
-
-                    const systemPrompt = `You are an expert AI assignment grader. Your task is to evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${strictness} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${extraInstructions || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. If no grading format is specified, default to a score out of 100.`;
+                    const systemPrompt = `You are an expert AI assignment grader. Evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${dom.strictnessMeter.value} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. Provide detailed feedback and a final score in Markdown format.`;
+                    const parts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
                     
-                    const parts = [
-                        { text: systemPrompt },
-                        { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" },
-                        ...instructionsParts,
-                        { text: "\n\n--- GRADING RUBRIC ---\n" },
-                        ...rubricParts,
-                        { text: "\n\n--- STUDENT'S SUBMISSION ---\n" },
-                        ...essayParts
-                    ];
-                    
-                    const payload = { contents: [{ parts: parts }] };
-                    
-                    const payloadSizeLimit = 4 * 1024 * 1024; // 4MB
-                    if (JSON.stringify(payload).length > payloadSizeLimit) {
-                        throw new Error(`Total input size is too large. Please reduce the number or size of your files (limit is ~4MB).`);
-                    }
-
-                    const resultText = await callApiWithRetries(payload);
+                    const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
 
                     dom.resultContentDiv.innerHTML = marked.parse(resultText);
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
-                    
                     saveState();
 
                 } catch (error) {
-                    console.error("Grading Error:", error);
-                    let errorMessage = error.message;
-                    if (errorMessage.includes('API key not valid')) {
-                        errorMessage = "The provided API key is invalid. Please check the key and try again.";
-                    }
-                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${errorMessage}`, true);
+                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
                 } finally {
                     toggleLoading(false);
                 }
             };
 
-            const addPasteListener = (textarea, filesArray, fileInputId) => {
+            // --- EVENT LISTENERS ---
+            dom.steps.forEach(step => {
+                const backBtn = step.querySelector('.step-header .btn-container.text-left .nav-button');
+                const nextBtn = step.querySelector('.step-header .btn-container.text-right .nav-button');
+                if (backBtn && !backBtn.classList.contains('opacity-0')) {
+                    backBtn.addEventListener('click', prevStep);
+                }
+                if (nextBtn && !nextBtn.classList.contains('opacity-0')) {
+                    nextBtn.addEventListener('click', nextStep);
+                }
+            });
+
+            dom.gradeButton.addEventListener('click', gradeEssay);
+            dom.clearButton.addEventListener('click', clearState);
+            Object.values(dom.textareas).forEach(ta => ta.addEventListener('input', saveState));
+            dom.strictnessMeter.addEventListener('input', e => { dom.strictnessValueDisplay.textContent = e.target.value; saveState(); });
+
+            const setupFileInput = (key) => {
+                dom.fileInputs[key].addEventListener('change', e => { files[key].push(...Array.from(e.target.files)); updateAllFileListDisplays(); e.target.value = ''; });
+                dom.fileLists[key].addEventListener('click', e => { if (e.target.tagName === 'BUTTON') { files[e.target.dataset.key].splice(e.target.dataset.index, 1); updateAllFileListDisplays(); } });
+                const toggleBtn = dom.fileInputs[key].closest('.step-content').querySelector('.toggle-file-list-button');
+                toggleBtn.addEventListener('click', () => { dom.fileLists[key].classList.toggle('expanded'); toggleBtn.textContent = dom.fileLists[key].classList.contains('expanded') ? 'Hide Files' : 'Show Files'; });
+            };
+            Object.keys(files).forEach(setupFileInput);
+
+            const addPasteListener = (textarea, filesArrayKey) => {
                 textarea.addEventListener('paste', (e) => {
                     for (const item of e.clipboardData.items) {
                         if (item.kind === 'file' && item.type.startsWith('image/')) {
                             e.preventDefault();
                             const blob = item.getAsFile();
                             blob.name = `Pasted Image ${Date.now()}`;
-                            filesArray.push(blob);
-                            updateFileList(fileInputId, filesArray);
+                            files[filesArrayKey].push(blob);
+                            updateAllFileListDisplays();
                             displayMessage(dom.successMessageDiv, 'Image pasted successfully!');
                             return;
                         }
                     }
                 });
             };
+            addPasteListener(dom.textareas.instructions, 'instructions');
+            addPasteListener(dom.textareas.rubric, 'rubric');
+            addPasteListener(dom.textareas.essay, 'essay');
 
-            addPasteListener(dom.instructions, instructionsFiles, 'instructions-file');
-            addPasteListener(dom.rubric, rubricFiles, 'rubric-file');
-            addPasteListener(dom.essay, essayFiles, 'essay-file');
+            dom.gradeLevelButtons.forEach(btn => btn.addEventListener('click', () => {
+                const isAlreadySelected = btn.classList.contains('selected');
+                dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
+                if (isAlreadySelected) { selectedGrade = 'None'; } 
+                else { btn.classList.add('selected'); selectedGrade = btn.dataset.grade; }
+                refreshQuickAddAreas();
+                saveState();
+            }));
 
-            ['instructions', 'rubric', 'essay', 'extra-instructions'].forEach(id => {
-                document.getElementById(id).addEventListener('input', saveState);
+            dom.subjectSelect.addEventListener('change', () => { dom.addSubjectBtn.disabled = (dom.subjectSelect.value === 'none'); });
+            dom.addSubjectBtn.addEventListener('click', () => {
+                const subject = dom.subjectSelect.value;
+                if (!subject || subject === 'none') return;
+                const tmpl = selectedGrade === 'AP Courses' ? SUBJECT_TEMPLATES.AP(subject) : selectedGrade === 'Higher Ed' ? SUBJECT_TEMPLATES["Higher Ed"](subject) : SUBJECT_TEMPLATES.IB(subject);
+                if (tmpl) { dom.textareas.extra.value += (dom.textareas.extra.value ? '\n\n' : '') + tmpl; displayMessage(dom.successMessageDiv, `Added "${subject}" guidance.`); saveState(); }
             });
 
+            dom.addRubricBtn.addEventListener('click', () => {
+                const selectedValue = dom.rubricSelect.value;
+                if (selectedValue && selectedValue !== 'none' && selectedValue !== 'Custom') {
+                    const rubricText = RUBRIC_TEXTS[selectedValue];
+                    if (rubricText) { dom.textareas.extra.value += `\n\n--- Rubric: ${selectedValue} ---${rubricText}--- End Rubric ---`; displayMessage(dom.successMessageDiv, `Added "${selectedValue}" rubric.`); saveState(); }
+                }
+            });
+
+            // Advanced Options Listeners
             dom.toggleAdvancedButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 dom.advancedOptions.classList.toggle('hidden');
@@ -887,18 +589,22 @@
                 customApiKey = dom.customApiKeyInput.value.trim();
                 if (customApiKey) {
                     dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
-                    dom.customApiKeyInput.value = '';
+                    dom.customApiKeyInput.value = ''; // Clear for security
                 } else {
                     dom.apiKeyMessage.textContent = 'API Key cleared.';
                 }
                 setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
             });
 
+            // --- INITIALIZATION ---
             showStep(0);
             loadState();
-        });
+        }
 
-        document.addEventListener('DOMContentLoaded', loadHeader);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHeader();
+            initializeGraderApp();
+        });
     </script>
 
   <!-- Vercel Analytics -->
@@ -907,9 +613,6 @@
     window.va('set', 'mode', 'auto');
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
-
-  <!-- iFrame -->
-  <script src="/iframe-messenger.js" defer></script>
-    
+  
 </body>
 </html>
