@@ -290,23 +290,31 @@
                 copyBiblioBtn: document.getElementById('copy-biblio-btn'),
             };
 
-            // --- NEW: Function to save the current state to localStorage ---
+            // --- UPDATED: Function now saves both inputs AND outputs ---
             function saveState() {
                 try {
+                    // Save inputs
                     localStorage.setItem('citationApp-essayText', dom.essayInput.value);
                     localStorage.setItem('citationApp-citationStyle', dom.citationStyleSelect.value);
                     localStorage.setItem('citationApp-citationCount', dom.citationCountSelect.value);
                     localStorage.setItem('citationApp-customCount', dom.customCitationCountInput.value);
                     const outputType = document.querySelector('input[name="output-type"]:checked').value;
                     localStorage.setItem('citationApp-outputType', outputType);
+
+                    // Save outputs
+                    localStorage.setItem('citationApp-outputHTML', dom.outputArea.innerHTML);
+                    localStorage.setItem('citationApp-inTextEssay', dom.inTextOutputArea.textContent);
+                    localStorage.setItem('citationApp-outputVisible', dom.outputSection.style.display);
+                    localStorage.setItem('citationApp-inTextVisible', dom.inTextOutputContainer.style.display);
                 } catch (e) {
                     console.error("Could not save to localStorage:", e);
                 }
             }
 
-            // --- NEW: Function to load the saved state from localStorage ---
+            // --- UPDATED: Function now loads both inputs AND outputs ---
             function loadState() {
                 try {
+                    // Load inputs
                     const essayText = localStorage.getItem('citationApp-essayText');
                     if (essayText) dom.essayInput.value = essayText;
 
@@ -316,7 +324,7 @@
                     const citationCount = localStorage.getItem('citationApp-citationCount');
                     if (citationCount) {
                         dom.citationCountSelect.value = citationCount;
-                        dom.citationCountSelect.dispatchEvent(new Event('change')); // Trigger change to show/hide custom input
+                        dom.citationCountSelect.dispatchEvent(new Event('change'));
                     }
 
                     const customCount = localStorage.getItem('citationApp-customCount');
@@ -327,6 +335,20 @@
                         const radio = document.querySelector(`input[name="output-type"][value="${outputType}"]`);
                         if (radio) radio.checked = true;
                     }
+
+                    // Load outputs
+                    const outputHTML = localStorage.getItem('citationApp-outputHTML');
+                    if (outputHTML) dom.outputArea.innerHTML = outputHTML;
+
+                    const inTextEssay = localStorage.getItem('citationApp-inTextEssay');
+                    if (inTextEssay) dom.inTextOutputArea.textContent = inTextEssay;
+
+                    const outputVisible = localStorage.getItem('citationApp-outputVisible');
+                    if (outputVisible) dom.outputSection.style.display = outputVisible;
+
+                    const inTextVisible = localStorage.getItem('citationApp-inTextVisible');
+                    if (inTextVisible) dom.inTextOutputContainer.style.display = inTextVisible;
+
                 } catch (e) {
                     console.error("Could not load from localStorage:", e);
                 }
@@ -354,6 +376,7 @@
                 }, 500);
             }
 
+            // --- UPDATED: Now saves the state after rendering the output ---
             function renderOutput(result, outputType) {
                 dom.outputArea.innerHTML = '';
                 dom.inTextOutputArea.textContent = '';
@@ -362,6 +385,7 @@
                 if (!Array.isArray(result.citations) || result.citations.length === 0) {
                     showMessage('No relevant sources were found for the provided text.', 'info');
                     dom.outputSection.style.display = 'none';
+                    saveState(); // Save the "hidden" state
                     return;
                 }
 
@@ -392,6 +416,7 @@
 
                 dom.outputSection.style.display = 'block';
                 showMessage('Citations generated successfully!', 'info');
+                saveState(); // Save the new output state
             }
 
             async function processAndGenerate(payload) {
@@ -440,19 +465,26 @@
                 processAndGenerate(apiPayload);
             });
 
-            // --- UPDATED: Clear button now also clears localStorage ---
+            // --- UPDATED: Clear button now also clears saved output state ---
             dom.clearBtn.addEventListener('click', () => {
                 dom.essayInput.value = '';
                 dom.outputSection.style.display = 'none';
                 dom.messageBox.style.display = 'none';
                 dom.inTextOutputArea.textContent = '';
                 dom.inTextOutputContainer.style.display = 'none';
+                dom.outputArea.innerHTML = '';
                 try {
+                    // Clear inputs
                     localStorage.removeItem('citationApp-essayText');
                     localStorage.removeItem('citationApp-citationStyle');
                     localStorage.removeItem('citationApp-citationCount');
                     localStorage.removeItem('citationApp-customCount');
                     localStorage.removeItem('citationApp-outputType');
+                    // Clear outputs
+                    localStorage.removeItem('citationApp-outputHTML');
+                    localStorage.removeItem('citationApp-inTextEssay');
+                    localStorage.removeItem('citationApp-outputVisible');
+                    localStorage.removeItem('citationApp-inTextVisible');
                 } catch (e) {
                     console.error("Could not clear localStorage:", e);
                 }
@@ -478,16 +510,28 @@
                 }
             });
 
-            // --- NEW: Add event listeners to all inputs to save state on change ---
-            dom.essayInput.addEventListener('input', saveState);
-            dom.citationStyleSelect.addEventListener('change', saveState);
-            dom.citationCountSelect.addEventListener('change', saveState);
-            dom.customCitationCountInput.addEventListener('input', saveState);
+            // --- UPDATED: Save only inputs on change ---
+            function saveInputs() {
+                 try {
+                    localStorage.setItem('citationApp-essayText', dom.essayInput.value);
+                    localStorage.setItem('citationApp-citationStyle', dom.citationStyleSelect.value);
+                    localStorage.setItem('citationApp-citationCount', dom.citationCountSelect.value);
+                    localStorage.setItem('citationApp-customCount', dom.customCitationCountInput.value);
+                    const outputType = document.querySelector('input[name="output-type"]:checked').value;
+                    localStorage.setItem('citationApp-outputType', outputType);
+                } catch (e) {
+                    console.error("Could not save to localStorage:", e);
+                }
+            }
+            dom.essayInput.addEventListener('input', saveInputs);
+            dom.citationStyleSelect.addEventListener('change', saveInputs);
+            dom.citationCountSelect.addEventListener('change', saveInputs);
+            dom.customCitationCountInput.addEventListener('input', saveInputs);
             document.querySelectorAll('input[name="output-type"]').forEach(radio => {
-                radio.addEventListener('change', saveState);
-});
+                radio.addEventListener('change', saveInputs);
+            });
 
-            // --- NEW: Load any saved state when the app initializes ---
+            // --- Load all saved state (inputs and outputs) when the app initializes ---
             loadState();
         }
 
