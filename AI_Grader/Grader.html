@@ -50,11 +50,13 @@
         input[type="range"]:hover { opacity: 1; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
         input[type="range"]::-moz-range-thumb { width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
-        .nav-button, button#grade-button, .clear-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
-        .nav-button:hover, button#grade-button:hover, .clear-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
+        .nav-button, button#grade-button, .clear-button, .copy-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
+        .nav-button:hover, button#grade-button:hover, .clear-button:hover, .copy-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
         .nav-button:disabled, button#grade-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
         .clear-button { background: #4a5568; color: #fff; }
         .clear-button:hover { background: #2d3748; }
+        .copy-button { background: #38a169; color: #fff; }
+        .copy-button:hover { background: #2f855a; }
         #error-message, #success-message { padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; text-align: center; border: 1px solid; }
         #error-message { background-color: rgba(239, 68, 68, 0.1); border-color: rgb(239, 68, 68); color: #fecaca; }
         #success-message { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
@@ -78,6 +80,21 @@
         .rubric-select { background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; width: 100%; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%20164.2c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9L146.2%2063.2l-107.4%20101c-4.4%205.1-10.4%207.9-16.7%207.9s-12.3-2.8-16.7-7.9c-9.1-10.4-8.1-26.6%202.3-35.7L130.4%2022.4c4.4-5.1%2010.4-7.9%2016.7-7.9s12.3%202.8%2016.7%207.9l118.8%20111.9c9.2%209.1%209.2%2024.1%200%2033.2z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px; }
         .rubric-select:focus { outline: none; box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5); }
         .hidden { display: none; }
+
+        /* --- NEW: Step Indicator Styles --- */
+        .step-indicator-container { display: flex; justify-content: space-between; margin-bottom: 1.5rem; position: relative; }
+        .step-indicator-bar { position: absolute; height: 4px; background-color: rgba(var(--accent-rgb), 0.3); top: 50%; transform: translateY(-50%); left: 0; right: 0; z-index: 1; }
+        .step-indicator-progress { position: absolute; height: 4px; background-color: var(--accent); top: 50%; transform: translateY(-50%); left: 0; width: 0; z-index: 2; transition: width 0.4s ease-in-out; }
+        .step-indicator { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-secondary); border: 2px solid rgba(var(--accent-rgb), 0.3); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; z-index: 3; transition: all 0.4s ease-in-out; }
+        .step-indicator.active { border-color: var(--accent); background: var(--accent); color: var(--bg-primary); font-weight: bold; }
+        .step-indicator.completed { border-color: var(--accent); }
+
+        /* --- NEW: Structured Results Styles --- */
+        .result-section { margin-bottom: 1.5rem; }
+        .result-section h3 { color: var(--accent); border-bottom: 1px solid var(--accent); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .final-grade-display { background-color: var(--accent); color: var(--bg-primary); padding: 1rem 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem; }
+        .final-grade-display p { margin: 0; font-size: 1.2rem; }
+        .final-grade-display span { font-size: 2.5rem; font-weight: bold; display: block; }
     </style>
     <script>
         (function() { try { const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite'; document.documentElement.className = theme; } catch (e) { console.error("Failed to apply theme from localStorage", e); } })();
@@ -93,6 +110,18 @@
     </section>
 
     <div class="grader-container">
+        <!-- NEW: Step Indicator -->
+        <div class="step-indicator-container">
+            <div class="step-indicator-bar">
+                <div id="step-indicator-progress" class="step-indicator-progress"></div>
+            </div>
+            <div class="step-indicator active" data-step="0">1</div>
+            <div class="step-indicator" data-step="1">2</div>
+            <div class="step-indicator" data-step="2">3</div>
+            <div class="step-indicator" data-step="3">4</div>
+            <div class="step-indicator" data-step="4">5</div>
+        </div>
+
         <div>
             <div id="step-instructions" class="step-content">
                 <div class="step-header">
@@ -209,9 +238,8 @@
                     </div>
                 </div>
                 
-                <!-- ADVANCED OPTIONS ADDED HERE -->
                 <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
-                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 8px;">Advanced Options</button>
+                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 20px;">Advanced Options</button>
                     <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
                         <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
                         <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
@@ -232,7 +260,10 @@
             </div>
 
             <div id="grade-result" class="hidden">
-                <h2 class="text-2xl font-bold mb-4 text-center">Grading Results</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-center">Grading Results</h2>
+                    <button id="copy-results-button" class="copy-button text-sm !px-4 !py-2">Copy Results</button>
+                </div>
                 <div id="result-content" class="prose max-w-none leading-relaxed"></div>
             </div>
         </div>
@@ -270,7 +301,14 @@
 
         function initializeGraderApp() {
             // --- CONSTANTS & PRESETS ---
-            const ALL_GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+            const ALL_GEMINI_MODELS = [
+            'gemini-2.5-pro',
+            'gemini-2.5-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.0-flash-lite',
+            ];
+
             const RUBRIC_TEXTS = { 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`, 'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`, 'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`, 'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`, 'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n` };
             const AP_SUBJECTS = [ "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP English Language & Composition","AP English Literature & Composition", "AP Environmental Science","AP European History","AP Human Geography", "AP Macroeconomics","AP Microeconomics", "AP Physics 1","AP Physics C: Mechanics","AP Psychology", "AP Statistics", "AP United States Government & Politics","AP United States History","AP World History: Modern" ];
             const HIGHER_ED_SUBJECTS = [ "Mathematics (Calculus)","Physics (Mechanics)","Chemistry (General)","Biology (Genetics)", "Computer Science (Data Structures)","Data Science","Economics (Micro)","Finance","Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition", "Civil Engineering","Mechanical Engineering","Electrical Engineering","Law/Legal Studies","Nursing","Medicine (Premed)" ];
@@ -300,19 +338,22 @@
                 textareas: { instructions: document.getElementById('instructions'), rubric: document.getElementById('rubric'), essay: document.getElementById('essay'), extra: document.getElementById('extra-instructions') },
                 fileInputs: { instructions: document.getElementById('instructions-file'), rubric: document.getElementById('rubric-file'), essay: document.getElementById('essay-file') },
                 fileLists: { instructions: document.getElementById('instructions-file-list'), rubric: document.getElementById('rubric-file-list'), essay: document.getElementById('essay-file-list') },
-                // Advanced Options
                 toggleAdvancedButton: document.getElementById('toggleAdvancedButton'),
                 advancedOptions: document.getElementById('advancedOptions'),
                 customApiKeyInput: document.getElementById('customApiKeyInput'),
                 saveApiKeyButton: document.getElementById('saveApiKeyButton'),
                 apiKeyMessage: document.getElementById('apiKeyMessage'),
+                // NEW
+                stepIndicators: document.querySelectorAll('.step-indicator'),
+                stepIndicatorProgress: document.getElementById('step-indicator-progress'),
+                copyResultsButton: document.getElementById('copy-results-button'),
             };
 
             // --- STATE MANAGEMENT ---
             let currentStep = 0;
             let selectedGrade = 'None';
             let files = { instructions: [], rubric: [], essay: [] };
-            let customApiKey = ''; // For session-only API key
+            let customApiKey = '';
 
             const saveState = () => {
                 localStorage.setItem('graderData', JSON.stringify({
@@ -348,7 +389,6 @@
                 dom.gradeLevelButtons.forEach(b => b.classList.remove('selected'));
                 selectedGrade = 'None';
                 refreshQuickAddAreas();
-                // Clear API Key
                 customApiKey = '';
                 dom.customApiKeyInput.value = '';
                 dom.apiKeyMessage.textContent = '';
@@ -363,6 +403,14 @@
                 dom.steps.forEach((step, i) => step.classList.toggle('hidden', i !== index));
                 dom.actionArea.style.display = (index === dom.steps.length - 1) ? 'block' : 'none';
                 currentStep = index;
+
+                // NEW: Update step indicator
+                const progressPercentage = (index / (dom.steps.length - 1)) * 100;
+                dom.stepIndicatorProgress.style.width = `${progressPercentage}%`;
+                dom.stepIndicators.forEach((indicator, i) => {
+                    indicator.classList.toggle('active', i === index);
+                    indicator.classList.toggle('completed', i < index);
+                });
             };
             const nextStep = () => showStep(currentStep + 1);
             const prevStep = () => showStep(currentStep - 1);
@@ -491,19 +539,61 @@
                         getProcessedSectionContent(dom.textareas.essay, files.essay)
                     ]);
 
-                    const systemPrompt = `You are an expert AI assignment grader. Evaluate a student's assignment based on the provided instructions and a specific grading rubric.\n\nGrading Strictness Level: ${dom.strictnessMeter.value} (1=Lenient, 3=Normal, 5=Strict).\n\nEducational Context: ${selectedGrade}\n\nAdditional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}\n\nPlease grade the following student assignment. Focus solely on the content provided. Provide detailed feedback and a final score in Markdown format.`;
+                    // UPDATED: System prompt to request structured JSON
+                    const systemPrompt = `You are an expert AI assignment grader. Evaluate a student's assignment based on the provided instructions and a specific grading rubric.
+                    Grading Strictness Level: ${dom.strictnessMeter.value} (1=Lenient, 3=Normal, 5=Strict).
+                    Educational Context: ${selectedGrade}
+                    Additional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}
+                    
+                    IMPORTANT: Your final output MUST be a JSON object inside a markdown code block. The JSON object must have the following keys: "finalGrade" (a string, e.g., "B+" or "85/100"), "overallFeedback" (a string in markdown format), "strengths" (a string in markdown format, preferably as a bulleted list), and "areasForImprovement" (a string in markdown format, preferably as a bulleted list).`;
+                    
                     const parts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
                     
                     const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
 
-                    dom.resultContentDiv.innerHTML = marked.parse(resultText);
+                    // NEW: Parse the structured JSON response
+                    const jsonMatch = resultText.match(/```json\n([\s\S]*?)\n```/);
+                    if (!jsonMatch || !jsonMatch[1]) {
+                        throw new Error("AI response did not contain a valid JSON code block. Displaying raw output.");
+                    }
+
+                    const resultData = JSON.parse(jsonMatch[1]);
+                    
+                    const resultHTML = `
+                        <div class="final-grade-display">
+                            <p>Final Grade</p>
+                            <span>${resultData.finalGrade || 'N/A'}</span>
+                        </div>
+                        <div class="result-section">
+                            <h3>Overall Feedback</h3>
+                            <div class="prose max-w-none">${marked.parse(resultData.overallFeedback || '')}</div>
+                        </div>
+                        <div class="result-section">
+                            <h3>Strengths</h3>
+                            <div class="prose max-w-none">${marked.parse(resultData.strengths || '')}</div>
+                        </div>
+                        <div class="result-section">
+                            <h3>Areas for Improvement</h3>
+                            <div class="prose max-w-none">${marked.parse(resultData.areasForImprovement || '')}</div>
+                        </div>
+                    `;
+
+                    dom.resultContentDiv.innerHTML = resultHTML;
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     saveState();
 
                 } catch (error) {
-                    displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
+                    // Fallback for when JSON parsing fails
+                    if (error.message.includes("AI response did not contain a valid JSON")) {
+                        const resultText = await callApiWithRetries({ contents: [{ parts: parts }] }); // Assuming resultText is available
+                        dom.resultContentDiv.innerHTML = marked.parse(resultText);
+                        dom.gradeResultDiv.classList.remove('hidden');
+                        displayMessage(dom.errorMessageDiv, `<strong>Warning:</strong> Could not parse structured response. Displaying raw AI output.`, true);
+                    } else {
+                        displayMessage(dom.errorMessageDiv, `<strong>Error:</strong> ${error.message}`, true);
+                    }
                 } finally {
                     toggleLoading(false);
                 }
@@ -513,12 +603,8 @@
             dom.steps.forEach(step => {
                 const backBtn = step.querySelector('.step-header .btn-container.text-left .nav-button');
                 const nextBtn = step.querySelector('.step-header .btn-container.text-right .nav-button');
-                if (backBtn && !backBtn.classList.contains('opacity-0')) {
-                    backBtn.addEventListener('click', prevStep);
-                }
-                if (nextBtn && !nextBtn.classList.contains('opacity-0')) {
-                    nextBtn.addEventListener('click', nextStep);
-                }
+                if (backBtn && !backBtn.classList.contains('opacity-0')) backBtn.addEventListener('click', prevStep);
+                if (nextBtn && !nextBtn.classList.contains('opacity-0')) nextBtn.addEventListener('click', nextStep);
             });
 
             dom.gradeButton.addEventListener('click', gradeEssay);
@@ -578,22 +664,32 @@
                 }
             });
 
-            // Advanced Options Listeners
-            dom.toggleAdvancedButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                dom.advancedOptions.classList.toggle('hidden');
-            });
-
+            dom.toggleAdvancedButton.addEventListener('click', (e) => { e.preventDefault(); dom.advancedOptions.classList.toggle('hidden'); });
             dom.saveApiKeyButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 customApiKey = dom.customApiKeyInput.value.trim();
-                if (customApiKey) {
-                    dom.apiKeyMessage.textContent = 'API Key has been set for this session.';
-                    dom.customApiKeyInput.value = ''; // Clear for security
-                } else {
-                    dom.apiKeyMessage.textContent = 'API Key cleared.';
-                }
+                dom.apiKeyMessage.textContent = customApiKey ? 'API Key has been set for this session.' : 'API Key cleared.';
+                if (customApiKey) dom.customApiKeyInput.value = '';
                 setTimeout(() => { dom.apiKeyMessage.textContent = ''; }, 3000);
+            });
+
+            // NEW: Copy Results Listener
+            dom.copyResultsButton.addEventListener('click', (e) => {
+                const grade = dom.resultContentDiv.querySelector('.final-grade-display span')?.innerText || 'N/A';
+                const feedback = dom.resultContentDiv.querySelector('.result-section:nth-of-type(1) .prose')?.innerText || '';
+                const strengths = dom.resultContentDiv.querySelector('.result-section:nth-of-type(2) .prose')?.innerText || '';
+                const improvements = dom.resultContentDiv.querySelector('.result-section:nth-of-type(3) .prose')?.innerText || '';
+                
+                const textToCopy = `Final Grade: ${grade}\n\n--- OVERALL FEEDBACK ---\n${feedback}\n\n--- STRENGTHS ---\n${strengths}\n\n--- AREAS FOR IMPROVEMENT ---\n${improvements}`;
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const button = e.target;
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    setTimeout(() => button.textContent = originalText, 2000);
+                }).catch(err => {
+                    displayMessage(dom.errorMessageDiv, 'Failed to copy results.', true);
+                });
             });
 
             // --- INITIALIZATION ---
