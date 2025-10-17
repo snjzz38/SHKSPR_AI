@@ -50,11 +50,13 @@
         input[type="range"]:hover { opacity: 1; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
         input[type="range"]::-moz-range-thumb { width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
-        .nav-button, button#grade-button, .clear-button, #send-chat-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
-        .nav-button:hover, button#grade-button:hover, .clear-button:hover, #send-chat-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
+        .nav-button, button#grade-button, .clear-button, .copy-button, #send-chat-button, #clear-chat-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
+        .nav-button:hover, button#grade-button:hover, .clear-button:hover, .copy-button:hover, #send-chat-button:hover, #clear-chat-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
         .nav-button:disabled, button#grade-button:disabled, #send-chat-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
-        .clear-button { background: #4a5568; color: #fff; }
-        .clear-button:hover { background: #2d3748; }
+        .clear-button, #clear-chat-button { background: #4a5568; color: #fff; }
+        .clear-button:hover, #clear-chat-button:hover { background: #2d3748; }
+        .copy-button { background: #38a169; color: #fff; }
+        .copy-button:hover { background: #2f855a; }
         #error-message, #success-message { padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; text-align: center; border: 1px solid; }
         #error-message { background-color: rgba(239, 68, 68, 0.1); border-color: rgb(239, 68, 68); color: #fecaca; }
         #success-message { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
@@ -89,12 +91,11 @@
         .final-grade-display { background-color: var(--accent); color: var(--bg-primary); padding: 1rem 1.5rem; border-radius: 8px; text-align: center; margin-bottom: 1.5rem; }
         .final-grade-display p { margin: 0; font-size: 1.2rem; }
         .final-grade-display span { font-size: 2.5rem; font-weight: bold; display: block; }
-
-        /* --- NEW: Follow-up Chat Modal Styles --- */
         .chat-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .chat-modal { background: var(--card-bg); width: 90%; max-width: 700px; height: 80vh; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; border: 1px solid var(--accent); }
         .chat-modal-header { padding: 1rem; border-bottom: 1px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }
         .chat-modal-header h3 { margin: 0; font-size: 1.25rem; }
+        .chat-modal-header-buttons { display: flex; gap: 0.5rem; }
         .chat-modal-close { background: none; border: none; color: var(--text-primary); font-size: 2rem; cursor: pointer; line-height: 1; }
         #chat-history { flex-grow: 1; overflow-y: auto; padding: 1rem; }
         .chat-message { margin-bottom: 1rem; display: flex; flex-direction: column; }
@@ -249,7 +250,7 @@
                 </div>
                 
                 <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
-                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 20px;">Advanced Options</button>
+                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 8px;">Advanced Options</button>
                     <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
                         <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
                         <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
@@ -273,7 +274,7 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-center">Grading Results</h2>
                     <div class="flex gap-2">
-                        <button id="copy-results-button" class="file-input-label text-sm !px-4 !py-2">Copy</button>
+                        <button id="copy-results-button" class="copy-button text-sm !px-4 !py-2">Copy</button>
                         <button id="start-follow-up-button" class="nav-button text-sm !px-4 !py-2">Ask a Follow-up</button>
                     </div>
                 </div>
@@ -286,12 +287,14 @@
         &copy; 2025 Shkspr. All rights reserved.
     </footer>
 
-    <!-- NEW: Chat Modal -->
     <div id="chat-modal-overlay" class="chat-modal-overlay hidden">
         <div class="chat-modal">
             <div class="chat-modal-header">
                 <h3>Follow-up Chat</h3>
-                <button id="chat-modal-close" class="chat-modal-close">&times;</button>
+                <div class="chat-modal-header-buttons">
+                    <button id="clear-chat-button" class="nav-button text-sm !px-4 !py-2">Clear Chat</button>
+                    <button id="chat-modal-close" class="chat-modal-close">&times;</button>
+                </div>
             </div>
             <div id="chat-history"></div>
             <div class="chat-input-area">
@@ -329,13 +332,7 @@
 
         function initializeGraderApp() {
             // --- CONSTANTS & PRESETS ---
-            const ALL_GEMINI_MODELS = [
-            'gemini-2.5-pro',
-            'gemini-2.5-flash-lite',
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-2.0-flash-lite',
-            ];
+            const ALL_GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
             const RUBRIC_TEXTS = { 'IB Internal Assessment': `\n- Criterion A: The topic and research question are well-focused and feasible.\n- Criterion B: The methodology is appropriate and ethical considerations are addressed.\n- Criterion C: The quality of the analysis and evaluation of the findings is high.\n- Criterion D: The conclusion is justified by the evidence presented.\n- Criterion E: The communication is clear, well-structured, and includes appropriate citations.\n`, 'AP English Argument': `\nThe AP English Argument essay rubric focuses on three main categories: Thesis, Evidence and Commentary, and Sophistication. The grade is based on a scale of 0-6. The thesis must be defensible and establish a line of reasoning. The evidence must be relevant and sufficient to support the argument. The commentary must explain how the evidence supports the thesis. Sophistication can be earned by demonstrating a complex understanding of the argument, a nuanced position, or by using a vivid and persuasive style.\n`, 'AP Calculus': `\n- For AP Calculus, grade the response based on the College Board's official rubric for a specific Free Response Question (FRQ).\n- Focus on the correct application of calculus concepts (e.g., limits, derivatives, integrals).\n- Check for correct mathematical notation and justification of steps.\n- Ensure the final answer is simplified and correct.\n- Award partial credit for correct setup or minor algebraic errors.\n`, 'Higher Ed General Essay': `\n- Clarity and Coherence: The essay has a clear thesis and logical flow.\n- Argumentation: The arguments are well-supported with credible evidence.\n- Research: The student has used and cited a sufficient number of relevant sources.\n- Style and Tone: The writing is formal, academic, and free of grammatical errors.\n- Originality: The essay demonstrates critical thinking and original insight.\n`, 'Harvard Biology Lab Report': `\n- Introduction: Clearly states the purpose, background, and hypothesis.\n- Methods: Provides a detailed, replicable description of the experimental procedure.\n- Results: Presents data clearly using tables and/or graphs. Data analysis is correct.\n- Discussion: Interprets the results, discusses their significance, addresses limitations, and suggests future research.\n- Conclusion: Summarizes key findings and states whether the hypothesis was supported.\n` };
             const AP_SUBJECTS = [ "AP Art History","AP Biology","AP Calculus AB","AP Calculus BC","AP Chemistry", "AP English Language & Composition","AP English Literature & Composition", "AP Environmental Science","AP European History","AP Human Geography", "AP Macroeconomics","AP Microeconomics", "AP Physics 1","AP Physics C: Mechanics","AP Psychology", "AP Statistics", "AP United States Government & Politics","AP United States History","AP World History: Modern" ];
             const HIGHER_ED_SUBJECTS = [ "Mathematics (Calculus)","Physics (Mechanics)","Chemistry (General)","Biology (Genetics)", "Computer Science (Data Structures)","Data Science","Economics (Micro)","Finance","Psychology (Intro)","Sociology","Political Science","History","Philosophy","English Composition", "Civil Engineering","Mechanical Engineering","Electrical Engineering","Law/Legal Studies","Nursing","Medicine (Premed)" ];
@@ -373,13 +370,13 @@
                 stepIndicators: document.querySelectorAll('.step-indicator'),
                 stepIndicatorProgress: document.getElementById('step-indicator-progress'),
                 copyResultsButton: document.getElementById('copy-results-button'),
-                // NEW: Chat Modal Elements
                 startFollowUpButton: document.getElementById('start-follow-up-button'),
                 chatModalOverlay: document.getElementById('chat-modal-overlay'),
                 chatModalClose: document.getElementById('chat-modal-close'),
                 chatHistory: document.getElementById('chat-history'),
                 chatInput: document.getElementById('chat-input'),
                 sendChatButton: document.getElementById('send-chat-button'),
+                clearChatButton: document.getElementById('clear-chat-button'),
             };
 
             // --- STATE MANAGEMENT ---
@@ -387,14 +384,16 @@
             let selectedGrade = 'None';
             let files = { instructions: [], rubric: [], essay: [] };
             let customApiKey = '';
-            let lastGradingContext = null; // NEW: To store context for follow-ups
-            let conversationHistory = []; // NEW: To store chat messages
+            let lastGradingContext = null;
+            let conversationHistory = [];
 
             const saveState = () => {
                 localStorage.setItem('graderData', JSON.stringify({
                     texts: { instructions: dom.textareas.instructions.value, rubric: dom.textareas.rubric.value, essay: dom.textareas.essay.value, extra: dom.textareas.extra.value },
                     selectedGrade: selectedGrade, strictness: dom.strictnessMeter.value,
                     resultHTML: dom.gradeResultDiv.classList.contains('hidden') ? null : dom.resultContentDiv.innerHTML,
+                    lastGradingContext: lastGradingContext, // UPDATED
+                    conversationHistory: conversationHistory, // UPDATED
                 }));
             };
 
@@ -410,6 +409,14 @@
                 if (data.resultHTML) {
                     dom.resultContentDiv.innerHTML = data.resultHTML;
                     dom.gradeResultDiv.classList.remove('hidden');
+                }
+                // UPDATED: Restore context and chat history
+                if (data.lastGradingContext) {
+                    lastGradingContext = data.lastGradingContext;
+                }
+                if (data.conversationHistory) {
+                    conversationHistory = data.conversationHistory;
+                    updateChatDisplay();
                 }
             };
 
@@ -429,7 +436,6 @@
                 dom.apiKeyMessage.textContent = '';
                 dom.advancedOptions.classList.add('hidden');
                 localStorage.removeItem('graderData');
-                // NEW: Reset chat state
                 lastGradingContext = null;
                 conversationHistory = [];
                 dom.chatHistory.innerHTML = '';
@@ -562,7 +568,8 @@
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
                 localStorage.removeItem('graderResultHTML');
-                lastGradingContext = null; // Reset context
+                lastGradingContext = null;
+                conversationHistory = [];
 
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
@@ -600,10 +607,9 @@
                     dom.gradeResultDiv.classList.remove('hidden');
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
-                    saveState();
-
-                    // NEW: Save context for follow-up
+                    
                     lastGradingContext = { instructionsParts, rubricParts, essayParts, initialFeedback: resultData };
+                    saveState();
 
                 } catch (error) {
                     if (error.message.includes("AI response did not contain a valid JSON")) {
@@ -619,7 +625,6 @@
                 }
             };
 
-            // --- NEW: Follow-up Chat Logic ---
             const updateChatDisplay = () => {
                 dom.chatHistory.innerHTML = '';
                 conversationHistory.forEach(msg => {
@@ -631,7 +636,7 @@
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
-                dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight; // Auto-scroll
+                dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
             };
 
             const handleFollowUp = async () => {
@@ -643,6 +648,7 @@
 
                 conversationHistory.push({ role: 'user', parts: [{ text: userInput }] });
                 updateChatDisplay();
+                saveState(); // Save user message
 
                 const contextParts = [
                     { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
@@ -658,14 +664,22 @@
                     const resultText = await callApiWithRetries({ contents: fullConversation });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
+                    saveState(); // Save model response
                 } catch (error) {
                     const errorMsg = { role: 'model', parts: [{ text: `Sorry, I encountered an error: ${error.message}` }] };
                     conversationHistory.push(errorMsg);
                     updateChatDisplay();
+                    saveState(); // Save error message
                 } finally {
                     dom.sendChatButton.disabled = false;
                     dom.chatInput.focus();
                 }
+            };
+
+            const clearChatHistory = () => {
+                conversationHistory = [];
+                updateChatDisplay();
+                saveState();
             };
 
             // --- EVENT LISTENERS ---
@@ -756,7 +770,6 @@
                 }).catch(err => { displayMessage(dom.errorMessageDiv, 'Failed to copy results.', true); });
             });
 
-            // NEW: Chat Modal Listeners
             dom.startFollowUpButton.addEventListener('click', () => {
                 dom.chatModalOverlay.classList.remove('hidden');
                 dom.chatInput.focus();
@@ -769,6 +782,7 @@
                     handleFollowUp();
                 }
             });
+            dom.clearChatButton.addEventListener('click', clearChatHistory);
 
             // --- INITIALIZATION ---
             showStep(0);
