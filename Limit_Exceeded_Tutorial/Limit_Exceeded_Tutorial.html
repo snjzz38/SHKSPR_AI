@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/favicon.png">
-    <title>API Key Local Setup Tutorial</title>
+    <title>API Key Setup Tutorial</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -62,14 +62,13 @@
         }
         .hero h1 {
             font-size: 3.2rem;
-            /* text-shadow: 0 0 10px var(--accent); */
             margin-bottom: 20px;
         }
         .hero p {
             font-size: 1.2rem;
             margin: 0 auto 30px;
             text-shadow: 0 0 8px var(--accent);
-            max-width: 700px; /* FIX: Increased width to prevent wrapping */
+            max-width: 700px;
         }
         .container {
             max-width: 800px;
@@ -113,8 +112,8 @@
             display: block;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
-        a[style*="color: cyan;"] { text-decoration: none; }
-        a[style*="color: cyan;"]:hover { text-decoration: underline; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
         footer.main-footer {
             text-align: center;
             padding: 20px;
@@ -127,7 +126,6 @@
         }
     </style>
     <script>
-        // DEFINITIVE FOUC FIX: Inline script to apply theme before rendering
         (function() {
             try {
                 const theme = localStorage.getItem('shkspr-theme') || 'theme-blackwhite';
@@ -137,13 +135,12 @@
     </script>
 </head>
 <body>
-    <!-- Container for the dynamically loaded header -->
     <div id="header-container"></div>
 
     <main class="main-content animate-on-load">
         <section class="hero">
-            <h1>API Key Local Setup Tutorial</h1>
-            <p style="text-align: center;">The "Limit Exceeded" error is due to free plan limitations. <br> However, you can run the application yourself to avoid these issues.</p>
+            <h1>API Key Setup Tutorial</h1>
+            <p style="text-align: center;">The "Limit Exceeded" error is due to free plan limitations. <br> However, you can use your own free API key to bypass these issues.</p>
         </section>
 
         <div class="container">
@@ -151,29 +148,31 @@
             <p>The AI Humanizer uses the Groq API Key. ALL OTHER APPLICATIONS use the Gemini API Key.</p>
 
             <p class="sub-step-heading">Groq API Key:</p>
-            <p>Go to <a href="https://console.groq.com/keys" style="color: cyan;" target="_blank">https://console.groq.com/keys</a>, create a free account, then click "Create API Key". Give it any name and <strong>copy the value it gives you</strong>.</p>
+            <p>Go to <a href="https://console.groq.com/keys" target="_blank">https://console.groq.com/keys</a>, create a free account, then click "Create API Key". Give it any name and <strong>copy the value it gives you</strong>.</p>
             <img src="1.png" alt="Groq Create API Key" class="tutorial-image">
             <img src="2.png" alt="Groq Copy API Key" class="tutorial-image">
 
             <p class="sub-step-heading">Gemini API Key:</p>
-            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" style="color: cyan;" target="_blank">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in, accept any Terms of Service, then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
+            <p>Go to <a href="https://aistudio.google.com/u/1/apikey?pli=1" target="_blank">https://aistudio.google.com/u/1/apikey?pli=1</a>, sign in, accept any Terms of Service, then click "Create API Key". <strong>Copy the value it gives you</strong>.</p>
             <img src="3.jpg" alt="Gemini Create API Key" class="tutorial-image">
             <img src="4.png" alt="Gemini Copy API Key" class="tutorial-image">
 
             <p class="important-note font-bold text-red-400">IMPORTANT: Save your API key! Do not share it publicly.</p>
 
-            <p class="step-heading">Step 2: Add the API Key into the code:</p>
-            <p>Go to the project's <a href="https://github.com/snjzz38/SHKSPR_AI/tree/main/Local_Use" style="color: cyan;" target="_blank">Local Use Folder on GitHub</a> and select a tool like `Humanizer.html`. <strong>Copy the entire file text</strong>.</p>
-            <img src="5.png" alt="GitHub Local Use Folder" class="tutorial-image">
-            <img src="6.jpg" alt="GitHub File Text" class="tutorial-image">
+            <p class="step-heading">Step 2: Use the API Key in the Application</p>
+            <p>On any of the AI tools, proceed to the final step before generation. There you will find an "Advanced Options" button.</p>
+            
+            <p>1. Click the <strong>"Advanced Options"</strong> button to reveal the API key input field.</p>
+            <img src="5.png" alt="Advanced Options button" class="tutorial-image">
 
-            <p>Go to an online editor like <a href="https://www.codechef.com/html-online-compiler" style="color: cyan;" target="_blank">CodeChef's HTML Compiler</a>, paste the code into the "index.html" section. Press Ctrl+F, search for "your-api-key-here", and <strong>replace it with the API key you copied earlier</strong>. Run the code and enjoy!</p>
-            <img src="7.jpg" alt="CodeChef HTML Editor" class="tutorial-image">
-            <img src="8.jpg" alt="CodeChef Find API Key" class="tutorial-image">
-            <img src="9.png" alt="CodeChef Replace API Key" class="tutorial-image">
+            <p>2. <strong>Paste your copied API key</strong> into the input field that appears.</p>
+            <img src="6.png" alt="Pasting the API key" class="tutorial-image">
+
+            <p>3. Click <strong>"Set Key for Session"</strong>. You will see a confirmation message. Your key is now active for this session only.</p>
+            <img src="7.png" alt="Confirmation message after setting the key" class="tutorial-image">
 
             <p class="step-heading">Step 3: Enjoy!</p>
-            <p>You can save this edited code to use whenever you want. Keep in mind that the code may update, so you can check the GitHub folder for new versions. You will likely never need to create a new API key.</p>
+            <p>You can now use the application without rate limits. The key is not saved, so you will need to re-enter it if you close or refresh the page. You will likely never need to create a new API key from Google or Groq.</p>
         </div>
     </main>
 
@@ -217,7 +216,6 @@
 
         document.addEventListener('DOMContentLoaded', loadHeader);
     </script>
-
 
 <!-- Vercel Analytics -->
 <script>
