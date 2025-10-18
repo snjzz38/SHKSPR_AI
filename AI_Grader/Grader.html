@@ -562,6 +562,8 @@
                 toggleLoading(true);
                 conversationHistory = [];
 
+                let initialUserPromptParts; // Define here to be accessible in catch block
+
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
                     if (!dom.textareas.rubric.value.trim() && files.rubric.length === 0) throw new Error("Please provide a Grading Rubric.");
@@ -579,7 +581,7 @@
                     Additional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}
                     IMPORTANT: Your final output MUST be a JSON object inside a markdown code block. The JSON object must have the following keys: "finalGrade" (a string, e.g., "B+" or "85/100"), "overallFeedback" (a string in markdown format), "strengths" (a string in markdown format, preferably as a bulleted list), and "areasForImprovement" (a string in markdown format, preferably as a bulleted list).`;
                     
-                    const initialUserPromptParts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
+                    initialUserPromptParts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
                     
                     const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
 
@@ -599,13 +601,12 @@
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     
-                    // FIXED: Initialize conversation history correctly
                     conversationHistory.push({ role: 'user', parts: initialUserPromptParts });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     saveState();
 
                 } catch (error) {
-                    if (error.message.includes("AI response did not contain a valid JSON")) {
+                    if (error.message.includes("AI response did not contain a valid JSON") && initialUserPromptParts) {
                         const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
                         dom.resultContentDiv.innerHTML = marked.parse(resultText);
                         dom.gradeResultDiv.classList.remove('hidden');
@@ -620,22 +621,18 @@
 
             const updateChatDisplay = () => {
                 dom.chatHistory.innerHTML = '';
-                // Skip the first 'user' message (the massive context prompt) for a cleaner display
                 const displayableHistory = conversationHistory.slice(1); 
                 displayableHistory.forEach(msg => {
-                    // Don't display the initial JSON response, just the conversational parts
+                    let currentMsg = msg;
                     if (msg.role === 'model' && msg.parts[0].text.includes('```json')) {
-                        const initialGreeting = {
-                            role: 'model',
-                            parts: [{ text: "I have finished grading the assignment. How can I help you further?" }]
-                        };
-                        msg = initialGreeting;
+                        currentMsg = { role: 'model', parts: [{ text: "I have finished grading the assignment. How can I help you further?" }] };
                     }
                     const messageWrapper = document.createElement('div');
-                    messageWrapper.className = `chat-message ${msg.role}`;
+                    messageWrapper.className = `chat-message ${currentMsg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    messageBubble.innerHTML = marked.parse(msg.parts.text);
+                    // FIXED: Correctly access the text property
+                    messageBubble.innerHTML = marked.parse(currentMsg.parts.text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
@@ -654,7 +651,6 @@
                 saveState();
 
                 try {
-                    // FIXED: Send the entire, valid conversation history
                     const resultText = await callApiWithRetries({ contents: conversationHistory });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
@@ -671,7 +667,6 @@
             };
 
             const clearChatHistory = () => {
-                // Keep the first two items (initial prompt and response)
                 if (conversationHistory.length > 2) {
                     conversationHistory = conversationHistory.slice(0, 2);
                 }
