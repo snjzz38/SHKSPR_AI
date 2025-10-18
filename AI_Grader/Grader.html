@@ -384,7 +384,6 @@
             let selectedGrade = 'None';
             let files = { instructions: [], rubric: [], essay: [] };
             let customApiKey = '';
-            let lastGradingContext = null;
             let conversationHistory = [];
 
             const saveState = () => {
@@ -392,8 +391,7 @@
                     texts: { instructions: dom.textareas.instructions.value, rubric: dom.textareas.rubric.value, essay: dom.textareas.essay.value, extra: dom.textareas.extra.value },
                     selectedGrade: selectedGrade, strictness: dom.strictnessMeter.value,
                     resultHTML: dom.gradeResultDiv.classList.contains('hidden') ? null : dom.resultContentDiv.innerHTML,
-                    lastGradingContext: lastGradingContext, // UPDATED
-                    conversationHistory: conversationHistory, // UPDATED
+                    conversationHistory: conversationHistory,
                 }));
             };
 
@@ -410,11 +408,7 @@
                     dom.resultContentDiv.innerHTML = data.resultHTML;
                     dom.gradeResultDiv.classList.remove('hidden');
                 }
-                // UPDATED: Restore context and chat history
-                if (data.lastGradingContext) {
-                    lastGradingContext = data.lastGradingContext;
-                }
-                if (data.conversationHistory) {
+                if (data.conversationHistory && data.conversationHistory.length > 0) {
                     conversationHistory = data.conversationHistory;
                     updateChatDisplay();
                 }
@@ -436,7 +430,6 @@
                 dom.apiKeyMessage.textContent = '';
                 dom.advancedOptions.classList.add('hidden');
                 localStorage.removeItem('graderData');
-                lastGradingContext = null;
                 conversationHistory = [];
                 dom.chatHistory.innerHTML = '';
                 dom.chatModalOverlay.classList.add('hidden');
@@ -567,8 +560,6 @@
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
-                localStorage.removeItem('graderResultHTML');
-                lastGradingContext = null;
                 conversationHistory = [];
 
                 try {
@@ -588,9 +579,9 @@
                     Additional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}
                     IMPORTANT: Your final output MUST be a JSON object inside a markdown code block. The JSON object must have the following keys: "finalGrade" (a string, e.g., "B+" or "85/100"), "overallFeedback" (a string in markdown format), "strengths" (a string in markdown format, preferably as a bulleted list), and "areasForImprovement" (a string in markdown format, preferably as a bulleted list).`;
                     
-                    const parts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
+                    const initialUserPromptParts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
                     
-                    const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
+                    const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
 
                     const jsonMatch = resultText.match(/```json\n([\s\S]*?)\n```/);
                     if (!jsonMatch || !jsonMatch[1]) throw new Error("AI response did not contain a valid JSON code block. Displaying raw output.");
@@ -608,12 +599,14 @@
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     
-                    lastGradingContext = { instructionsParts, rubricParts, essayParts, initialFeedback: resultData };
+                    // FIXED: Initialize conversation history correctly
+                    conversationHistory.push({ role: 'user', parts: initialUserPromptParts });
+                    conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     saveState();
 
                 } catch (error) {
                     if (error.message.includes("AI response did not contain a valid JSON")) {
-                        const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
+                        const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
                         dom.resultContentDiv.innerHTML = marked.parse(resultText);
                         dom.gradeResultDiv.classList.remove('hidden');
                         displayMessage(dom.errorMessageDiv, `<strong>Warning:</strong> Could not parse structured response. Displaying raw AI output.`, true);
@@ -627,12 +620,22 @@
 
             const updateChatDisplay = () => {
                 dom.chatHistory.innerHTML = '';
-                conversationHistory.forEach(msg => {
+                // Skip the first 'user' message (the massive context prompt) for a cleaner display
+                const displayableHistory = conversationHistory.slice(1); 
+                displayableHistory.forEach(msg => {
+                    // Don't display the initial JSON response, just the conversational parts
+                    if (msg.role === 'model' && msg.parts[0].text.includes('```json')) {
+                        const initialGreeting = {
+                            role: 'model',
+                            parts: [{ text: "I have finished grading the assignment. How can I help you further?" }]
+                        };
+                        msg = initialGreeting;
+                    }
                     const messageWrapper = document.createElement('div');
                     messageWrapper.className = `chat-message ${msg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    messageBubble.innerHTML = marked.parse(msg.parts[0].text);
+                    messageBubble.innerHTML = marked.parse(msg.parts.text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
@@ -641,35 +644,26 @@
 
             const handleFollowUp = async () => {
                 const userInput = dom.chatInput.value.trim();
-                if (!userInput || !lastGradingContext) return;
+                if (!userInput || conversationHistory.length === 0) return;
 
                 dom.chatInput.value = '';
                 dom.sendChatButton.disabled = true;
 
                 conversationHistory.push({ role: 'user', parts: [{ text: userInput }] });
                 updateChatDisplay();
-                saveState(); // Save user message
-
-                const contextParts = [
-                    { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
-                    { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
-                    { text: "\n\n--- GRADING RUBRIC ---\n" }, ...lastGradingContext.rubricParts,
-                    { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...lastGradingContext.essayParts,
-                    { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
-                ];
-
-                const fullConversation = [...contextParts, ...conversationHistory.map(msg => ({ role: msg.role, parts: msg.parts }))];
+                saveState();
 
                 try {
-                    const resultText = await callApiWithRetries({ contents: fullConversation });
+                    // FIXED: Send the entire, valid conversation history
+                    const resultText = await callApiWithRetries({ contents: conversationHistory });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
-                    saveState(); // Save model response
+                    saveState();
                 } catch (error) {
                     const errorMsg = { role: 'model', parts: [{ text: `Sorry, I encountered an error: ${error.message}` }] };
                     conversationHistory.push(errorMsg);
                     updateChatDisplay();
-                    saveState(); // Save error message
+                    saveState();
                 } finally {
                     dom.sendChatButton.disabled = false;
                     dom.chatInput.focus();
@@ -677,7 +671,10 @@
             };
 
             const clearChatHistory = () => {
-                conversationHistory = [];
+                // Keep the first two items (initial prompt and response)
+                if (conversationHistory.length > 2) {
+                    conversationHistory = conversationHistory.slice(0, 2);
+                }
                 updateChatDisplay();
                 saveState();
             };
