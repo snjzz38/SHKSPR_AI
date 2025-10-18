@@ -631,7 +631,7 @@
                     messageWrapper.className = `chat-message ${currentMsg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    // FIXED: Correctly access the text property from the parts array
+                    // *** CRITICAL BUG FIX HERE ***
                     messageBubble.innerHTML = marked.parse(currentMsg.parts.text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
