@@ -562,7 +562,7 @@
                 toggleLoading(true);
                 conversationHistory = [];
 
-                let initialUserPromptParts; // Define here to be accessible in catch block
+                let initialUserPromptParts;
 
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
@@ -631,7 +631,7 @@
                     messageWrapper.className = `chat-message ${currentMsg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    // FIXED: Correctly access the text property
+                    // FIXED: Correctly access the text property from the parts array
                     messageBubble.innerHTML = marked.parse(currentMsg.parts.text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
