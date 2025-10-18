@@ -631,8 +631,14 @@
                     messageWrapper.className = `chat-message ${currentMsg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    // *** CRITICAL BUG FIX HERE ***
-                    messageBubble.innerHTML = marked.parse(currentMsg.parts.text);
+                    
+                    // --- FIX START ---
+                    // The 'parts' property is an array. We need to access the text from the first part.
+                    // This correctly handles the data structure of the conversation history.
+                    const messageText = currentMsg.parts && currentMsg.parts ? currentMsg.parts.text : '';
+                    messageBubble.innerHTML = marked.parse(messageText);
+                    // --- FIX END ---
+
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
