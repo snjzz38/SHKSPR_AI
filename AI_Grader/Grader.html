@@ -624,7 +624,7 @@
                 const displayableHistory = conversationHistory.slice(1); 
                 displayableHistory.forEach(msg => {
                     let currentMsg = msg;
-                    if (msg.role === 'model' && msg.parts[0].text.includes('```json')) {
+                    if (msg.role === 'model' && msg.parts[0] && msg.parts[0].text.includes('```json')) {
                         currentMsg = { role: 'model', parts: [{ text: "I have finished grading the assignment. How can I help you further?" }] };
                     }
                     const messageWrapper = document.createElement('div');
@@ -632,12 +632,11 @@
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
                     
-                    // --- FIX START ---
-                    // The 'parts' property is an array. We need to access the text from the first part.
-                    // This correctly handles the data structure of the conversation history.
+                    // --- FINAL CORRECTED LINE ---
+                    // This correctly accesses the 'text' property from the first object in the 'parts' array.
                     const messageText = currentMsg.parts && currentMsg.parts ? currentMsg.parts.text : '';
                     messageBubble.innerHTML = marked.parse(messageText);
-                    // --- FIX END ---
+                    // --- END FIX ---
 
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
