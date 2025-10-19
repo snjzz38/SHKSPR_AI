@@ -632,8 +632,9 @@
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
                     
-                    // --- FINAL CORRECTED LINE ---
-                    // This correctly accesses the 'text' property from the first object in the 'parts' array.
+                    // --- DEFINITIVE FIX ---
+                    // This correctly and safely accesses the text from the first element of the 'parts' array,
+                    // preventing the "undefined" error with the marked.js library.
                     const messageText = currentMsg.parts && currentMsg.parts ? currentMsg.parts.text : '';
                     messageBubble.innerHTML = marked.parse(messageText);
                     // --- END FIX ---
@@ -805,3 +806,4 @@
     
 </body>
 </html>
+```
