@@ -684,7 +684,7 @@
                 dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
             };
 
-            const handleFollowUp = async () => {
+         const handleFollowUp = async () => {
                 const userInput = dom.chatInput.value.trim();
                 if (!userInput || !lastGradingContext) return;
 
@@ -695,6 +695,7 @@
                 updateChatDisplay();
                 saveState();
 
+                // This part correctly assembles all the context into an array of "Part" objects.
                 const contextParts = [
                     { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
                     { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
@@ -703,9 +704,16 @@
                     { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
                 ];
 
-                const fullConversation = [...contextParts, ...conversationHistory];
+                // **FIX APPLIED HERE**
+                // The entire context is now wrapped in a single "Content" object with the 'user' role.
+                // This is followed by the actual conversation history. This creates the valid, multi-turn structure the API expects.
+                const fullConversation = [
+                    { role: 'user', parts: contextParts },
+                    ...conversationHistory
+                ];
 
                 try {
+                    // The correctly structured 'fullConversation' array is passed to the API.
                     const resultText = await callApiWithRetries({ contents: fullConversation });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
