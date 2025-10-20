@@ -5,14 +5,24 @@ export default async function handler(request, response) {
     }
 
     try {
-        const googleApiKey = process.env.GRADER_1;
-        if (!googleApiKey) {
-            console.error("Environment variable GRADER_1 is not set.");
-            throw new Error("API key (GRADER_1) is not configured on the server.");
+        // --- START OF FIX ---
+
+        // 1. Prioritize the custom API key sent from the browser's request body.
+        // 2. If no custom key is provided, fall back to the server's default key.
+        const apiKey = request.body.apiKey || process.env.GRADER_1;
+
+        // 3. Add a safety check. If NEITHER key is available, stop and throw an error.
+        if (!apiKey) {
+            console.error("API key is not configured on the server (GRADER_1) and no custom key was provided.");
+            throw new Error("API key is not configured.");
         }
 
         const { model, contents } = request.body;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${googleApiKey}`;
+        
+        // 4. Use the selected 'apiKey' in the URL.
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        
+        // --- END OF FIX ---
         
         const apiResponse = await fetch(apiUrl, {
             method: 'POST',
