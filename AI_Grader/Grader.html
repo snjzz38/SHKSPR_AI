@@ -542,22 +542,9 @@
             const callApiWithRetries = async (payload) => {
                 for (const model of ALL_GEMINI_MODELS) {
                     try {
-                        // Create the base payload first
-                        const apiPayload = {
-                            contents: payload.contents,
-                            model: model
-                        };
-            
-                        // Explicitly add the apiKey if it exists
-                        if (customApiKey) {
-                            apiPayload.apiKey = customApiKey;
-                        }
-            
-                        const response = await fetch('/api/Grader_API', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(apiPayload)
-                        });
+                        const apiPayload = { ...payload, model };
+                        if (customApiKey) apiPayload.apiKey = customApiKey;
+                        const response = await fetch('/api/Grader_API', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
                             throw new Error(errorData.error || `Server error (${response.status})`);
