@@ -384,6 +384,7 @@
             let selectedGrade = 'None';
             let files = { instructions: [], rubric: [], essay: [] };
             let customApiKey = '';
+            let lastGradingContext = null;
             let conversationHistory = [];
 
             const saveState = () => {
@@ -391,6 +392,7 @@
                     texts: { instructions: dom.textareas.instructions.value, rubric: dom.textareas.rubric.value, essay: dom.textareas.essay.value, extra: dom.textareas.extra.value },
                     selectedGrade: selectedGrade, strictness: dom.strictnessMeter.value,
                     resultHTML: dom.gradeResultDiv.classList.contains('hidden') ? null : dom.resultContentDiv.innerHTML,
+                    lastGradingContext: lastGradingContext,
                     conversationHistory: conversationHistory,
                 }));
             };
@@ -408,7 +410,10 @@
                     dom.resultContentDiv.innerHTML = data.resultHTML;
                     dom.gradeResultDiv.classList.remove('hidden');
                 }
-                if (data.conversationHistory && data.conversationHistory.length > 0) {
+                if (data.lastGradingContext) {
+                    lastGradingContext = data.lastGradingContext;
+                }
+                if (data.conversationHistory) {
                     conversationHistory = data.conversationHistory;
                     updateChatDisplay();
                 }
@@ -430,6 +435,7 @@
                 dom.apiKeyMessage.textContent = '';
                 dom.advancedOptions.classList.add('hidden');
                 localStorage.removeItem('graderData');
+                lastGradingContext = null;
                 conversationHistory = [];
                 dom.chatHistory.innerHTML = '';
                 dom.chatModalOverlay.classList.add('hidden');
@@ -538,79 +544,31 @@
                 return parts;
             };
 
-            // --- START: REBUILT API CALL FUNCTION ---
             const callApiWithRetries = async (payload) => {
-                let lastError = null;
-
-                if (customApiKey) {
-                    // PATH 1: Direct call to Google's API with the user's custom key
-                    console.log("Attempting DIRECT API call with custom key.");
-                    for (const model of ALL_GEMINI_MODELS) {
-                        try {
-                            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${customApiKey}`;
-                            
-                            const response = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: payload.contents })
-                            });
-
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(errorData.error?.message || `HTTP error ${response.status}`);
-                            }
-
-                            const result = await response.json();
-                            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (text) return text; // Success!
-                            
-                            throw new Error("Received an invalid or empty response structure from the direct API call.");
-
-                        } catch (error) {
-                            console.warn(`Direct call with model ${model} failed:`, error.message);
-                            lastError = error;
+                for (const model of ALL_GEMINI_MODELS) {
+                    try {
+                        const apiPayload = { ...payload, model };
+                        if (customApiKey) apiPayload.apiKey = customApiKey;
+                        const response = await fetch('/api/Grader_API', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.error || `Server error (${response.status})`);
                         }
-                    }
-                } else {
-                    // PATH 2: Fallback to the serverless function (default behavior)
-                    console.log("Attempting API call via serverless function.");
-                    for (const model of ALL_GEMINI_MODELS) {
-                        try {
-                            const apiPayload = {
-                                contents: payload.contents,
-                                model: model
-                            };
-                            const response = await fetch('/api/Grader_API', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(apiPayload)
-                            });
-                            if (!response.ok) {
-                                const errorBody = await response.json().catch(() => ({ error: `Server error (${response.status})` }));
-                                throw new Error(errorBody.error);
-                            }
-                            const result = await response.json();
-                            if (result.text) return result.text; // Success!
-
-                        } catch (error) {
-                            console.warn(`Serverless call with model ${model} failed:`, error.message);
-                            lastError = error;
-                        }
-                    }
+                        const result = await response.json();
+                        if (result.text) return result.text;
+                    } catch (error) { console.warn(`Model ${model} failed: ${error.message}`); }
                 }
-                
-                throw lastError || new Error("All API models and methods failed.");
+                throw new Error("All API models failed.");
             };
-            // --- END: REBUILT API CALL FUNCTION ---
 
             const gradeEssay = async () => {
                 dom.errorMessageDiv.classList.add('hidden');
                 dom.successMessageDiv.classList.add('hidden');
                 dom.gradeResultDiv.classList.add('hidden');
                 toggleLoading(true);
+                localStorage.removeItem('graderResultHTML');
+                lastGradingContext = null;
                 conversationHistory = [];
-
-                let initialUserPromptParts;
 
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
@@ -629,9 +587,9 @@
                     Additional Instructions: ${dom.textareas.extra.value.trim() || 'None.'}
                     IMPORTANT: Your final output MUST be a JSON object inside a markdown code block. The JSON object must have the following keys: "finalGrade" (a string, e.g., "B+" or "85/100"), "overallFeedback" (a string in markdown format), "strengths" (a string in markdown format, preferably as a bulleted list), and "areasForImprovement" (a string in markdown format, preferably as a bulleted list).`;
                     
-                    initialUserPromptParts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
+                    const parts = [ { text: systemPrompt }, { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...instructionsParts, { text: "\n\n--- GRADING RUBRIC ---\n" }, ...rubricParts, { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...essayParts ];
                     
-                    const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
+                    const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
 
                     const jsonMatch = resultText.match(/```json\n([\s\S]*?)\n```/);
                     if (!jsonMatch || !jsonMatch[1]) throw new Error("AI response did not contain a valid JSON code block. Displaying raw output.");
@@ -649,13 +607,12 @@
                     displayMessage(dom.successMessageDiv, `Assignment graded successfully!`);
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     
-                    conversationHistory.push({ role: 'user', parts: initialUserPromptParts });
-                    conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
+                    lastGradingContext = { instructionsParts, rubricParts, essayParts, initialFeedback: resultData };
                     saveState();
 
                 } catch (error) {
-                    if (error.message.includes("AI response did not contain a valid JSON") && initialUserPromptParts) {
-                        const resultText = await callApiWithRetries({ contents: [{ role: 'user', parts: initialUserPromptParts }] });
+                    if (error.message.includes("AI response did not contain a valid JSON")) {
+                        const resultText = await callApiWithRetries({ contents: [{ parts: parts }] });
                         dom.resultContentDiv.innerHTML = marked.parse(resultText);
                         dom.gradeResultDiv.classList.remove('hidden');
                         displayMessage(dom.errorMessageDiv, `<strong>Warning:</strong> Could not parse structured response. Displaying raw AI output.`, true);
@@ -669,20 +626,13 @@
 
             const updateChatDisplay = () => {
                 dom.chatHistory.innerHTML = '';
-                const displayableHistory = conversationHistory.slice(1); 
-                displayableHistory.forEach(msg => {
-                    let currentMsg = msg;
-                    if (msg.role === 'model' && msg.parts[0] && msg.parts[0].text.includes('```json')) {
-                        currentMsg = { role: 'model', parts: [{ text: "I have finished grading the assignment. How can I help you further?" }] };
-                    }
+                conversationHistory.forEach(msg => {
                     const messageWrapper = document.createElement('div');
-                    messageWrapper.className = `chat-message ${currentMsg.role}`;
+                    messageWrapper.className = `chat-message ${msg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    
-                    const messageText = currentMsg.parts && currentMsg.parts ? currentMsg.parts.text : '';
-                    messageBubble.innerHTML = marked.parse(messageText);
-
+                    // FIX: Correctly access the text content from the parts array
+                    messageBubble.innerHTML = marked.parse(msg.parts[0].text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
@@ -691,7 +641,7 @@
 
             const handleFollowUp = async () => {
                 const userInput = dom.chatInput.value.trim();
-                if (!userInput || conversationHistory.length === 0) return;
+                if (!userInput || !lastGradingContext) return;
 
                 dom.chatInput.value = '';
                 dom.sendChatButton.disabled = true;
@@ -700,8 +650,18 @@
                 updateChatDisplay();
                 saveState();
 
+                const contextParts = [
+                    { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
+                    { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
+                    { text: "\n\n--- GRADING RUBRIC ---\n" }, ...lastGradingContext.rubricParts,
+                    { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...lastGradingContext.essayParts,
+                    { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
+                ];
+
+                const fullConversation = [...contextParts, ...conversationHistory.map(msg => ({ role: msg.role, parts: msg.parts }))];
+
                 try {
-                    const resultText = await callApiWithRetries({ contents: conversationHistory });
+                    const resultText = await callApiWithRetries({ contents: fullConversation });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
                     saveState();
@@ -717,9 +677,7 @@
             };
 
             const clearChatHistory = () => {
-                if (conversationHistory.length > 2) {
-                    conversationHistory = conversationHistory.slice(0, 2);
-                }
+                conversationHistory = [];
                 updateChatDisplay();
                 saveState();
             };
