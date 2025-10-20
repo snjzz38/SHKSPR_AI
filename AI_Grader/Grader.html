@@ -557,7 +557,7 @@
                             const response = await fetch(GOOGLE_API_URL, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: payload.contents })
+                                body: JSON.stringify(payload) // Direct payload
                             });
                             if (!response.ok) {
                                 const errorData = await response.json();
@@ -607,7 +607,7 @@
                 lastGradingContext = null;
                 conversationHistory = [];
 
-                let parts; // Define parts here to be accessible in finally block if needed
+                let parts;
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
                     if (!dom.textareas.rubric.value.trim() && files.rubric.length === 0) throw new Error("Please provide a Grading Rubric.");
@@ -651,7 +651,6 @@
                 } catch (error) {
                     let errorMessage = error.message;
                     if (errorMessage.includes("AI response did not contain a valid JSON")) {
-                        // Fallback to display raw text if JSON parsing fails
                         callApiWithRetries({ contents: [{ parts: parts }] }).then(rawText => {
                             dom.resultContentDiv.innerHTML = marked.parse(rawText);
                             dom.gradeResultDiv.classList.remove('hidden');
@@ -677,6 +676,7 @@
                     messageWrapper.className = `chat-message ${msg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
+                    // --- CHAT FIX: Correctly access the text content ---
                     messageBubble.innerHTML = marked.parse(msg.parts[0].text);
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
@@ -695,15 +695,25 @@
                 updateChatDisplay();
                 saveState();
 
-                const contextParts = [
-                    { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
-                    { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
-                    { text: "\n\n--- GRADING RUBRIC ---\n" }, ...lastGradingContext.rubricParts,
-                    { text: "\n\n--- STUDENT'S SUBMISSION ---\n" }, ...lastGradingContext.essayParts,
-                    { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
+                // --- CHAT FIX: Correctly structure the conversation payload ---
+                const fullConversation = [
+                    {
+                        role: 'user',
+                        parts: [
+                            { text: "Here is the full context of an assignment I need to ask follow-up questions about. Do not grade it again, just use this information to answer my questions." },
+                            ...lastGradingContext.instructionsParts,
+                            ...lastGradingContext.rubricParts,
+                            ...lastGradingContext.essayParts,
+                        ]
+                    },
+                    {
+                        role: 'model',
+                        parts: [
+                            { text: `Here is the initial feedback I provided for that assignment, in JSON format:\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
+                        ]
+                    },
+                    ...conversationHistory
                 ];
-
-                const fullConversation = [...contextParts, ...conversationHistory];
 
                 try {
                     const resultText = await callApiWithRetries({ contents: fullConversation });
