@@ -8,7 +8,7 @@ import random
 # --- A manually curated list of promising proxies from free-proxy-list.net ---
 # You can add more good ones you find here.
 PROXY_LIST = [
-    "http://159.69.57.20:8880",
+    "http://84.239.49.180:9002",
     # Add another proxy here, e.g., "http://IP_ADDRESS:PORT"
     # Add a third one here...
 ]
