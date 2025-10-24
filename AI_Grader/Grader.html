@@ -304,7 +304,7 @@
         </div>
     </div>
 
-    <script>
+       <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
         
         async function loadHeader() {
@@ -677,25 +677,30 @@
                     messageWrapper.className = `chat-message ${msg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    messageBubble.innerHTML = marked.parse(msg.parts[0].text);
+                    // Ensure msg.parts[0].text exists to avoid errors
+                    messageBubble.innerHTML = marked.parse(msg.parts[0]?.text || '');
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
                 });
                 dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
             };
 
-         const handleFollowUp = async () => {
+            // --- THIS IS THE CORRECTED FUNCTION ---
+            // This version ensures the data sent to the API is structured correctly for a conversation.
+            const handleFollowUp = async () => {
                 const userInput = dom.chatInput.value.trim();
                 if (!userInput || !lastGradingContext) return;
 
                 dom.chatInput.value = '';
                 dom.sendChatButton.disabled = true;
 
+                // Add the user's new message to our history
                 conversationHistory.push({ role: 'user', parts: [{ text: userInput }] });
                 updateChatDisplay();
                 saveState();
 
-                // This part correctly assembles all the context into an array of "Part" objects.
+                // Assemble all the initial context (instructions, rubric, submission, feedback)
+                // into a single large array of "Part" objects.
                 const contextParts = [
                     { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
                     { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
@@ -704,16 +709,18 @@
                     { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
                 ];
 
-                // **FIX APPLIED HERE**
-                // The entire context is now wrapped in a single "Content" object with the 'user' role.
-                // This is followed by the actual conversation history. This creates the valid, multi-turn structure the API expects.
+                // **THE CRITICAL FIX IS HERE:**
+                // We create a new array for the API call.
+                // The VERY FIRST item is a single "user" message containing ALL the context.
+                // Then, we append the rest of the actual chat history.
+                // This creates the valid, multi-turn structure the API requires: [ {role, parts}, {role, parts}, ... ]
                 const fullConversation = [
                     { role: 'user', parts: contextParts },
                     ...conversationHistory
                 ];
 
                 try {
-                    // The correctly structured 'fullConversation' array is passed to the API.
+                    // The correctly structured 'fullConversation' is sent to the API.
                     const resultText = await callApiWithRetries({ contents: fullConversation });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
