@@ -52,7 +52,7 @@
         input[type="range"]::-moz-range-thumb { width: 25px; height: 25px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px var(--accent); }
         .nav-button, button#grade-button, .clear-button, .copy-button, #send-chat-button, #clear-chat-button { background: var(--accent); color: var(--bg-primary); padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5); border: none; cursor: pointer; }
         .nav-button:hover, button#grade-button:hover, .clear-button:hover, .copy-button:hover, #send-chat-button:hover, #clear-chat-button:hover { box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.8); transform: translateY(-2px); }
-        .nav-button:disabled, button#grade-button:disabled, #send-chat-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
+        .nav-button:disabled, button#grade-button:disabled, #send-chat-button:disabled, #start-follow-up-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
         .clear-button, #clear-chat-button { background: #4a5568; color: #fff; }
         .clear-button:hover, #clear-chat-button:hover { background: #2d3748; }
         .copy-button { background: #38a169; color: #fff; }
@@ -304,7 +304,7 @@
         </div>
     </div>
 
-       <script>
+    <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
         
         async function loadHeader() {
@@ -439,6 +439,7 @@
                 conversationHistory = [];
                 dom.chatHistory.innerHTML = '';
                 dom.chatModalOverlay.classList.add('hidden');
+                dom.startFollowUpButton.disabled = true; // **FIX: Disable button on clear**
                 showStep(0);
             };
 
@@ -606,8 +607,9 @@
                 localStorage.removeItem('graderResultHTML');
                 lastGradingContext = null;
                 conversationHistory = [];
+                dom.startFollowUpButton.disabled = true; // **FIX: Disable button before grading**
 
-                let parts; // Define parts here to be accessible in finally block if needed
+                let parts; 
                 try {
                     if (!dom.textareas.instructions.value.trim() && files.instructions.length === 0) throw new Error("Please provide Assignment Instructions.");
                     if (!dom.textareas.rubric.value.trim() && files.rubric.length === 0) throw new Error("Please provide a Grading Rubric.");
@@ -646,12 +648,12 @@
                     dom.gradeResultDiv.scrollIntoView({ behavior: 'smooth' });
                     
                     lastGradingContext = { instructionsParts, rubricParts, essayParts, initialFeedback: resultData };
+                    dom.startFollowUpButton.disabled = false; // **FIX: Enable button on success**
                     saveState();
 
                 } catch (error) {
                     let errorMessage = error.message;
                     if (errorMessage.includes("AI response did not contain a valid JSON")) {
-                        // Fallback to display raw text if JSON parsing fails
                         callApiWithRetries({ contents: [{ parts: parts }] }).then(rawText => {
                             dom.resultContentDiv.innerHTML = marked.parse(rawText);
                             dom.gradeResultDiv.classList.remove('hidden');
@@ -677,7 +679,6 @@
                     messageWrapper.className = `chat-message ${msg.role}`;
                     const messageBubble = document.createElement('div');
                     messageBubble.className = 'chat-message-bubble prose max-w-none';
-                    // Ensure msg.parts[0].text exists to avoid errors
                     messageBubble.innerHTML = marked.parse(msg.parts[0]?.text || '');
                     messageWrapper.appendChild(messageBubble);
                     dom.chatHistory.appendChild(messageWrapper);
@@ -685,22 +686,26 @@
                 dom.chatHistory.scrollTop = dom.chatHistory.scrollHeight;
             };
 
-            // --- THIS IS THE CORRECTED FUNCTION ---
-            // This version ensures the data sent to the API is structured correctly for a conversation.
             const handleFollowUp = async () => {
                 const userInput = dom.chatInput.value.trim();
-                if (!userInput || !lastGradingContext) return;
+
+                // **FIX: Add safeguard for missing context**
+                if (!lastGradingContext) {
+                    const errorMsg = { role: 'model', parts: [{ text: "I'm sorry, but I don't have any grading context. Please grade an assignment first before asking a follow-up." }] };
+                    conversationHistory.push(errorMsg);
+                    updateChatDisplay();
+                    return;
+                }
+                
+                if (!userInput) return;
 
                 dom.chatInput.value = '';
                 dom.sendChatButton.disabled = true;
 
-                // Add the user's new message to our history
                 conversationHistory.push({ role: 'user', parts: [{ text: userInput }] });
                 updateChatDisplay();
                 saveState();
 
-                // Assemble all the initial context (instructions, rubric, submission, feedback)
-                // into a single large array of "Part" objects.
                 const contextParts = [
                     { text: "You are a helpful teaching assistant. A student has a follow-up question about the assignment you just graded. Use the original assignment details and your initial feedback to provide a clear, concise, and helpful answer. Here is all the context:" },
                     { text: "\n\n--- ASSIGNMENT INSTRUCTIONS ---\n" }, ...lastGradingContext.instructionsParts,
@@ -709,18 +714,13 @@
                     { text: `\n\n--- YOUR INITIAL FEEDBACK (JSON) ---\n${JSON.stringify(lastGradingContext.initialFeedback, null, 2)}` }
                 ];
 
-                // **THE CRITICAL FIX IS HERE:**
-                // We create a new array for the API call.
-                // The VERY FIRST item is a single "user" message containing ALL the context.
-                // Then, we append the rest of the actual chat history.
-                // This creates the valid, multi-turn structure the API requires: [ {role, parts}, {role, parts}, ... ]
+                // This structure is correct for the API.
                 const fullConversation = [
                     { role: 'user', parts: contextParts },
                     ...conversationHistory
                 ];
 
                 try {
-                    // The correctly structured 'fullConversation' is sent to the API.
                     const resultText = await callApiWithRetries({ contents: fullConversation });
                     conversationHistory.push({ role: 'model', parts: [{ text: resultText }] });
                     updateChatDisplay();
@@ -847,6 +847,7 @@
             // --- INITIALIZATION ---
             showStep(0);
             loadState();
+            dom.startFollowUpButton.disabled = !lastGradingContext; // **FIX: Set initial button state**
         }
 
         document.addEventListener('DOMContentLoaded', () => {
