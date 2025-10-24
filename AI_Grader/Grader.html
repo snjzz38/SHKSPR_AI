@@ -55,8 +55,6 @@
         .nav-button:disabled, button#grade-button:disabled, #send-chat-button:disabled, #start-follow-up-button:disabled { background: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
         .clear-button, #clear-chat-button { background: #4a5568; color: #fff; }
         .clear-button:hover, #clear-chat-button:hover { background: #2d3748; }
-        .copy-button { background: #38a169; color: #fff; }
-        .copy-button:hover { background: #2f855a; }
         #error-message, #success-message { padding: 0.75rem; border-radius: 0.5rem; margin-top: 1rem; text-align: center; border: 1px solid; }
         #error-message { background-color: rgba(239, 68, 68, 0.1); border-color: rgb(239, 68, 68); color: #fecaca; }
         #success-message { background-color: rgba(var(--accent-rgb), 0.1); border-color: var(--accent); color: var(--text-primary); }
@@ -250,7 +248,7 @@
                 </div>
                 
                 <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
-                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%; border-radius: 8px;">Advanced Options</button>
+                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%;">Advanced Options</button>
                     <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
                         <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
                         <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
@@ -275,7 +273,7 @@
                     <h2 class="text-2xl font-bold text-center">Grading Results</h2>
                     <div class="flex gap-2">
                         <button id="copy-results-button" class="copy-button text-sm !px-4 !py-2">Copy</button>
-                        <button id="start-follow-up-button" class="nav-button text-sm !px-4 !py-2">Ask a Follow-up</button>
+                        <button id="start-follow-up-button" class="nav-button text-sm !px-4 !py-2">Follow-up</button>
                     </div>
                 </div>
                 <div id="result-content" class="prose max-w-none leading-relaxed"></div>
