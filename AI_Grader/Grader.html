@@ -247,16 +247,19 @@
                     </div>
                 </div>
                 
-                <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
-                    <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%;">Advanced Options</button>
-                    <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
-                        <label for="customApiKeyInput" style="font-size: 0.9rem; display: block; margin-bottom: 8px;">Custom API Key (optional, not stored)</label>
-                        <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
-                        <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
-                        <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
+            <div class="advanced-options-container" style="width: 100%; margin-top: 25px;">
+                <button id="toggleAdvancedButton" class="file-input-label" style="width: 100%;">Advanced Options</button>
+                <div id="advancedOptions" class="hidden" style="width: 100%; padding: 15px; border: 1px solid var(--card-bg); border-radius: 8px; margin-top: 10px; background-color: var(--bg-primary);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label for="customApiKeyInput" style="font-size: 0.9rem;">Custom API Key (optional, not stored)</label>
+                        <span for="customApiKeyInput" style="font-size: 0.9rem;">Get your Gemini API key <a target="_blank" style="color: cyan;" href="https://aistudio.google.com/u/1/apikey?pli=1">here</a></span>
                     </div>
+                    <input type="password" id="customApiKeyInput" placeholder="Enter your key to override the default" style="width: 100%; padding: 10px; background-color: var(--card-bg); color: var(--text-primary); border: 1px solid var(--accent); border-radius: 6px;">
+                    <button id="saveApiKeyButton" class="nav-button" style="width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 10px;">Set Key for Session</button>
+                    <p id="apiKeyMessage" style="font-size: 0.8rem; margin-top: 8px; color: var(--accent); height: 1em;"></p>
                 </div>
             </div>
+
 
             <div id="action-area" class="mt-6 space-y-4">
                 <button id="grade-button" class="w-full py-3">Grade Assignment</button>
