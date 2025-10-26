@@ -1,7 +1,10 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
+# --- NEW: Import the specific WebshareProxyConfig class ---
+from youtube_transcript_api.proxies import WebshareProxyConfig
 import json
+import os # --- NEW: Import the 'os' module to access environment variables ---
 
 class handler(BaseHTTPRequestHandler):
 
@@ -17,19 +20,33 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # --- FINAL STRATEGY: Direct request using the proven instance method ---
-            print(f"Fetching transcript for video_id: {video_id} directly (no proxy).")
+            # --- 1. Securely get Webshare credentials from Environment Variables ---
+            webshare_username = os.environ.get('WEBSHARE_USERNAME')
+            webshare_password = os.environ.get('WEBSHARE_PASSWORD')
 
-            # 1. Create an instance of the API client.
-            api = YouTubeTranscriptApi()
+            if not webshare_username or not webshare_password:
+                raise Exception("Webshare credentials are not configured on the server. Please set WEBSHARE_USERNAME and WEBSHARE_PASSWORD environment variables.")
 
-            # 2. Call the .fetch() method on the instance.
+            print("Attempting to fetch transcript using Webshare authenticated proxy...")
+
+            # --- 2. Configure the API to use your Webshare account ---
+            # This is much simpler. No more loops or fetching lists.
+            proxy_config = WebshareProxyConfig(
+                proxy_username=webshare_username,
+                proxy_password=webshare_password
+            )
+            
+            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+            
+            # --- 3. Fetch the transcript ---
+            # The library will handle rotating through your 10 Webshare proxies automatically.
             transcript_list = api.fetch(video_id)
 
             if not transcript_list:
                 raise Exception("Failed to retrieve transcript. The video may not have one or it might be disabled.")
 
-            # 3. Process the result using .text, which we know is correct for .fetch().
+            # --- 4. Process and Return the Transcript ---
+            # Use .text, which we know is correct for the .fetch() method.
             full_transcript = " ".join([segment.text for segment in transcript_list])
 
             self.send_response(200)
@@ -43,11 +60,6 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            
-            error_message = str(e)
-            if 'No transcript found' in error_message:
-                error_message = "No transcript found for this video. It might be disabled or in a language that is not supported."
-            
-            self.wfile.write(json.dumps({'error': f'An error occurred: {error_message}'}).encode('utf-8'))
+            self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
             
         return
