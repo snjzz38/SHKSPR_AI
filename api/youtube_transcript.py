@@ -8,7 +8,7 @@ import requests
 import random
 
 # The API URL for fetching a list of fresh proxies from Geonode
-GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc"
+GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=50&page=1&sort_by=lastChecked&sort_type=desc&speed=fast,medium"
 
 class handler(BaseHTTPRequestHandler):
 
