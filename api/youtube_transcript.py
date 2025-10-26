@@ -1,10 +1,11 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
-# --- NEW: Import the specific WebshareProxyConfig class ---
-from youtube_transcript_api.proxies import WebshareProxyConfig
+from youtube_transcript_api.proxies import GenericProxyConfig # We use the generic config now
 import json
-import os # --- NEW: Import the 'os' module to access environment variables ---
+import os
+import requests
+import random
 
 class handler(BaseHTTPRequestHandler):
 
@@ -13,41 +14,67 @@ class handler(BaseHTTPRequestHandler):
         video_id = query_components.get('video_id', [None])[0]
 
         if not video_id:
-            self.send_response(400)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
+            # ... (error handling)
             return
 
         try:
-            # --- 1. Securely get Webshare credentials from Environment Variables ---
+            # --- 1. Securely get ALL Webshare credentials from Environment Variables ---
             webshare_username = os.environ.get('WEBSHARE_USERNAME')
             webshare_password = os.environ.get('WEBSHARE_PASSWORD')
+            webshare_api_key = os.environ.get('WEBSHARE_API_KEY')
 
-            if not webshare_username or not webshare_password:
-                raise Exception("Webshare credentials are not configured on the server. Please set WEBSHARE_USERNAME and WEBSHARE_PASSWORD environment variables.")
+            if not all([webshare_username, webshare_password, webshare_api_key]):
+                raise Exception("Webshare credentials or API key are not configured on the server.")
 
-            print("Attempting to fetch transcript using Webshare authenticated proxy...")
-
-            # --- 2. Configure the API to use your Webshare account ---
-            # This is much simpler. No more loops or fetching lists.
-            proxy_config = WebshareProxyConfig(
-                proxy_username=webshare_username,
-                proxy_password=webshare_password
-            )
+            # --- 2. Fetch your personal proxy list directly from the Webshare API ---
+            print("Fetching personal proxy list from Webshare API...")
+            api_url = "https://proxy.webshare.io/api/v2/proxy_list/"
+            headers = {"Authorization": f"Token {webshare_api_key}"}
+            response = requests.get(api_url, headers=headers, timeout=10)
+            response.raise_for_status()
             
-            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+            proxy_data = response.json().get('results', [])
+            if not proxy_data:
+                raise Exception("Webshare API did not return any proxies.")
+
+            # --- 3. Manually construct the fully authenticated proxy URLs ---
+            authenticated_proxies = []
+            for proxy in proxy_data:
+                ip = proxy.get('proxy_address')
+                port = proxy.get('ports', {}).get('http')
+                if ip and port and proxy.get('valid'):
+                    # This is the standard format: http://user:pass@host:port
+                    url = f"http://{webshare_username}:{webshare_password}@{ip}:{port}"
+                    authenticated_proxies.append(url)
             
-            # --- 3. Fetch the transcript ---
-            # The library will handle rotating through your 10 Webshare proxies automatically.
-            transcript_list = api.fetch(video_id)
+            if not authenticated_proxies:
+                raise Exception("Could not construct any valid authenticated proxy URLs.")
 
-            if not transcript_list:
-                raise Exception("Failed to retrieve transcript. The video may not have one or it might be disabled.")
+            print(f"Found {len(authenticated_proxies)} personal proxies. Shuffling and testing...")
+            random.shuffle(authenticated_proxies)
 
-            # --- 4. Process and Return the Transcript ---
-            # Use .text, which we know is correct for the .fetch() method.
-            full_transcript = " ".join([segment.text for segment in transcript_list])
+            # --- 4. Try each manually authenticated proxy ---
+            transcript_data = None
+            for i, proxy_url in enumerate(authenticated_proxies):
+                print(f"Attempting proxy {i+1}/{len(authenticated_proxies)}")
+                try:
+                    # Use the GenericProxyConfig with our manually built URL
+                    proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
+                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
+                    transcript_list = api.fetch(video_id)
+                    
+                    transcript_data = transcript_list
+                    print(f"Proxy successful!")
+                    break
+                except Exception as e:
+                    print(f"Proxy attempt failed: {e}")
+                    continue
+
+            if not transcript_data:
+                raise Exception("All personal Webshare proxies failed. Please check their status in the Webshare dashboard.")
+
+            # --- 5. Process and Return the Transcript ---
+            full_transcript = " ".join([segment.text for segment in transcript_data])
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
