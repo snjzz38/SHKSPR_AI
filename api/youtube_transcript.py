@@ -1,4 +1,13 @@
-GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=50&page=1&sort_by=lastChecked&sort_type=desc"
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
+import json
+import requests
+import random
+
+# Fetch a smaller, more manageable number of proxies to avoid Vercel's 10-second timeout.
+GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=30&page=1&sort_by=lastChecked&sort_type=desc"
 
 class handler(BaseHTTPRequestHandler):
 
@@ -8,11 +17,13 @@ class handler(BaseHTTPRequestHandler):
 
         if not video_id:
             self.send_response(400)
-            # ... (rest of the error handling)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
         try:
-            # Fetch and Filter Proxies (No changes here from the last working version)
+            # 1. Fetch and Filter Proxies
             print(f"Fetching proxy list from Geonode API...")
             response = requests.get(GEONODE_API_URL, timeout=10)
             response.raise_for_status()
@@ -45,24 +56,19 @@ class handler(BaseHTTPRequestHandler):
             print(f"Found {len(socks_proxies)} SOCKS proxies. Shuffling and testing...")
             random.shuffle(socks_proxies)
 
+            # 2. Try Each Proxy Until One Succeeds
             transcript_data = None
             last_error = None
 
             for i, proxy_url in enumerate(socks_proxies):
                 print(f"Attempting proxy {i+1}/{len(socks_proxies)}: {proxy_url}")
                 try:
+                    # CORRECTED CODE: Removed the invalid http_client_options argument
                     proxy_config = GenericProxyConfig(
                         http_url=proxy_url,
                         https_url=proxy_url
                     )
-                    
-                    # 2. CRITICAL FIX: Add a timeout to the API call itself.
-                    # If a proxy doesn't respond in 5 seconds, we give up and move on.
-                    # This prevents the entire script from getting stuck on one bad proxy.
-                    api = YouTubeTranscriptApi(
-                        proxy_config=proxy_config,
-                        http_client_options={'timeout': 5} # 5-second timeout
-                    )
+                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
                     
                     transcript_list = api.fetch(video_id)
                     
@@ -72,20 +78,13 @@ class handler(BaseHTTPRequestHandler):
 
                 except Exception as e:
                     last_error = str(e)
-                    # This is now expected, so we don't print the full error unless debugging
-                    print(f"Proxy {proxy_url} failed (likely timeout).")
+                    print(f"Proxy {proxy_url} failed.")
                     continue
 
             if not transcript_data:
-                error_message = f"All {len(socks_proxies)} proxies failed within the time limit."
-                if last_error:
-                    if "timed out" in last_error or "Connection refused" in last_error:
-                         error_message += " Most proxies were unreachable or too slow."
-                    else:
-                         error_message += f" Last error: {last_error}"
-                raise Exception(error_message)
+                raise Exception(f"All {len(socks_proxies)} proxies failed. The video may not have a transcript or the proxies may be blocked.")
 
-            # Process and Return the Transcript
+            # 3. Process and Return the Transcript
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
             self.send_response(200)
