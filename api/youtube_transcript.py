@@ -1,13 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import GenericProxyConfig
 import json
-import requests
-import random
-
-# Using the superior ProxyScrape API source
-PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=socks4,socks5&proxy_format=protocolipport&format=text&anonymity=Elite,Anonymous&timeout=220"
 
 class handler(BaseHTTPRequestHandler):
 
@@ -23,57 +17,20 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # 1. Fetch the pre-filtered, high-speed proxy list
-            print(f"Fetching high-speed proxy list from ProxyScrape API...")
-            response = requests.get(PROXY_API_URL, timeout=10)
-            response.raise_for_status()
-            
-            proxy_list_text = response.text
-            socks_proxies = [line.strip() for line in proxy_list_text.split('\n') if line.strip()]
-            
-            if not socks_proxies:
-                raise Exception("ProxyScrape API did not return any proxies. The service may be temporarily down.")
+            # --- FINAL STRATEGY: Direct request using the proven instance method ---
+            print(f"Fetching transcript for video_id: {video_id} directly (no proxy).")
 
-            print(f"Found {len(socks_proxies)} high-speed SOCKS proxies. Shuffling and testing...")
-            random.shuffle(socks_proxies)
+            # 1. Create an instance of the API client.
+            api = YouTubeTranscriptApi()
 
-            # 2. Try Each Proxy
-            transcript_data = None
-            last_error = None
+            # 2. Call the .fetch() method on the instance.
+            transcript_list = api.fetch(video_id)
 
-            for i, proxy_url in enumerate(socks_proxies):
-                if i >= 30:
-                    print("Tested 30 proxies, stopping to avoid timeout.")
-                    break
-                
-                print(f"Attempting proxy {i+1}/{len(socks_proxies)}: {proxy_url}")
-                try:
-                    proxy_config = GenericProxyConfig(
-                        http_url=proxy_url,
-                        https_url=proxy_url
-                    )
-                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
-                    
-                    transcript_list = api.fetch(video_id)
-                    
-                    transcript_data = transcript_list
-                    print(f"Proxy successful: {proxy_url}")
-                    break
+            if not transcript_list:
+                raise Exception("Failed to retrieve transcript. The video may not have one or it might be disabled.")
 
-                except Exception as e:
-                    last_error = str(e)
-                    print(f"Proxy {proxy_url} failed.")
-                    continue
-
-            if not transcript_data:
-                raise Exception(f"All {len(socks_proxies)} high-speed proxies failed. The video may not have a transcript or YouTube may be temporarily blocking proxies.")
-
-            # 3. Process and Return the Transcript
-            #
-            # --- THIS IS THE CORRECTED LINE ---
-            # Use .text (attribute access) instead of ['text'] (subscript/key access)
-            #
-            full_transcript = " ".join([segment.text for segment in transcript_data])
+            # 3. Process the result using .text, which we know is correct for .fetch().
+            full_transcript = " ".join([segment.text for segment in transcript_list])
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -86,6 +43,11 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps({'error': f'An error occurred: {str(e)}'}).encode('utf-8'))
+            
+            error_message = str(e)
+            if 'No transcript found' in error_message:
+                error_message = "No transcript found for this video. It might be disabled or in a language that is not supported."
+            
+            self.wfile.write(json.dumps({'error': f'An error occurred: {error_message}'}).encode('utf-8'))
             
         return
