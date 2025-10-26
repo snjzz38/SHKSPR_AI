@@ -63,7 +63,6 @@ class handler(BaseHTTPRequestHandler):
             for i, proxy_url in enumerate(socks_proxies):
                 print(f"Attempting proxy {i+1}/{len(socks_proxies)}: {proxy_url}")
                 try:
-                    # CORRECTED CODE: Removed the invalid http_client_options argument
                     proxy_config = GenericProxyConfig(
                         http_url=proxy_url,
                         https_url=proxy_url
@@ -85,7 +84,9 @@ class handler(BaseHTTPRequestHandler):
                 raise Exception(f"All {len(socks_proxies)} proxies failed. The video may not have a transcript or the proxies may be blocked.")
 
             # 3. Process and Return the Transcript
+            # CORRECTED LINE: Use .text attribute access instead of ['text']
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
+
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
