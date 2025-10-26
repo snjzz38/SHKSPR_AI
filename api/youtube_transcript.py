@@ -6,11 +6,7 @@ import json
 import requests
 import random
 
-# NEW, SUPERIOR PROXY SOURCE: ProxyScrape
-# - Filters for SOCKS4/5 protocols.
-# - Filters for high-anonymity proxies.
-# - Filters for proxies with a timeout of less than ~2.2 seconds (2218ms). This is the key improvement.
-# - Returns a simple text list, which is fast to parse.
+# Using the superior ProxyScrape API source
 PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=socks4,socks5&proxy_format=protocolipport&format=text&anonymity=Elite,Anonymous&timeout=2218"
 
 class handler(BaseHTTPRequestHandler):
@@ -32,10 +28,7 @@ class handler(BaseHTTPRequestHandler):
             response = requests.get(PROXY_API_URL, timeout=10)
             response.raise_for_status()
             
-            # The response is plain text, with one proxy per line.
             proxy_list_text = response.text
-            
-            # Split the text into a list and filter out any empty lines.
             socks_proxies = [line.strip() for line in proxy_list_text.split('\n') if line.strip()]
             
             if not socks_proxies:
@@ -49,7 +42,6 @@ class handler(BaseHTTPRequestHandler):
             last_error = None
 
             for i, proxy_url in enumerate(socks_proxies):
-                # We only try a maximum of 30 proxies to be safe with the timeout.
                 if i >= 30:
                     print("Tested 30 proxies, stopping to avoid timeout.")
                     break
@@ -77,7 +69,11 @@ class handler(BaseHTTPRequestHandler):
                 raise Exception(f"All {len(socks_proxies)} high-speed proxies failed. The video may not have a transcript or YouTube may be temporarily blocking proxies.")
 
             # 3. Process and Return the Transcript
-            full_transcript = " ".join([segment['text'] for segment in transcript_data])
+            #
+            # --- THIS IS THE CORRECTED LINE ---
+            # Use .text (attribute access) instead of ['text'] (subscript/key access)
+            #
+            full_transcript = " ".join([segment.text for segment in transcript_data])
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
