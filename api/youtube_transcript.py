@@ -6,8 +6,12 @@ import json
 import requests
 import random
 
-# Fetch a smaller, more manageable number of proxies to avoid Vercel's 10-second timeout.
-GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=30&page=1&sort_by=lastChecked&sort_type=desc"
+# NEW, SUPERIOR PROXY SOURCE: ProxyScrape
+# - Filters for SOCKS4/5 protocols.
+# - Filters for high-anonymity proxies.
+# - Filters for proxies with a timeout of less than ~2.2 seconds (2218ms). This is the key improvement.
+# - Returns a simple text list, which is fast to parse.
+PROXY_API_URL = "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=socks4,socks5&proxy_format=protocolipport&format=text&anonymity=Elite,Anonymous&timeout=2218"
 
 class handler(BaseHTTPRequestHandler):
 
@@ -23,44 +27,33 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # 1. Fetch and Filter Proxies
-            print(f"Fetching proxy list from Geonode API...")
-            response = requests.get(GEONODE_API_URL, timeout=10)
+            # 1. Fetch the pre-filtered, high-speed proxy list
+            print(f"Fetching high-speed proxy list from ProxyScrape API...")
+            response = requests.get(PROXY_API_URL, timeout=10)
             response.raise_for_status()
             
-            api_data = response.json()
-            proxy_list_raw = api_data.get('data', [])
+            # The response is plain text, with one proxy per line.
+            proxy_list_text = response.text
             
-            if not proxy_list_raw:
-                raise Exception("API did not return any proxies.")
-
-            socks_proxies = []
-            for proxy_data in proxy_list_raw:
-                protocols = proxy_data.get('protocols', [])
-                ip = proxy_data.get('ip')
-                port = proxy_data.get('port')
-
-                proxy_protocol = None
-                if 'socks5' in protocols:
-                    proxy_protocol = 'socks5'
-                elif 'socks4' in protocols:
-                    proxy_protocol = 'socks4'
-
-                if proxy_protocol and ip and port:
-                    formatted_proxy = f"{proxy_protocol}://{ip}:{port}"
-                    socks_proxies.append(formatted_proxy)
+            # Split the text into a list and filter out any empty lines.
+            socks_proxies = [line.strip() for line in proxy_list_text.split('\n') if line.strip()]
             
             if not socks_proxies:
-                raise Exception("No SOCKS4/SOCKS5 proxies found in the API response.")
+                raise Exception("ProxyScrape API did not return any proxies. The service may be temporarily down.")
 
-            print(f"Found {len(socks_proxies)} SOCKS proxies. Shuffling and testing...")
+            print(f"Found {len(socks_proxies)} high-speed SOCKS proxies. Shuffling and testing...")
             random.shuffle(socks_proxies)
 
-            # 2. Try Each Proxy Until One Succeeds
+            # 2. Try Each Proxy
             transcript_data = None
             last_error = None
 
             for i, proxy_url in enumerate(socks_proxies):
+                # We only try a maximum of 30 proxies to be safe with the timeout.
+                if i >= 30:
+                    print("Tested 30 proxies, stopping to avoid timeout.")
+                    break
+                
                 print(f"Attempting proxy {i+1}/{len(socks_proxies)}: {proxy_url}")
                 try:
                     proxy_config = GenericProxyConfig(
@@ -81,12 +74,10 @@ class handler(BaseHTTPRequestHandler):
                     continue
 
             if not transcript_data:
-                raise Exception(f"All {len(socks_proxies)} proxies failed. The video may not have a transcript or the proxies may be blocked.")
+                raise Exception(f"All {len(socks_proxies)} high-speed proxies failed. The video may not have a transcript or YouTube may be temporarily blocking proxies.")
 
             # 3. Process and Return the Transcript
-            # CORRECTED LINE: Use .text attribute access instead of ['text']
             full_transcript = " ".join([segment['text'] for segment in transcript_data])
-
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
