@@ -1,18 +1,13 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import GenericProxyConfig
 import json
+import requests # We need this to fetch the proxy list
 import random
 
-# --- A manually curated list of promising proxies from free-proxy-list.net ---
-# You can add more good ones you find here.
-PROXY_LIST = [
-    "http://31.59.20.176:6754",
-    "http://142.111.48.253:7030"
-    # Add another proxy here, e.g., "http://IP_ADDRESS:PORT"
-    # Add a third one here...
-]
+# The API URL for fetching a list of fresh proxies from Geonode
+# This URL fetches 500 proxies, sorted by the last time they were checked
+GEONODE_API_URL = "https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc"
 
 class handler(BaseHTTPRequestHandler):
 
@@ -27,42 +22,80 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
-        transcript_data = None
-        last_error = None
-
         try:
-            # Shuffle our curated list of proxies
-            random.shuffle(PROXY_LIST)
+            # --- 1. Fetch Proxies Dynamically from the API ---
+            print(f"Fetching proxy list from Geonode API...")
+            response = requests.get(GEONODE_API_URL, timeout=10) # 10-second timeout
+            response.raise_for_status() # Raise an exception for bad status codes (like 404, 500)
+            
+            api_data = response.json()
+            proxy_list_raw = api_data.get('data', [])
+            
+            if not proxy_list_raw:
+                raise Exception("API did not return any proxies.")
 
-            # Try every proxy in our list
-            for proxy_url in PROXY_LIST:
+            # --- 2. Filter for SOCKS4/SOCKS5 Proxies and Format Them ---
+            socks_proxies = []
+            for proxy_data in proxy_list_raw:
+                # We only care about proxies that support socks4 or socks5
+                protocols = proxy_data.get('protocols', [])
+                ip = proxy_data.get('ip')
+                port = proxy_data.get('port')
+
+                # Find the first SOCKS protocol in the list for that proxy
+                proxy_protocol = None
+                if 'socks5' in protocols:
+                    proxy_protocol = 'socks5'
+                elif 'socks4' in protocols:
+                    proxy_protocol = 'socks4'
+
+                if proxy_protocol and ip and port:
+                    # Format for the requests library: "protocol://ip:port"
+                    formatted_proxy = f"{proxy_protocol}://{ip}:{port}"
+                    socks_proxies.append(formatted_proxy)
+            
+            if not socks_proxies:
+                raise Exception("No SOCKS4/SOCKS5 proxies found in the API response.")
+
+            print(f"Found {len(socks_proxies)} SOCKS proxies. Shuffling and testing...")
+            random.shuffle(socks_proxies)
+
+            # --- 3. Try Each Proxy Until One Succeeds ---
+            transcript_data = None
+            last_error = None
+
+            for i, proxy_url in enumerate(socks_proxies):
+                print(f"Attempting proxy {i+1}/{len(socks_proxies)}: {proxy_url}")
                 try:
-                    clean_proxy_url = proxy_url.strip()
-                    if not clean_proxy_url:
-                        continue
+                    # The youtube_transcript_api uses the 'requests' library, which
+                    # expects the proxy in a dictionary format.
+                    proxies_dict = {
+                        'http': proxy_url,
+                        'https': proxy_url
+                    }
                     
-                    print(f"Attempting to use proxy: {clean_proxy_url}")
-
-                    proxy_config = GenericProxyConfig(
-                        http_url=clean_proxy_url,
-                        https_url=clean_proxy_url
-                    )
-                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
+                    # Fetch the transcript using the current proxy
+                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies_dict)
                     
-                    transcript_data = api.fetch(video_id)
-                    
-                    print("Proxy successful!")
-                    break 
+                    # If we get here, the proxy worked!
+                    transcript_data = transcript_list
+                    print(f"Proxy successful: {proxy_url}")
+                    break # Exit the loop since we found a working proxy
 
                 except Exception as e:
                     last_error = str(e)
-                    print(f"Proxy {clean_proxy_url} failed: {last_error}")
+                    print(f"Proxy {proxy_url} failed: {last_error}")
+                    # Continue to the next proxy in the list
                     continue
 
             if not transcript_data:
-                raise Exception(f"All curated proxies failed. Last error: {last_error}" if last_error else "Proxy list is empty.")
+                error_message = f"All {len(socks_proxies)} proxies failed."
+                if last_error:
+                    error_message += f" Last error: {last_error}"
+                raise Exception(error_message)
 
-            full_transcript = " ".join([segment.text for segment in transcript_data])
+            # --- 4. Process and Return the Transcript ---
+            full_transcript = " ".join([segment['text'] for segment in transcript_data])
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
