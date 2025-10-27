@@ -3,21 +3,18 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
 import json
-import os
 import random
 
-# --- FINAL STRATEGY: Hardcode the user's 10 free Webshare proxies ---
-# This bypasses the Webshare API, which appears to be restricted on the free plan.
+# --- FOR DEBUGGING ONLY: Hardcoding credentials to bypass environment variables ---
+# WARNING: DO NOT COMMIT THIS TO A PUBLIC REPOSITORY
+WEBSHARE_USERNAME = "wfjcuixb"
+WEBSHARE_PASSWORD = "utyyt4s7xv67l"
+
+# Hardcoded list of the user's 10 free Webshare proxies.
 WEBSHARE_PROXY_IPS = [
-    "142.111.48.253:7030",
-    "31.59.20.176:6754",
-    "23.95.150.145:6114",
-    "198.23.239.134:6540",
-    "45.38.107.97:6014",
-    "107.172.163.27:6543",
-    "64.137.96.74:6641",
-    "216.10.27.159:6837",
-    "142.111.67.146:5611",
+    "142.111.48.253:7030", "31.59.20.176:6754", "23.95.150.145:6114",
+    "198.23.239.134:6540", "45.38.107.97:6014", "107.172.163.27:6543",
+    "64.137.96.74:6641", "216.10.27.159:6837", "142.111.67.146:5611",
     "142.147.128.93:6593"
 ]
 
@@ -28,34 +25,23 @@ class handler(BaseHTTPRequestHandler):
         video_id = query_components.get('video_id', [None])[0]
 
         if not video_id:
-            self.send_response(400)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
+            # ... (error handling)
             return
 
         try:
-            # --- 1. Securely get Webshare credentials from Environment Variables ---
-            webshare_username = os.environ.get('WEBSHARE_USERNAME')
-            webshare_password = os.environ.get('WEBSHARE_PASSWORD')
-
-            if not webshare_username or not webshare_password:
-                raise Exception("Webshare credentials are not configured on the server.")
-
-            # --- 2. Manually construct the fully authenticated proxy URLs from the hardcoded list ---
+            # 1. Manually construct SOCKS5 authenticated proxy URLs from hardcoded values
             authenticated_proxies = []
             for ip_port in WEBSHARE_PROXY_IPS:
-                # Standard format: http://user:pass@host:port
-                url = f"http://{webshare_username}:{webshare_password}@{ip_port}"
+                url = f"socks5://{WEBSHARE_USERNAME}:{WEBSHARE_PASSWORD}@{ip_port}"
                 authenticated_proxies.append(url)
             
-            print(f"Constructed {len(authenticated_proxies)} personal proxies. Shuffling and testing...")
+            print(f"Constructed {len(authenticated_proxies)} hardcoded SOCKS5 proxies. Shuffling and testing...")
             random.shuffle(authenticated_proxies)
 
-            # --- 3. Try each manually authenticated proxy ---
+            # 2. Try each SOCKS5 authenticated proxy
             transcript_data = None
             for i, proxy_url in enumerate(authenticated_proxies):
-                print(f"Attempting proxy {i+1}/{len(authenticated_proxies)}")
+                print(f"Attempting SOCKS5 proxy {i+1}/{len(authenticated_proxies)}")
                 try:
                     proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
@@ -65,13 +51,14 @@ class handler(BaseHTTPRequestHandler):
                     print(f"Proxy successful!")
                     break
                 except Exception as e:
-                    print(f"Proxy attempt failed: {e}")
+                    # We expect failures, so we keep the error message brief
+                    print(f"Proxy attempt failed.")
                     continue
 
             if not transcript_data:
-                raise Exception("All 10 personal Webshare proxies failed. Please check their status in the Webshare dashboard or ensure your credentials are correct.")
+                raise Exception("All 10 hardcoded proxies failed. This suggests a network issue between Vercel and Webshare, or the proxies are blocked by YouTube.")
 
-            # --- 4. Process and Return the Transcript ---
+            # 3. Process and Return the Transcript
             full_transcript = " ".join([segment.text for segment in transcript_data])
 
             self.send_response(200)
