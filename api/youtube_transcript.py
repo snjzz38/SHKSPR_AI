@@ -4,8 +4,22 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import GenericProxyConfig
 import json
 import os
-import requests
 import random
+
+# --- FINAL STRATEGY: Hardcode the user's 10 free Webshare proxies ---
+# This bypasses the Webshare API, which appears to be restricted on the free plan.
+WEBSHARE_PROXY_IPS = [
+    "142.111.48.253:7030",
+    "31.59.20.176:6754",
+    "23.95.150.145:6114",
+    "198.23.239.134:6540",
+    "45.38.107.97:6014",
+    "107.172.163.27:6543",
+    "64.137.96.74:6641",
+    "216.10.27.159:6837",
+    "142.111.67.146:5611",
+    "142.147.128.93:6593"
+]
 
 class handler(BaseHTTPRequestHandler):
 
@@ -21,44 +35,24 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # --- 1. Securely get ALL Webshare credentials from Environment Variables ---
+            # --- 1. Securely get Webshare credentials from Environment Variables ---
             webshare_username = os.environ.get('WEBSHARE_USERNAME')
             webshare_password = os.environ.get('WEBSHARE_PASSWORD')
-            webshare_api_key = os.environ.get('WEBSHARE_API_KEY')
 
-            if not all([webshare_username, webshare_password, webshare_api_key]):
-                raise Exception("Webshare credentials or API key are not configured on the server.")
+            if not webshare_username or not webshare_password:
+                raise Exception("Webshare credentials are not configured on the server.")
 
-            # --- 2. Fetch your personal proxy list from the CORRECT Webshare API URL ---
-            print("Fetching personal proxy list from Webshare API...")
-            #
-            # --- THIS IS THE CORRECTED LINE ---
-            #
-            api_url = "https://proxy.webshare.io/api/v2/proxy/list/"
-            headers = {"Authorization": f"Token {webshare_api_key}"}
-            response = requests.get(api_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            
-            proxy_data = response.json().get('results', [])
-            if not proxy_data:
-                raise Exception("Webshare API did not return any proxies.")
-
-            # --- 3. Manually construct the fully authenticated proxy URLs ---
+            # --- 2. Manually construct the fully authenticated proxy URLs from the hardcoded list ---
             authenticated_proxies = []
-            for proxy in proxy_data:
-                ip = proxy.get('proxy_address')
-                port = proxy.get('ports', {}).get('http')
-                if ip and port and proxy.get('valid'):
-                    url = f"http://{webshare_username}:{webshare_password}@{ip}:{port}"
-                    authenticated_proxies.append(url)
+            for ip_port in WEBSHARE_PROXY_IPS:
+                # Standard format: http://user:pass@host:port
+                url = f"http://{webshare_username}:{webshare_password}@{ip_port}"
+                authenticated_proxies.append(url)
             
-            if not authenticated_proxies:
-                raise Exception("Could not construct any valid authenticated proxy URLs.")
-
-            print(f"Found {len(authenticated_proxies)} personal proxies. Shuffling and testing...")
+            print(f"Constructed {len(authenticated_proxies)} personal proxies. Shuffling and testing...")
             random.shuffle(authenticated_proxies)
 
-            # --- 4. Try each manually authenticated proxy ---
+            # --- 3. Try each manually authenticated proxy ---
             transcript_data = None
             for i, proxy_url in enumerate(authenticated_proxies):
                 print(f"Attempting proxy {i+1}/{len(authenticated_proxies)}")
@@ -75,9 +69,9 @@ class handler(BaseHTTPRequestHandler):
                     continue
 
             if not transcript_data:
-                raise Exception("All personal Webshare proxies failed. Please check their status in the Webshare dashboard.")
+                raise Exception("All 10 personal Webshare proxies failed. Please check their status in the Webshare dashboard or ensure your credentials are correct.")
 
-            # --- 5. Process and Return the Transcript ---
+            # --- 4. Process and Return the Transcript ---
             full_transcript = " ".join([segment.text for segment in transcript_data])
 
             self.send_response(200)
