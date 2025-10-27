@@ -15,15 +15,13 @@ PLATINUM_PROXY_LIST = [
     "103.118.175.165:8199"
 ]
 
-# --- Helper function for parallel processing ---
+# Helper function for parallel processing (no changes needed here)
 def fetch_with_proxy(proxy_url, video_id):
-    """Attempts to fetch a transcript with a single proxy. Returns transcript if successful, None otherwise."""
     try:
-        print(f"Attempting proxy: {proxy_url.split('@')[1]}") # Print without credentials
+        # We don't print here to keep the logs clean during batch processing
         proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
         api = YouTubeTranscriptApi(proxy_config=proxy_config)
         transcript_list = api.fetch(video_id)
-        print(f"Proxy successful: {proxy_url.split('@')[1]}")
         return transcript_list
     except Exception:
         return None
@@ -46,23 +44,30 @@ class handler(BaseHTTPRequestHandler):
             random.shuffle(formatted_proxies)
 
             transcript_data = None
-            # --- NEW: Parallel Processing Logic ---
-            # We will try up to 8 proxies at the same time.
-            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-                # Create a future for each proxy task
-                future_to_proxy = {executor.submit(fetch_with_proxy, url, video_id): url for url in formatted_proxies}
+            
+            # --- NEW: Hybrid Batch Processing Logic ---
+            BATCH_SIZE = 4 # Number of proxies to test in each parallel batch
+            proxy_batches = [formatted_proxies[i:i + BATCH_SIZE] for i in range(0, len(formatted_proxies), BATCH_SIZE)]
+
+            for i, batch in enumerate(proxy_batches):
+                print(f"--- Testing Batch {i+1}/{len(proxy_batches)} ---")
+                with concurrent.futures.ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
+                    future_to_proxy = {executor.submit(fetch_with_proxy, url, video_id): url for url in batch}
+                    
+                    for future in concurrent.futures.as_completed(future_to_proxy):
+                        result = future.result()
+                        if result:
+                            proxy_url = future_to_proxy[future]
+                            print(f"Success found in batch {i+1}! Proxy: {proxy_url.split('@')[1]}")
+                            transcript_data = result
+                            executor.shutdown(wait=False, cancel_futures=True)
+                            break # Exit the inner loop
                 
-                # Wait for the first one to complete successfully
-                for future in concurrent.futures.as_completed(future_to_proxy):
-                    result = future.result()
-                    if result:
-                        transcript_data = result
-                        # Once we have a success, we shut down all other waiting tasks.
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        break
+                if transcript_data:
+                    break # Exit the outer loop if we found a result
 
             if not transcript_data:
-                raise Exception("All proxies in your platinum list failed. They may have gone offline. A new list may be needed.")
+                raise Exception("All proxies in all batches failed. The proxies may be offline or YouTube has blocked them. A new list may be needed.")
 
             # --- Process and Return the Transcript ---
             full_transcript = " ".join([segment.text for segment in transcript_data])
