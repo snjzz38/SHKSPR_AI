@@ -6,13 +6,9 @@ import json
 import os
 import random
 
-# Hardcoded list of your 10 free Webshare proxies. This is reliable and fast.
-WEBSHARE_PROXY_IPS = [
-    "142.111.48.253:7030", "31.59.20.176:6754", "23.95.150.145:6114",
-    "198.23.239.134:6540", "45.38.107.97:6014", "107.172.163.27:6543",
-    "64.137.96.74:6641", "216.10.27.159:6837", "142.111.67.146:5611",
-    "142.147.128.93:6593"
-]
+# Your new Oxylabs datacenter proxy entry points
+OXYLABS_HOST = "dc.oxylabs.io"
+OXYLABS_PORTS = ["8001", "8002", "8003", "8004", "8005"]
 
 class handler(BaseHTTPRequestHandler):
 
@@ -21,33 +17,37 @@ class handler(BaseHTTPRequestHandler):
         video_id = query_components.get('video_id', [None])[0]
 
         if not video_id:
-            # ... (error handling)
+            self.send_response(400)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
         try:
-            # 1. Securely get Webshare credentials from Environment Variables
-            webshare_username = os.environ.get('WEBSHARE_USERNAME')
-            webshare_password = os.environ.get('WEBSHARE_PASSWORD')
+            # 1. Securely get your new Oxylabs credentials from Environment Variables
+            oxylabs_username = os.environ.get('OXYLABS_USERNAME')
+            oxylabs_password = os.environ.get('OXYLABS_PASSWORD')
 
-            if not webshare_username or not webshare_password:
-                raise Exception("Webshare credentials are not configured on the server.")
+            if not oxylabs_username or not oxylabs_password:
+                raise Exception("Oxylabs credentials are not configured on the server. Please set OXYLABS_USERNAME and OXYLABS_PASSWORD environment variables.")
 
-            # 2. Manually construct the fully authenticated SOCKS5 proxy URLs
+            # 2. Construct the specific, authenticated Oxylabs proxy URLs
             authenticated_proxies = []
-            for ip_port in WEBSHARE_PROXY_IPS:
-                # The standard format: socks5://user:pass@host:port
-                url = f"socks5://{webshare_username}:{webshare_password}@{ip_port}"
+            for port in OXYLABS_PORTS:
+                # This format is based on the example you provided:
+                # http://user-USERNAME-country-us:PASSWORD@HOST:PORT
+                # We are using 'us' for United States as a high-quality default.
+                url = f"http://user-{oxylabs_username}-country-us:{oxylabs_password}@{OXYLABS_HOST}:{port}"
                 authenticated_proxies.append(url)
             
-            print(f"Constructed {len(authenticated_proxies)} SOCKS5 proxies. Shuffling and testing...")
+            print(f"Constructed {len(authenticated_proxies)} Oxylabs proxies. Shuffling and testing...")
             random.shuffle(authenticated_proxies)
 
-            # 3. Try each manually authenticated proxy
+            # 3. Try each authenticated Oxylabs proxy
             transcript_data = None
             for i, proxy_url in enumerate(authenticated_proxies):
-                print(f"Attempting SOCKS5 proxy {i+1}/{len(authenticated_proxies)}")
+                print(f"Attempting Oxylabs proxy {i+1}/{len(authenticated_proxies)}")
                 try:
-                    # Use the generic config with our manually built URL
                     proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
                     transcript_list = api.fetch(video_id)
@@ -56,11 +56,11 @@ class handler(BaseHTTPRequestHandler):
                     print(f"Proxy successful!")
                     break
                 except Exception as e:
-                    print(f"Proxy attempt failed.")
+                    print(f"Proxy attempt failed: {e}")
                     continue
 
             if not transcript_data:
-                raise Exception("All 10 personal Webshare proxies failed. This suggests the proxies themselves may be blocked by YouTube, but the connection to them is now working.")
+                raise Exception("All 5 Oxylabs datacenter proxies failed. Please double-check your credentials and ensure your Oxylabs plan is active.")
 
             # 4. Process and Return the Transcript
             full_transcript = " ".join([segment.text for segment in transcript_data])
