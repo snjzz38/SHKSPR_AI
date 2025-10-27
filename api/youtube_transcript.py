@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import GenericProxyConfig # We use the generic config now
+from youtube_transcript_api.proxies import GenericProxyConfig
 import json
 import os
 import requests
@@ -14,7 +14,10 @@ class handler(BaseHTTPRequestHandler):
         video_id = query_components.get('video_id', [None])[0]
 
         if not video_id:
-            # ... (error handling)
+            self.send_response(400)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': 'video_id parameter is required'}).encode('utf-8'))
             return
 
         try:
@@ -26,9 +29,12 @@ class handler(BaseHTTPRequestHandler):
             if not all([webshare_username, webshare_password, webshare_api_key]):
                 raise Exception("Webshare credentials or API key are not configured on the server.")
 
-            # --- 2. Fetch your personal proxy list directly from the Webshare API ---
+            # --- 2. Fetch your personal proxy list from the CORRECT Webshare API URL ---
             print("Fetching personal proxy list from Webshare API...")
-            api_url = "https://proxy.webshare.io/api/v2/proxy_list/"
+            #
+            # --- THIS IS THE CORRECTED LINE ---
+            #
+            api_url = "https://proxy.webshare.io/api/v2/proxy/list/"
             headers = {"Authorization": f"Token {webshare_api_key}"}
             response = requests.get(api_url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -43,7 +49,6 @@ class handler(BaseHTTPRequestHandler):
                 ip = proxy.get('proxy_address')
                 port = proxy.get('ports', {}).get('http')
                 if ip and port and proxy.get('valid'):
-                    # This is the standard format: http://user:pass@host:port
                     url = f"http://{webshare_username}:{webshare_password}@{ip}:{port}"
                     authenticated_proxies.append(url)
             
@@ -58,7 +63,6 @@ class handler(BaseHTTPRequestHandler):
             for i, proxy_url in enumerate(authenticated_proxies):
                 print(f"Attempting proxy {i+1}/{len(authenticated_proxies)}")
                 try:
-                    # Use the GenericProxyConfig with our manually built URL
                     proxy_config = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
                     api = YouTubeTranscriptApi(proxy_config=proxy_config)
                     transcript_list = api.fetch(video_id)
