@@ -7,27 +7,6 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- For rendering Markdown -->
-
-    <!-- MathJax CDN for LaTeX Math Rendering -->
-    <script>
-        MathJax = {
-          tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']]
-          },
-          svg: {
-            fontCache: 'global'
-          }
-        };
-    </script>
-    <script type="text/javascript" id="MathJax-script" async
-      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
-    </script>
-
-    <!-- highlight.js CDN for Code Syntax Highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
         :root {
@@ -337,33 +316,6 @@ async function loadHeader() {
   }
 }
 
-// --- NEW: Corrected rendering pipeline function ---
-function renderContent(element, rawText) {
-    if (!element || typeof rawText !== 'string') return;
-
-    // Step 1: Convert Markdown to HTML.
-    element.innerHTML = marked.parse(rawText);
-
-    // Step 2: Post-process the rendered HTML for Math and Code.
-    try {
-        if (window.MathJax) {
-            window.MathJax.typesetPromise([element]);
-        }
-    } catch (e) {
-        console.error("MathJax typesetting failed:", e);
-    }
-
-    try {
-        if (window.hljs) {
-            element.querySelectorAll('pre code').forEach((block) => {
-                window.hljs.highlightElement(block);
-            });
-        }
-    } catch(e) {
-        console.error("highlight.js failed:", e);
-    }
-}
-
 function initializeStudyGuideApp() {
     const ALL_GEMINI_MODELS = [
       'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
@@ -435,8 +387,7 @@ function initializeStudyGuideApp() {
                 studyGuideMarkdown = savedMarkdown;
                 if (Array.isArray(quizData) && quizData.length > 0) {
                     if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
-                        // --- MODIFIED: Use renderContent on load ---
-                        renderContent(dom.studyGuideContent, studyGuideMarkdown);
+                        dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
                     } else {
                         dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the previous content, but a quiz is available.</p>`;
                     }
@@ -629,8 +580,7 @@ function initializeStudyGuideApp() {
                 }
             });
             
-            // --- MODIFIED: Added guidance for math and code formatting ---
-            const instructionPrompt = `\n\n${instructions ? `Follow these specific instructions for both the guide and the quiz: "${instructions}".` : ''} For any mathematical equations, use LaTeX format (e.g., $...$ or $$...$$). For code snippets, use Markdown code fences. The final output MUST be a single JSON object with two keys: "studyGuide" (containing the Markdown text of the guide) and "quizQuestions" (containing a JSON array of quiz objects). Each quiz object must have 'question', 'answer', 'type' ('multiple_choice', 'true_false', or 'short_answer'), and an 'options' array for multiple_choice. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a comma-separated string of keywords. Be flexible and forgiving: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive". This ensures a user who answers "it's repetitive" is graded correctly. For answers that are a list of items (e.g., "a and e"), provide only the core items separated by a comma (e.g., "a,e").`;
+            const instructionPrompt = `\n\n${instructions ? `Follow these specific instructions for both the guide and the quiz: "${instructions}".` : ''} The final output MUST be a single JSON object with two keys: "studyGuide" (containing the Markdown text of the guide) and "quizQuestions" (containing a JSON array of quiz objects). Each quiz object must have 'question', 'answer', 'type' ('multiple_choice', 'true_false', or 'short_answer'), and an 'options' array for multiple_choice. For 'short_answer', the 'answer' is CRITICAL for automated grading. It MUST be a comma-separated string of keywords. Be flexible and forgiving: include technical terms, synonyms, and simple descriptive words. For example, for a question about "data redundancy", a good answer string would be "Unnecessary repetition,redundant,repetitive". This ensures a user who answers "it's repetitive" is graded correctly. For answers that are a list of items (e.g., "a and e"), provide only the core items separated by a comma (e.g., "a,e").`;
             promptParts.push({ text: instructionPrompt });
             
             const result = await callApiWithRetries({ contents: [{ role: "user", parts: promptParts }] });
@@ -643,8 +593,7 @@ function initializeStudyGuideApp() {
             studyGuideMarkdown = result.studyGuide;
 
             if (studyGuideMarkdown && studyGuideMarkdown.trim() !== '') {
-                // --- MODIFIED: Use renderContent on generation ---
-                renderContent(dom.studyGuideContent, studyGuideMarkdown);
+                dom.studyGuideContent.innerHTML = marked.parse(studyGuideMarkdown);
             } else {
                 dom.studyGuideContent.innerHTML = `<p>A study guide could not be generated from the provided content, but a quiz is available.</p>`;
             }
@@ -926,9 +875,7 @@ function initializeStudyGuideApp() {
     // Initialization
     showInputStep(0);
     updateFileListDisplay();
-    
-    // --- MODIFIED: Defer loading state until all scripts are ready ---
-    window.addEventListener('load', loadState);
+    loadState();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
