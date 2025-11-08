@@ -11,6 +11,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <!-- Marked.js CDN for Markdown rendering -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- MathJax CDN for LaTeX Math Rendering -->
+    <script>
+        MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+
+    <!-- highlight.js CDN for Code Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
     <style>
         /* --- CRITICAL STYLES FOR FOUC PREVENTION --- */
         :root {
@@ -328,6 +349,33 @@
           }
         }
 
+        // --- NEW: Corrected rendering pipeline function ---
+        function renderContent(element, rawText) {
+            if (!element || typeof rawText !== 'string') return;
+
+            // Step 1: Convert Markdown to HTML.
+            element.innerHTML = marked.parse(rawText);
+
+            // Step 2: Post-process the rendered HTML for Math and Code.
+            try {
+                if (window.MathJax) {
+                    window.MathJax.typesetPromise([element]);
+                }
+            } catch (e) {
+                console.error("MathJax typesetting failed:", e);
+            }
+
+            try {
+                if (window.hljs) {
+                    element.querySelectorAll('pre code').forEach((block) => {
+                        window.hljs.highlightElement(block);
+                    });
+                }
+            } catch(e) {
+                console.error("highlight.js failed:", e);
+            }
+        }
+
         function initializeApp() {
             const dom = {
                 steps: [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')],
@@ -422,7 +470,7 @@
             };
             
             function generateSummarizationInstruction(level) {
-                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. Adhere strictly to the specific summarization instruction that follows.";
+                const basePrompt = "You are an expert summarization engine. Your task is to analyze the provided text, which is a transcript of an audio recording or video. Your goal is to distill the core information into a clear, accurate, and easy-to-understand format. For any mathematical equations, use LaTeX format (e.g., $E=mc^2$). For code, use Markdown code fences (e.g., ```python... ```). Adhere strictly to the specific summarization instruction that follows.";
                 let specificInstruction = '';
 
                 switch (level) {
@@ -532,7 +580,7 @@
                         sourceContent = sourceContent.trim();
                         if (!sourceContent) throw new Error('Please enter text or upload a text file.');
                         displayMessage("Summarizing text...", false);
-                        dom.transcribedTextOutput.innerHTML = marked.parse("N/A - Direct text/file input was used.");
+                        renderContent(dom.transcribedTextOutput, "N/A - Direct text/file input was used.");
                         showElement(dom.transcribedTextContainer);
                         promptParts.push({ text: sourceContent });
                     } else if (currentMode === 'youtube') {
@@ -543,7 +591,9 @@
                         displayMessage("Fetching YouTube transcript...", false);
                         sourceContent = await fetchYouTubeTranscript(videoId);
                         if (!sourceContent || sourceContent.trim() === '') throw new Error("Could not fetch transcript for this video.");
-                        dom.transcribedTextOutput.innerHTML = marked.parse(sourceContent);
+                        
+                        renderContent(dom.transcribedTextOutput, sourceContent);
+
                         showElement(dom.transcribedTextContainer);
                         localStorage.setItem('summarizerTranscript', sourceContent);
                         promptParts.push({ text: sourceContent });
@@ -564,7 +614,8 @@
                         sourceContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
                         if (!sourceContent || sourceContent.trim() === '') throw new Error("Failed to process the file(s). They might be empty or unsupported.");
                         
-                        dom.transcribedTextOutput.innerHTML = marked.parse(sourceContent);
+                        renderContent(dom.transcribedTextOutput, sourceContent);
+                        
                         showElement(dom.transcribedTextContainer);
                         localStorage.setItem('summarizerTranscript', sourceContent);
                     }
@@ -579,7 +630,8 @@
 
                     if (!summary || summary.trim() === '') throw new Error("Summarization failed or returned empty.");
 
-                    dom.summaryOutput.innerHTML = marked.parse(summary);
+                    renderContent(dom.summaryOutput, summary);
+
                     showElement(dom.summaryContainer);
                     localStorage.setItem('summarizerSummary', summary);
                     clearMessages();
@@ -693,22 +745,6 @@
                 dom.summaryOutput.innerHTML = '';
             }
 
-            function loadSavedResults() {
-                dom.inputs.text.value = localStorage.getItem('summarizerTextInput') || '';
-                dom.inputs.youtube.value = localStorage.getItem('summarizerYoutubeInput') || '';
-                const savedTranscript = localStorage.getItem('summarizerTranscript');
-                const savedSummary = localStorage.getItem('summarizerSummary');
-
-                if (savedTranscript) {
-                    dom.transcribedTextOutput.innerHTML = marked.parse(savedTranscript);
-                    showElement(dom.transcribedTextContainer);
-                }
-                if (savedSummary) {
-                    dom.summaryOutput.innerHTML = marked.parse(savedSummary);
-                    showElement(dom.summaryContainer);
-                }
-            }
-
             function copyToClipboard(text, buttonElement) {
                 if (!navigator.clipboard) {
                     console.error('Clipboard API not available.');
@@ -759,8 +795,8 @@
 
                 const fileInput = dom.inputs.file;
                 if (currentMode === 'text') { fileInput.accept = ".txt,.pdf,.md"; dom.fileInputLabel.textContent = "Upload Text File(s)"; }
-                else if (currentMode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
-                else if (currentMode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
+                else if (mode === 'image') { fileInput.accept = "image/*"; dom.fileInputLabel.textContent = "Upload Image File(s)"; }
+                else if (mode === 'audio') { fileInput.accept = "audio/*"; dom.fileInputLabel.textContent = "Upload Audio File(s)"; }
 
                 showStep(currentStep);
             }
@@ -816,7 +852,7 @@
             // Initial setup
             updateSummarizationPrompt();
             applyInitialStateUI();
-            loadSavedResults();
+            
             (async () => {
                 displayMessage("Loading API key...");
                 GEMINI_API_KEY = await getApiKeyFromFile();
@@ -828,6 +864,25 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadHeader();
             initializeApp();
+        });
+
+        window.addEventListener('load', () => {
+            const savedTranscript = localStorage.getItem('summarizerTranscript');
+            const savedSummary = localStorage.getItem('summarizerSummary');
+            const transcribedOutput = document.getElementById('transcribedTextOutput');
+            const summaryOutput = document.getElementById('summaryOutput');
+
+            document.getElementById('textInput').value = localStorage.getItem('summarizerTextInput') || '';
+            document.getElementById('youtubeUrlInput').value = localStorage.getItem('summarizerYoutubeInput') || '';
+
+            if (savedTranscript && transcribedOutput) {
+                renderContent(transcribedOutput, savedTranscript);
+                document.getElementById('transcribedTextContainer').classList.remove('hidden');
+            }
+            if (savedSummary && summaryOutput) {
+                renderContent(summaryOutput, savedSummary);
+                document.getElementById('summaryContainer').classList.remove('hidden');
+            }
         });
     </script>
  
