@@ -1,4 +1,3 @@
-// api/documateHumanizer.js
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,13 +8,10 @@ export default async function handler(req, res) {
 
   try {
     const { messages, apiKey } = req.body;
-
-    // Logic: Determine Key
     const activeKey = (apiKey && apiKey.length > 20) ? apiKey : process.env.DOCUMATE_HUMANIZER_1;
 
     if (!activeKey) return res.status(500).json({ error: "Missing Groq API Key." });
 
-    // Execution: Call Groq
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -29,11 +25,9 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
     if (data.error) throw new Error(data.error.message);
 
     return res.status(200).json({ text: data.choices[0].message.content });
-
   } catch (error) {
     return res.status(500).json({ error: `Groq Error: ${error.message}` });
   }
