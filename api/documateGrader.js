@@ -1,6 +1,4 @@
-// api/documateGrader.js
 export default async function handler(req, res) {
-  // Config
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -10,13 +8,10 @@ export default async function handler(req, res) {
 
   try {
     const { parts, apiKey } = req.body;
-
-    // Logic: Determine Key (User > Server)
     const activeKey = (apiKey && apiKey.length > 20) ? apiKey : process.env.DOCUMATE_GEMINI_1;
 
     if (!activeKey) return res.status(500).json({ error: "Missing Gemini API Key." });
 
-    // Execution: Call Google
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${activeKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,12 +19,9 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
     if (data.error) throw new Error(data.error.message);
     
-    // Return just the text to keep payload small
     return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
-
   } catch (error) {
     return res.status(500).json({ error: `Gemini Error: ${error.message}` });
   }
