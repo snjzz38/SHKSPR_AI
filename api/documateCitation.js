@@ -1,4 +1,3 @@
-// api/documateCitation.js
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,29 +8,22 @@ export default async function handler(req, res) {
 
   try {
     const { query } = req.body;
-
-    // Logic: Strictly use Server keys for Search (Cost control)
     const SEARCH_KEY = process.env.DOCUMATE_SEARCH_1;
     const CX = process.env.DOCUMATE_SEARCHID_1;
 
     if (!SEARCH_KEY || !CX) return res.status(500).json({ error: "Server Search Config Missing." });
-    if (!query) return res.status(400).json({ error: "No query provided." });
 
-    // Execution: Call Google Custom Search
-    const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${SEARCH_KEY}&cx=${CX}&q=${encodeURIComponent(query)}&num=10`;
-    const response = await fetch(searchUrl);
+    const response = await fetch(`https://www.googleapis.com/customsearch/v1?key=${SEARCH_KEY}&cx=${CX}&q=${encodeURIComponent(query)}&num=10`);
     const data = await response.json();
 
     if (data.error) throw new Error(data.error.message);
-    if (!data.items) return res.status(200).json({ results: "" }); // Handle no results
+    if (!data.items) return res.status(200).json({ results: "" });
 
-    // Format: Clean up JSON to plain text for the AI to read
     const formattedResults = data.items.map((item, i) => 
       `ID: ${i+1}\nTITLE: ${item.title}\nURL: ${item.link}\nSNIPPET: ${item.snippet}`
     ).join('\n\n---\n\n');
 
     return res.status(200).json({ results: formattedResults });
-
   } catch (error) {
     return res.status(500).json({ error: `Search Error: ${error.message}` });
   }
