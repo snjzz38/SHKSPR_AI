@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         messages: messages,
-        model: "llama3-70b-8192"
+        model: "llama-3.3-70b-versatile"
       })
     });
 
