@@ -9,61 +9,53 @@ export default async function handler(req, res) {
 
   try {
     const { parts, apiKey, model } = req.body;
-
-    if (!model) return res.status(400).end("Error: Model ID is required.");
-    if (!parts) return res.status(400).end("Error: No content provided.");
-
-    const activeKey = (apiKey && apiKey.trim().length > 20) ? apiKey : process.env.DOCUMATE_GEMINI_1;
     
-    // Ensure parts is formatted as an array of objects
-    const formattedParts = Array.isArray(parts) 
-      ? parts.map(p => typeof p === 'string' ? { text: p } : p)
-      : [{ text: String(parts) }];
+    if (!model) return res.status(400).end("Error: Model ID is required.");
 
-    const payload = {
-      contents: [{ role: "user", parts: formattedParts }]
-    };
+    // Prioritize User Key, fallback to serverless secret
+    const activeKey = (apiKey && apiKey.length > 20) ? apiKey : process.env.DOCUMATE_GEMINI_1;
+    if (!activeKey) return res.status(500).end("Error: Missing Gemini API Key.");
 
-    // FIXED URL: Added missing "/" and ensured correct template literal syntax
+    // URL fixed with backticks and forward slashes to prevent "Failed to parse URL"
     const url = `generativelanguage.googleapis.com{model}:streamGenerateContent?key=${activeKey}&alt=sse`;
 
-    const response = await fetch(url, {
+    const geminiResponse = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ contents: [{ parts: parts }] })
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      return res.status(response.status).end(`Google API Error: ${errText}`);
+    if (!geminiResponse.ok) {
+      const errorData = await geminiResponse.json();
+      return res.status(geminiResponse.status).end(`Error: [${model}] ${errorData.error?.message || geminiResponse.statusText}`);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
+    const reader = geminiResponse.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      let lines = buffer.split("\n");
-      buffer = lines.pop(); 
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
 
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data: ")) continue;
-        try {
-          const json = JSON.parse(trimmed.substring(6));
-          const txt = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) res.write(txt);
-        } catch (e) {}
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.substring(6));
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (text) res.write(text);
+          } catch (e) {
+            // Ignore parse errors for keep-alive messages
+          }
+        }
       }
     }
     res.end();
 
   } catch (error) {
     console.error("Grader Error:", error);
-    res.status(500).end(`Internal Server Error: ${error.message}`);
+    if (!res.writableEnded) res.status(500).end(`Error: ${error.message}`);
   }
 }
