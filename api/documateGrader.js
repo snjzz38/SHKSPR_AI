@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // 1. Set standard CORS and Streaming headers
+  // 1. Headers for Streaming and CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -11,21 +11,26 @@ export default async function handler(req, res) {
   try {
     const { parts, apiKey, model } = req.body;
     
-    // Ensure the model is passed from the frontend rotation logic
     if (!model) return res.status(400).end("Error: Model ID is required.");
 
-    // Determine key: prioritize user's custom key, fallback to server secret
+    // Prioritize user's key, fallback to serverless secret
     const activeKey = (apiKey && apiKey.trim().length > 20) ? apiKey : process.env.DOCUMATE_GEMINI_1;
     if (!activeKey) return res.status(500).end("Error: Missing Gemini API Key.");
 
-    // 2026 Grounding: This adds Google Search capability to the prompt.
-    // Note: Some Gemma models may ignore this tool if they don't support grounding,
-    // but Gemini models will use it to provide live search results.
+    // --- SCHEMA GUARD: Ensures 'parts' is an array of objects ---
+    // Google returns a 500 if you send a string or a flat array.
+    const formattedParts = Array.isArray(parts) 
+      ? parts.map(p => typeof p === 'string' ? { text: p } : p)
+      : [{ text: String(parts) }];
+
     const payload = {
-      contents: [{ parts: parts }],
+      contents: [{ 
+        role: "user", 
+        parts: formattedParts 
+      }]
+      // Note: Search tools removed as requested to avoid quota/billing 500s
     };
 
-    // Construct the endpoint using the model name passed from uses/api.js
     const url = `generativelanguage.googleapis.com{model}:streamGenerateContent?key=${activeKey}&alt=sse`;
 
     const geminiResponse = await fetch(url, {
@@ -40,40 +45,44 @@ export default async function handler(req, res) {
       try {
         const errorJson = JSON.parse(errorText);
         errorMessage = errorJson.error?.message || errorMessage;
-      } catch (e) {
-        errorMessage = errorText || errorMessage;
-      }
+      } catch (e) {}
+      
+      // LOG THE ERROR TO VERCEL DASHBOARD for easy debugging
+      console.error(`[Google API Error] ${model}:`, errorText);
+      
       return res.status(geminiResponse.status).end(`Error: [${model}] ${errorMessage}`);
     }
 
-    // Stream handling
     const reader = geminiResponse.body.getReader();
     const decoder = new TextDecoder('utf-8');
-    
+    let leftover = "";
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
+      const lines = (leftover + chunk).split('\n');
+      leftover = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.substring(6));
-            // Extract text from the candidate
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (text) res.write(text);
-          } catch (e) {
-            // Keep-alive or malformed chunks are ignored
-          }
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        
+        try {
+          const data = JSON.parse(trimmed.substring(6));
+          // Correct mapping for Gemini 2.0+ candidates
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (text) res.write(text);
+        } catch (e) {
+          // Skip malformed JSON or keep-alive pings
         }
       }
     }
     res.end();
 
   } catch (error) {
-    console.error("Grader Execution Error:", error);
+    console.error("Critical Backend Error:", error);
     if (!res.writableEnded) res.status(500).end(`Internal Server Error: ${error.message}`);
   }
 }
