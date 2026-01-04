@@ -23,7 +23,6 @@ export default async function handler(req, res) {
     // but Gemini models will use it to provide live search results.
     const payload = {
       contents: [{ parts: parts }],
-      tools: [{ google_search: {} }] 
     };
 
     // Construct the endpoint using the model name passed from uses/api.js
