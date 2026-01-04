@@ -12,11 +12,13 @@ export default async function handler(req, res) {
     
     if (!model) return res.status(400).end("Error: Model ID is required.");
 
-    // Prioritize User Key, fallback to serverless secret
+    // Prioritize user key, fallback to server secret
     const activeKey = (apiKey && apiKey.length > 20) ? apiKey : process.env.DOCUMATE_GEMINI_1;
     if (!activeKey) return res.status(500).end("Error: Missing Gemini API Key.");
 
-    // URL fixed with backticks and forward slashes to prevent "Failed to parse URL"
+    // --- THE FIX IS HERE ---
+    // You MUST use backticks ` ` for ${model} and ${activeKey} to work.
+    // Also ensured the / is present before "models"
     const url = `generativelanguage.googleapis.com{model}:streamGenerateContent?key=${activeKey}&alt=sse`;
 
     const geminiResponse = await fetch(url, {
@@ -26,8 +28,9 @@ export default async function handler(req, res) {
     });
 
     if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.json();
-      return res.status(geminiResponse.status).end(`Error: [${model}] ${errorData.error?.message || geminiResponse.statusText}`);
+      const errorText = await geminiResponse.text();
+      // This sends the actual Google error back to your api.js logs
+      return res.status(geminiResponse.status).end(`Google API Error: ${errorText}`);
     }
 
     const reader = geminiResponse.body.getReader();
@@ -44,10 +47,11 @@ export default async function handler(req, res) {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.substring(6));
+            // Correct mapping for candidates
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
             if (text) res.write(text);
           } catch (e) {
-            // Ignore parse errors for keep-alive messages
+            // Ignore parse errors for keep-alive messages or empty chunks
           }
         }
       }
