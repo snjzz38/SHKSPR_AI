@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     // --- THE FIX IS HERE ---
     // You MUST use backticks ` ` for ${model} and ${activeKey} to work.
     // Also ensured the / is present before "models"
-    const url = `generativelanguage.googleapis.com{model}:streamGenerateContent?key=${activeKey}&alt=sse`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:streamGenerateContent?key=${activeKey}&alt=sse`;
 
     const geminiResponse = await fetch(url, {
       method: 'POST',
