@@ -1,33 +1,27 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  // 1. Set CORS Headers (CRITICAL)
+  // 1. Force CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // 2. Handle Preflight Request immediately
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  // 2. Handle Preflight
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) {
-        return res.status(400).json({ error: "No URLs provided" });
-    }
+    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    // 3. Scrape Logic
+    // 3. Scrape
     const results = await Promise.all(urls.slice(0, 8).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch(url, { 
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
-            },
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -45,7 +39,7 @@ export default async function handler(req, res) {
 
         $('script, style, nav, footer, svg, noscript, iframe').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-        const content = fullText.substring(0, 2000); // Limit length
+        const content = fullText.substring(0, 1500);
 
         return { url, status: "ok", meta, content };
 
