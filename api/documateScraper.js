@@ -1,26 +1,33 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  // 1. Force CORS Headers (Even on error)
+  // 1. Set CORS Headers (CRITICAL)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  // 2. Handle Preflight Request immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   try {
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
+    if (!urls || !Array.isArray(urls)) {
+        return res.status(400).json({ error: "No URLs provided" });
+    }
 
-    // 2. Scrape in Parallel with strict timeout
+    // 3. Scrape Logic
     const results = await Promise.all(urls.slice(0, 8).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
 
         const response = await fetch(url, { 
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
+            },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -30,24 +37,19 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // Extract Meta Tags
         const meta = {
-            author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
+            author: $('meta[name="author"]').attr('content') || "",
             date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
             site: $('meta[property="og:site_name"]').attr('content') || ""
         };
 
-        // Clean & Extract Text
-        $('script, style, nav, footer, svg, noscript, iframe, header').remove();
+        $('script, style, nav, footer, svg, noscript, iframe').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-        
-        // Limit content to save tokens
-        const content = fullText.length > 1500 ? fullText.substring(0, 1500) + "..." : fullText;
+        const content = fullText.substring(0, 2000); // Limit length
 
         return { url, status: "ok", meta, content };
 
       } catch (e) {
-        console.error(`Failed to scrape ${url}: ${e.message}`);
         return { url, status: "failed", error: e.message };
       }
     }));
@@ -55,7 +57,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ results });
 
   } catch (error) {
-    console.error("Scraper Critical Error:", error);
     return res.status(500).json({ error: error.message });
   }
 }
