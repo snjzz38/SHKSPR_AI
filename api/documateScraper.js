@@ -1,28 +1,23 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  // 1. Force CORS Headers
+  // 1. Force CORS Headers (Even on error)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // 2. Handle Preflight Request (The Fix)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) {
-        return res.status(400).json({ error: "No URLs provided" });
-    }
+    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    // 3. Scrape Logic
+    // 2. Scrape in Parallel with strict timeout
     const results = await Promise.all(urls.slice(0, 8).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
         const response = await fetch(url, { 
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
@@ -35,23 +30,24 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
+        // Extract Meta Tags
         const meta = {
-            author: $('meta[name="author"]').attr('content') || "",
+            author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
             date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
             site: $('meta[property="og:site_name"]').attr('content') || ""
         };
 
-        $('script, style, nav, footer, svg, noscript, iframe').remove();
+        // Clean & Extract Text
+        $('script, style, nav, footer, svg, noscript, iframe, header').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
         
-        // Extract meaningful content
-        const content = fullText.length > 500 
-            ? fullText.substring(0, 2000) // First 2000 chars
-            : fullText;
+        // Limit content to save tokens
+        const content = fullText.length > 1500 ? fullText.substring(0, 1500) + "..." : fullText;
 
         return { url, status: "ok", meta, content };
 
       } catch (e) {
+        console.error(`Failed to scrape ${url}: ${e.message}`);
         return { url, status: "failed", error: e.message };
       }
     }));
@@ -59,6 +55,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ results });
 
   } catch (error) {
+    console.error("Scraper Critical Error:", error);
     return res.status(500).json({ error: error.message });
   }
 }
