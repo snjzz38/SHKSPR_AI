@@ -12,10 +12,14 @@ export default async function handler(req, res) {
     const { urls } = req.body;
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    const results = await Promise.all(urls.slice(0, 8).map(async (url) => {
+    // Limit to 6 URLs for speed
+    const targetUrls = urls.slice(0, 6);
+
+    const results = await Promise.all(targetUrls.map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        // 4 second timeout is plenty for a citation check
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
         const response = await fetch(url, { 
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
@@ -28,42 +32,32 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // 1. Robust Metadata Extraction
-        let author = $('meta[name="author"]').attr('content') || 
-                     $('meta[property="article:author"]').attr('content') || 
-                     $('meta[name="citation_author"]').attr('content') || 
-                     $('meta[name="dc.creator"]').attr('content') || "";
+        // 1. Better Title Extraction (Fixes Truncation)
+        // H1 is usually the full article title on the page, unlike meta tags which get cut off.
+        const h1 = $('h1').first().text().trim();
+        const ogTitle = $('meta[property="og:title"]').attr('content');
+        const metaTitle = $('title').text();
+        
+        // Prioritize H1 -> OG -> Title Tag
+        const bestTitle = h1 && h1.length > 10 ? h1 : (ogTitle || metaTitle || "");
 
-        let date = $('meta[name="date"]').attr('content') || 
-                   $('meta[property="article:published_time"]').attr('content') || 
-                   $('meta[name="citation_publication_date"]').attr('content') || 
-                   $('time').first().text().trim() || "";
+        // 2. Metadata
+        const meta = {
+            title: bestTitle, // Send this back explicitly
+            author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
+            date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
+            site: $('meta[property="og:site_name"]').attr('content') || ""
+        };
 
-        const site = $('meta[property="og:site_name"]').attr('content') || "";
-
-        // 2. Try JSON-LD (Structured Data) if meta failed
-        if (!author || !date) {
-            try {
-                $('script[type="application/ld+json"]').each((i, el) => {
-                    const data = JSON.parse($(el).html());
-                    if (data['@type'] === 'NewsArticle' || data['@type'] === 'Article' || data['@type'] === 'BlogPosting') {
-                        if (!author && data.author) {
-                            author = typeof data.author === 'object' ? data.author.name : data.author;
-                        }
-                        if (!date && data.datePublished) {
-                            date = data.datePublished;
-                        }
-                    }
-                });
-            } catch (e) {}
-        }
-
-        // 3. Clean Text (Keep Header this time)
-        $('script, style, nav, footer, svg, noscript, iframe').remove();
+        // 3. Clean & Limit Text (Speed Optimization)
+        $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-        const content = fullText.substring(0, 2500); // Increased limit
+        
+        // Reduce to 1000 chars (approx 150-200 words). 
+        // This is enough for a citation check and drastically reduces AI processing time.
+        const content = fullText.substring(0, 1000);
 
-        return { url, status: "ok", meta: { author, date, site }, content };
+        return { url, status: "ok", meta, content };
 
       } catch (e) {
         return { url, status: "failed", error: e.message };
