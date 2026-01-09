@@ -12,14 +12,11 @@ export default async function handler(req, res) {
     const { urls } = req.body;
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    // Limit to 6 URLs for speed
-    const targetUrls = urls.slice(0, 6);
-
-    const results = await Promise.all(targetUrls.map(async (url) => {
+    // UPDATE: Limit to 10 URLs
+    const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       try {
         const controller = new AbortController();
-        // 4 second timeout is plenty for a citation check
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
         const response = await fetch(url, { 
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
@@ -32,30 +29,15 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // 1. Better Title Extraction (Fixes Truncation)
-        // H1 is usually the full article title on the page, unlike meta tags which get cut off.
-        const h1 = $('h1').first().text().trim();
-        const ogTitle = $('meta[property="og:title"]').attr('content');
-        const metaTitle = $('title').text();
-        
-        // Prioritize H1 -> OG -> Title Tag
-        const bestTitle = h1 && h1.length > 10 ? h1 : (ogTitle || metaTitle || "");
-
-        // 2. Metadata
         const meta = {
-            title: bestTitle, // Send this back explicitly
             author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
             date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
             site: $('meta[property="og:site_name"]').attr('content') || ""
         };
 
-        // 3. Clean & Limit Text (Speed Optimization)
-        $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
+        $('script, style, nav, footer, svg, noscript, iframe').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-        
-        // Reduce to 1000 chars (approx 150-200 words). 
-        // This is enough for a citation check and drastically reduces AI processing time.
-        const content = fullText.substring(0, 1000);
+        const content = fullText.substring(0, 1500);
 
         return { url, status: "ok", meta, content };
 
