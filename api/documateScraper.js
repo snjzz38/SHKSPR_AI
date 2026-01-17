@@ -42,13 +42,12 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. JSON-LD EXTRACTION (Deep Search) ---
+        // --- 2. JSON-LD EXTRACTION ---
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
                 const json = JSON.parse($(el).html());
                 let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
                 
-                // Find Article/NewsArticle
                 const article = objects.find(o => 
                     ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
                 );
@@ -93,14 +92,18 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- 4. HYPERLINK STRATEGY (Fix for Brookings/News Sites) ---
+        // --- 4. HYPERLINK STRATEGY (Fixed) ---
         // Look for links that contain /author/, /experts/, /people/
+        // BUT ignore generic labels like "Experts", "People", "Authors"
         if (!author) {
             const authorLinks = [];
+            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About"];
+            
             $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
                 const name = $(el).text().trim();
-                // Filter out garbage like "View all authors" or empty strings
-                if (name && name.length > 2 && name.length < 50 && !name.includes("View") && !name.includes("All")) {
+                
+                // Filter out garbage
+                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
                     if (!authorLinks.includes(name)) authorLinks.push(name);
                 }
             });
