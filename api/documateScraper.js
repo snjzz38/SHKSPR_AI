@@ -42,7 +42,7 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. META TAGS (Standard & Academic) ---
+        // --- 2. META TAGS ---
         const authors = [];
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
@@ -52,10 +52,8 @@ export default async function handler(req, res) {
             const val = $(el).attr('content');
             if (val && !authors.includes(val)) authors.push(val);
         });
-        
         if (authors.length > 0) author = authors.join(', ');
 
-        // Fallback Meta
         if (!author) {
             const authorTags = ['author', 'article:author', 'parsely-author', 'sailthru.author'];
             authorTags.forEach(tag => {
@@ -67,27 +65,18 @@ export default async function handler(req, res) {
             if (authors.length > 0) author = authors.join(', ');
         }
 
-        // --- 3. LABEL-VALUE SCRAPER ---
-        if (!author) {
-            $('*').each((i, el) => {
-                if (author) return;
-                const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
-                if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
-                    let next = $(el).next();
-                    if (next.length && next.text().trim().length > 2) {
-                        author = next.text().trim();
-                        return;
-                    }
-                    let parentNext = $(el).parent().next();
-                    if (parentNext.length && parentNext.text().trim().length > 2) {
-                        author = parentNext.text().trim();
-                        return;
-                    }
-                }
-            });
+        // --- 3. EXTRACT SITE NAME ---
+        site = $('meta[property="og:site_name"]').attr('content') || 
+               $('meta[name="citation_journal_title"]').attr('content') ||
+               $('meta[name="application-name"]').attr('content');
+
+        // --- 4. GENERIC AUTHOR CHECK (Fix for ABC News) ---
+        // If author is same as site (e.g. "ABC News"), clear it to force text fallback
+        if (author && site && author.toLowerCase().trim() === site.toLowerCase().trim()) {
+            author = "";
         }
 
-        // --- 4. HYPERLINK STRATEGY ---
+        // --- 5. HYPERLINK STRATEGY ---
         if (!author) {
             const collectedAuthors = new Set();
             const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
@@ -98,39 +87,15 @@ export default async function handler(req, res) {
                     collectedAuthors.add(name);
                 }
             });
-            
             if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
         }
 
-        // --- 5. EXTRACT DATE ---
+        // --- 6. EXTRACT DATE ---
         date = $('meta[name="citation_publication_date"]').attr('content') || 
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content') ||
                $('meta[name="date"]').attr('content') || 
                $('meta[property="article:published_time"]').attr('content');
-
-        // --- 6. EXTRACT SITE NAME (With URL Fallback) ---
-        site = $('meta[property="og:site_name"]').attr('content') || 
-               $('meta[name="citation_journal_title"]').attr('content') ||
-               $('meta[name="application-name"]').attr('content');
-
-        // URL Fallback for Site Name
-        if (!site) {
-            try {
-                const hostname = new URL(url).hostname;
-                if (hostname.includes('substack.com')) {
-                    const subdomain = hostname.split('.')[0];
-                    // Capitalize: "daveshap" -> "Daveshap Substack"
-                    site = subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + " Substack";
-                } else {
-                    // Generic: "www.nytimes.com" -> "Nytimes"
-                    const parts = hostname.replace('www.', '').split('.');
-                    if (parts.length > 0) {
-                        site = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-                    }
-                }
-            } catch (e) {}
-        }
 
         // --- 7. CLEANUP & TEXT EXTRACTION ---
         if (author) {
@@ -141,7 +106,6 @@ export default async function handler(req, res) {
                 .replace(/^,\s*/, '')
                 .trim();
         }
-        
         if (date && date.includes('T')) date = date.split('T')[0];
 
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
@@ -149,11 +113,17 @@ export default async function handler(req, res) {
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 8. FINAL REGEX FALLBACKS ---
+        // --- 8. FINAL REGEX FALLBACK (Updated for Multiple Authors) ---
         if (!author) {
-            const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z]+\s[A-Z][a-z]+)/i;
+            // Matches: "By Name Name", "By Name, Name, and Name"
+            // Looks for capitalized words separated by commas/and
+            const authorRegex = /(?:Author|By|Written by)[:\s]+((?:[A-Z][a-z]+\s[A-Z][a-z]+(?:,\s+|,\s+and\s+|\s+and\s+)?)+)/i;
             const match = bodyText.substring(0, 800).match(authorRegex);
-            if (match) author = match[1];
+            if (match) {
+                author = match[1].trim();
+                // Remove trailing "and" if regex overshot
+                author = author.replace(/,\s*and$/, '').replace(/\s+and$/, '');
+            }
         }
 
         if (!date) {
