@@ -56,34 +56,15 @@ export default async function handler(req, res) {
                     if (!date && (article.datePublished || article.dateCreated)) {
                         date = article.datePublished || article.dateCreated;
                     }
-                    if (!author && article.author) {
-                        if (typeof article.author === 'string') author = article.author;
-                        else if (Array.isArray(article.author)) {
-                            author = article.author.map(a => a.name || a).join(', ');
-                        } else if (article.author.name) {
-                            author = article.author.name;
-                        }
-                    }
                     if (!site && article.publisher) {
                         site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
                     }
+                    // Note: We intentionally don't set 'author' here yet to allow the link strategy to run
                 }
             } catch(e) {}
         });
 
-        // --- 3. META TAGS ---
-        if (!author) {
-            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
-            const found = [];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val && !found.includes(val)) found.push(val);
-                });
-            });
-            if (found.length > 0) author = found.join(', ');
-        }
-
+        // --- 3. META TAGS (Date/Site) ---
         if (!date) {
             const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time', 'parsely-pub-date'];
             for (const tag of dateTags) {
@@ -92,39 +73,64 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- 4. HYPERLINK STRATEGY (Fixed) ---
-        // Look for links that contain /author/, /experts/, /people/
-        // BUT ignore generic labels like "Experts", "People", "Authors"
-        if (!author) {
-            const authorLinks = [];
-            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About"];
-            
-            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
-                const name = $(el).text().trim();
-                
-                // Filter out garbage
-                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
-                    if (!authorLinks.includes(name)) authorLinks.push(name);
-                }
-            });
-            if (authorLinks.length > 0) {
-                author = authorLinks.join(', ');
+        // --- 4. AUTHOR EXTRACTION (Multi-Strategy) ---
+        // We collect authors from ALL sources and merge them
+        let collectedAuthors = new Set();
+
+        // Strategy A: Hyperlinks (Best for Brookings, TheVerge, etc.)
+        const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
+        $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
+            const name = $(el).text().trim();
+            if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
+                collectedAuthors.add(name);
             }
+        });
+
+        // Strategy B: Meta Tags (If links failed or to supplement)
+        if (collectedAuthors.size === 0) {
+            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
+            authorTags.forEach(tag => {
+                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                    const val = $(el).attr('content');
+                    if (val) collectedAuthors.add(val);
+                });
+            });
         }
 
-        // --- 5. CSS SELECTORS FALLBACK ---
-        if (!author) {
+        // Strategy C: JSON-LD (Fallback)
+        if (collectedAuthors.size === 0) {
+             $('script[type="application/ld+json"]').each((i, el) => {
+                try {
+                    const json = JSON.parse($(el).html());
+                    let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
+                    const article = objects.find(o => ['Article', 'NewsArticle'].includes(o['@type']));
+                    if (article && article.author) {
+                        if (typeof article.author === 'string') collectedAuthors.add(article.author);
+                        else if (Array.isArray(article.author)) article.author.forEach(a => collectedAuthors.add(a.name || a));
+                        else if (article.author.name) collectedAuthors.add(article.author.name);
+                    }
+                } catch(e) {}
+            });
+        }
+
+        // Strategy D: CSS Selectors (Last Resort)
+        if (collectedAuthors.size === 0) {
             const selectors = ['.author-name', '.byline', '.author', '.contributors', '.article-author', '.entry-author'];
             for (const sel of selectors) {
                 const text = $(sel).first().text().trim();
                 if (text && text.length > 2 && text.length < 100) {
-                    author = text.replace(/\s+/g, ' ').trim();
+                    collectedAuthors.add(text.replace(/\s+/g, ' ').trim());
                     break;
                 }
             }
         }
 
-        // --- 6. CLEANUP ---
+        // Combine Authors
+        if (collectedAuthors.size > 0) {
+            author = Array.from(collectedAuthors).join(', ');
+        }
+
+        // --- 5. CLEANUP ---
         if (author) {
             author = author
                 .replace(/Author links open overlay panel/gi, '')
@@ -142,19 +148,19 @@ export default async function handler(req, res) {
                    $('meta[name="application-name"]').attr('content');
         }
 
-        // --- 7. TEXT EXTRACTION ---
+        // --- 6. TEXT EXTRACTION ---
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 8. FINAL REGEX FALLBACK ---
+        // --- 7. FINAL REGEX FALLBACK ---
         if (!author) {
             const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
             if (byMatch) author = byMatch[1];
         }
 
-        // --- 9. CONSTRUCT RICH CONTENT ---
+        // --- 8. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
