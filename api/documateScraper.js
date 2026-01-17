@@ -36,6 +36,12 @@ export default async function handler(req, res) {
         let site = "";
         let title = "";
 
+        // --- HELPER: Validate Name ---
+        const isValidName = (name) => {
+            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up", "Share", "Follow", "Twitter", "Facebook"];
+            return name && name.length > 2 && name.length < 50 && !badNames.includes(name) && !name.includes("...");
+        };
+
         // --- 1. EXTRACT TITLE ---
         title = $('meta[property="og:title"]').attr('content') || 
                 $('meta[name="twitter:title"]').attr('content') || 
@@ -59,7 +65,6 @@ export default async function handler(req, res) {
                     if (!site && article.publisher) {
                         site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
                     }
-                    // Note: We intentionally don't set 'author' here yet to allow the link strategy to run
                 }
             } catch(e) {}
         });
@@ -74,28 +79,29 @@ export default async function handler(req, res) {
         }
 
         // --- 4. AUTHOR EXTRACTION (Multi-Strategy) ---
-        // We collect authors from ALL sources and merge them
         let collectedAuthors = new Set();
 
-        // Strategy A: Hyperlinks (Best for Brookings, TheVerge, etc.)
-        const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
-        $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
-            const name = $(el).text().trim();
-            if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
-                collectedAuthors.add(name);
-            }
+        // Strategy A: Explicit Meta Tags
+        const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
+        authorTags.forEach(tag => {
+            $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                const val = $(el).attr('content');
+                if (isValidName(val)) collectedAuthors.add(val);
+            });
         });
 
-        // Strategy B: Meta Tags (If links failed or to supplement)
-        if (collectedAuthors.size === 0) {
-            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val) collectedAuthors.add(val);
-                });
-            });
-        }
+        // Strategy B: Hyperlinks & IDs (Enhanced for Brookings)
+        // 1. Look for URL patterns
+        $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
+            const name = $(el).text().trim();
+            if (isValidName(name)) collectedAuthors.add(name);
+        });
+
+        // 2. Look for ID/Class patterns (Fix for 'person-hover-1', 'person-hover-2')
+        $('a[id^="person-"], a[class*="person-"], a[class*="author-"], .author a, .byline a').each((i, el) => {
+             const name = $(el).text().trim();
+             if (isValidName(name)) collectedAuthors.add(name);
+        });
 
         // Strategy C: JSON-LD (Fallback)
         if (collectedAuthors.size === 0) {
@@ -118,7 +124,7 @@ export default async function handler(req, res) {
             const selectors = ['.author-name', '.byline', '.author', '.contributors', '.article-author', '.entry-author'];
             for (const sel of selectors) {
                 const text = $(sel).first().text().trim();
-                if (text && text.length > 2 && text.length < 100) {
+                if (isValidName(text)) {
                     collectedAuthors.add(text.replace(/\s+/g, ' ').trim());
                     break;
                 }
