@@ -109,10 +109,28 @@ export default async function handler(req, res) {
                $('meta[name="date"]').attr('content') || 
                $('meta[property="article:published_time"]').attr('content');
 
-        // --- 6. EXTRACT SITE NAME ---
+        // --- 6. EXTRACT SITE NAME (With URL Fallback) ---
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content') ||
                $('meta[name="application-name"]').attr('content');
+
+        // URL Fallback for Site Name
+        if (!site) {
+            try {
+                const hostname = new URL(url).hostname;
+                if (hostname.includes('substack.com')) {
+                    const subdomain = hostname.split('.')[0];
+                    // Capitalize: "daveshap" -> "Daveshap Substack"
+                    site = subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + " Substack";
+                } else {
+                    // Generic: "www.nytimes.com" -> "Nytimes"
+                    const parts = hostname.replace('www.', '').split('.');
+                    if (parts.length > 0) {
+                        site = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+                    }
+                }
+            } catch (e) {}
+        }
 
         // --- 7. CLEANUP & TEXT EXTRACTION ---
         if (author) {
@@ -138,9 +156,7 @@ export default async function handler(req, res) {
             if (match) author = match[1];
         }
 
-        // --- UPDATED DATE REGEX (Supports "Nov 27, 2024") ---
         if (!date) {
-            // Matches: "November 27, 2024", "Nov 27, 2024", "Nov. 27, 2024", "2024-11-27"
             const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
