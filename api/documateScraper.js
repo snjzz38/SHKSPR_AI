@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         const response = await fetch(url, { 
             headers: { 
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
             },
             signal: controller.signal
         });
@@ -35,7 +35,8 @@ export default async function handler(req, res) {
         let date = "";
         let site = "";
 
-        // --- 1. ACADEMIC META TAGS (Collect ALL authors) ---
+        // --- 1. META TAG EXTRACTION ---
+        // Collect ALL authors from academic tags
         const authors = [];
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content');
 
-        // --- 2. STANDARD META TAGS ---
+        // Standard Meta Fallbacks
         if (!author) {
             author = $('meta[name="author"]').attr('content') || 
                      $('meta[property="article:author"]').attr('content');
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // --- 3. JSON-LD (Rich Snippets) ---
+        // JSON-LD Fallback
         if (!date || !author) {
             $('script[type="application/ld+json"]').each((i, el) => {
                 try {
@@ -90,48 +91,56 @@ export default async function handler(req, res) {
             });
         }
 
-        // Cleanup Content
-        $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
+        // --- 2. TEXT CLEANUP ---
+        $('script, style, nav, footer, svg, noscript, iframe, header, aside, button, .ad, .advertisement').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 4. TEXT FALLBACKS (If Meta Failed) ---
-        
-        // Author Fallback: Look for "Authors: ..." or "Written by ..."
+        // --- 3. AUTHOR FALLBACK (First 300 Chars) ---
         if (!author) {
-            const authorRegex = /(?:Authors?|Written by)[:\s]+([A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}(?:,\s[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3})*)/i;
-            const match = fullText.substring(0, 500).match(authorRegex);
-            if (match) author = match[1];
+            const introText = fullText.substring(0, 300);
+            
+            // Pattern 1: "By [Name]"
+            const byMatch = introText.match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
+            if (byMatch) {
+                author = byMatch[1];
+            } 
+            // Pattern 2: ScienceDirect/Academic style (Names often appear before "Abstract" or "Show more")
+            // We look for capitalized words separated by commas or "and" early in the text
+            else {
+                // This is a heuristic: Look for a sequence of names
+                // e.g. "Adib Bin Rashid, MD Ashfakul Karim Kausik"
+                const nameListMatch = introText.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}(?:,\s[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3})*)/);
+                if (nameListMatch && nameListMatch[0].length > 10 && !nameListMatch[0].includes("Skip")) {
+                    author = nameListMatch[0];
+                }
+            }
         }
 
-        // Date Fallback: Regex search in text
+        // --- 4. DATE FALLBACK (Regex) ---
         if (!date) {
             const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = fullText.substring(0, 800).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 5. VARIED CONTENT EXTRACTION ---
-        // Extract chunks: 100-300, 500-700, 800-1000
-        let contentChunks = [];
-        const ranges = [[100, 300], [500, 700], [800, 1000]];
-        
-        ranges.forEach(([start, end]) => {
-            if (fullText.length > start) {
-                // Ensure we don't go out of bounds
-                const actualEnd = Math.min(fullText.length, end);
-                const chunk = fullText.substring(start, actualEnd).trim();
-                if (chunk.length > 20) { // Only add substantial chunks
-                    contentChunks.push(chunk);
-                }
+        // --- 5. SKIP-STEP CONTENT EXTRACTION ---
+        // Scrape 100 chars, skip 100 chars, repeat.
+        let finalContent = "";
+        const maxSourceScan = 4000; // Scan up to 4000 chars of source text
+        const outputLimit = 1500;   // But stop if we hit 1500 chars of output
+
+        for (let i = 0; i < Math.min(fullText.length, maxSourceScan); i += 200) {
+            if (finalContent.length >= outputLimit) break;
+
+            // Take 100 characters
+            const chunk = fullText.substring(i, i + 100);
+            
+            // Only add if it looks like real text (not just punctuation/numbers)
+            if (chunk.length > 10) {
+                finalContent += chunk + " ... ";
             }
-        });
-
-        // If text is very short, just take what we have
-        if (contentChunks.length === 0) {
-            contentChunks.push(fullText.substring(0, 500));
+            // The loop increments by 200, effectively skipping the next 100 characters
         }
-
-        const finalContent = contentChunks.join(" ... ");
 
         return { 
             url, 
