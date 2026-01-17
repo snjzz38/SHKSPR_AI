@@ -35,9 +35,12 @@ export default async function handler(req, res) {
         let date = "";
         let site = "";
 
-        // --- 1. META TAGS (Academic & Standard) ---
+        // --- 1. RELIABLE META TAGS ONLY ---
+        // We only take metadata if it's explicitly defined in the HTML.
+        // We do NOT guess with Regex anymore.
+        
+        // Authors (Collect all)
         const authors = [];
-        // ScienceDirect / Academic
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
             if (val && !authors.includes(val)) authors.push(val);
@@ -46,10 +49,7 @@ export default async function handler(req, res) {
             const val = $(el).attr('content');
             if (val && !authors.includes(val)) authors.push(val);
         });
-
-        if (authors.length > 0) {
-            author = authors.join(', ');
-        }
+        if (authors.length > 0) author = authors.join(', ');
 
         // Dates
         date = $('meta[name="citation_publication_date"]').attr('content') || 
@@ -63,90 +63,46 @@ export default async function handler(req, res) {
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // --- 2. JSON-LD EXTRACTION ---
+        // JSON-LD (Very reliable for News/Blogs)
         if (!date || !author) {
             $('script[type="application/ld+json"]').each((i, el) => {
                 try {
                     const json = JSON.parse($(el).html());
                     const data = Array.isArray(json) ? json[0] : json;
                     
-                    if (!date && (data.datePublished || data.dateCreated)) {
-                        date = data.datePublished || data.dateCreated;
-                    }
+                    if (!date && (data.datePublished || data.dateCreated)) date = data.datePublished || data.dateCreated;
                     if (!author && data.author) {
                         if (typeof data.author === 'string') author = data.author;
-                        else if (Array.isArray(data.author)) {
-                            author = data.author.map(a => a.name || a).join(', ');
-                        } else if (data.author.name) {
-                            author = data.author.name;
-                        }
+                        else if (Array.isArray(data.author)) author = data.author.map(a => a.name || a).join(', ');
+                        else if (data.author.name) author = data.author.name;
                     }
                 } catch(e) {}
             });
         }
 
-        // --- 3. TEXT PRE-PROCESSING (Fix Mashed Text) ---
-        // Inject spaces after block elements so "contentSkip" becomes "content Skip"
+        // --- 2. CLEAN TEXT EXTRACTION ---
+        // Inject spaces to prevent word mashing
         $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, header, aside, button, .ad, .advertisement').remove();
         
-        const fullText = $('body').text().replace(/\s+/g, ' ').trim();
+        // Clean up whitespace
+        let fullText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 4. SCIENCEDIRECT SPECIFIC HACK ---
-        // ScienceDirect puts authors right after "Author links open overlay panel"
-        if (!author && fullText.includes("Author links open overlay panel")) {
-            const parts = fullText.split("Author links open overlay panel");
-            if (parts[1]) {
-                // Take text until "Show more" or "Get rights"
-                const potentialAuthors = parts[1].split(/Show more|Get rights|Abstract/)[0].trim();
-                if (potentialAuthors.length > 3 && potentialAuthors.length < 100) {
-                    author = potentialAuthors;
-                }
-            }
-        }
-
-        // --- 5. GENERIC TEXT FALLBACKS ---
-        if (!author) {
-            // Look for "By [Name]"
-            const byMatch = fullText.substring(0, 500).match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
-            if (byMatch) author = byMatch[1];
-        }
-
-        if (!date) {
-            const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
-            const match = fullText.substring(0, 800).match(dateRegex);
-            if (match) date = match[0];
-        }
-
-        // --- 6. BAD AUTHOR FILTER ---
-        // If the "author" we found is actually UI text, kill it.
-        const badWords = ["Search", "Skip", "Login", "Sign in", "Menu", "Home", "PDF", "View", "Download"];
-        if (author && badWords.some(w => author.includes(w))) {
-            author = ""; // Reset if it contains garbage
-        }
-
-        // --- 7. SKIP-STEP CONTENT EXTRACTION ---
-        let finalContent = "";
-        const maxSourceScan = 4000; 
-        const outputLimit = 1500;   
-
-        for (let i = 0; i < Math.min(fullText.length, maxSourceScan); i += 200) {
-            if (finalContent.length >= outputLimit) break;
-            const chunk = fullText.substring(i, i + 100);
-            if (chunk.length > 10) {
-                finalContent += chunk + " ... ";
-            }
-        }
+        // --- 3. CONTIGUOUS CONTENT (The "AI Context" Strategy) ---
+        // Instead of skipping around, we grab the first 2000 characters.
+        // This almost ALWAYS contains the Title, Author List, Date, and Abstract/Intro.
+        // The AI in citation.js is smart enough to parse "By Adib Bin Rashid" from this block.
+        const content = fullText.substring(0, 2000);
 
         return { 
             url, 
             status: "ok", 
             meta: { 
-                author: author || "", 
+                author: author || "", // Return empty if not found in Meta
                 date: date || "", 
                 site: site || "" 
             }, 
-            content: finalContent
+            content: content 
         };
 
       } catch (e) {
