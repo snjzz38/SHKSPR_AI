@@ -34,12 +34,15 @@ export default async function handler(req, res) {
         let author = "";
         let date = "";
         let site = "";
+        let title = "";
 
-        // --- 1. RELIABLE META TAGS ONLY ---
-        // We only take metadata if it's explicitly defined in the HTML.
-        // We do NOT guess with Regex anymore.
-        
-        // Authors (Collect all)
+        // --- 1. EXTRACT TITLE ---
+        title = $('meta[property="og:title"]').attr('content') || 
+                $('meta[name="twitter:title"]').attr('content') || 
+                $('title').text() || 
+                "";
+
+        // --- 2. EXTRACT AUTHORS (Meta Tags) ---
         const authors = [];
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
@@ -49,60 +52,57 @@ export default async function handler(req, res) {
             const val = $(el).attr('content');
             if (val && !authors.includes(val)) authors.push(val);
         });
+        
+        // Fallback to standard author tag
+        if (authors.length === 0) {
+            const stdAuthor = $('meta[name="author"]').attr('content');
+            if (stdAuthor) authors.push(stdAuthor);
+        }
+
         if (authors.length > 0) author = authors.join(', ');
 
-        // Dates
+        // --- 3. EXTRACT DATE ---
         date = $('meta[name="citation_publication_date"]').attr('content') || 
                $('meta[name="citation_date"]').attr('content') || 
-               $('meta[name="dc.date"]').attr('content');
+               $('meta[name="dc.date"]').attr('content') ||
+               $('meta[name="date"]').attr('content') || 
+               $('meta[property="article:published_time"]').attr('content');
 
-        // Standard Fallbacks
-        if (!author) author = $('meta[name="author"]').attr('content');
-        if (!date) date = $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content');
-        
+        // --- 4. EXTRACT SITE NAME ---
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // JSON-LD (Very reliable for News/Blogs)
-        if (!date || !author) {
-            $('script[type="application/ld+json"]').each((i, el) => {
-                try {
-                    const json = JSON.parse($(el).html());
-                    const data = Array.isArray(json) ? json[0] : json;
-                    
-                    if (!date && (data.datePublished || data.dateCreated)) date = data.datePublished || data.dateCreated;
-                    if (!author && data.author) {
-                        if (typeof data.author === 'string') author = data.author;
-                        else if (Array.isArray(data.author)) author = data.author.map(a => a.name || a).join(', ');
-                        else if (data.author.name) author = data.author.name;
-                    }
-                } catch(e) {}
-            });
-        }
-
-        // --- 2. CLEAN TEXT EXTRACTION ---
+        // --- 5. CLEAN TEXT EXTRACTION ---
         // Inject spaces to prevent word mashing
         $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
-        $('script, style, nav, footer, svg, noscript, iframe, header, aside, button, .ad, .advertisement').remove();
         
-        // Clean up whitespace
-        let fullText = $('body').text().replace(/\s+/g, ' ').trim();
+        // Remove junk elements
+        $('script, style, nav, footer, svg, noscript, iframe, header, aside, button, .ad, .advertisement, .menu, .navigation').remove();
+        
+        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 3. CONTIGUOUS CONTENT (The "AI Context" Strategy) ---
-        // Instead of skipping around, we grab the first 2000 characters.
-        // This almost ALWAYS contains the Title, Author List, Date, and Abstract/Intro.
-        // The AI in citation.js is smart enough to parse "By Adib Bin Rashid" from this block.
-        const content = fullText.substring(0, 2000);
+        // --- 6. CONSTRUCT "RICH CONTENT" ---
+        // We explicitly prepend the metadata to the content string.
+        // This ensures the AI sees the author/date even if the raw text scrape is messy.
+        
+        let richContent = "";
+        if (title) richContent += `Title: ${title}. `;
+        if (author) richContent += `Author: ${author}. `;
+        if (date) richContent += `Date: ${date}. `;
+        if (site) richContent += `Source: ${site}. `;
+        
+        richContent += "\n\n" + bodyText.substring(0, 2000);
 
         return { 
             url, 
             status: "ok", 
+            title: title || "", // Separate title field as requested
             meta: { 
-                author: author || "", // Return empty if not found in Meta
+                author: author || "", 
                 date: date || "", 
                 site: site || "" 
             }, 
-            content: content 
+            content: richContent // Content now includes the metadata header
         };
 
       } catch (e) {
