@@ -67,25 +67,17 @@ export default async function handler(req, res) {
             if (authors.length > 0) author = authors.join(', ');
         }
 
-        // --- 3. LABEL-VALUE SCRAPER (Fix for UNH / Modern CMS) ---
-        // Looks for elements containing "Author" and grabs the NEXT element's text
+        // --- 3. LABEL-VALUE SCRAPER ---
         if (!author) {
-            // Find elements that contain exactly "Author" or "Author:" or "Written By"
             $('*').each((i, el) => {
-                if (author) return; // Stop if found
-                
-                // Check direct text of the element (ignoring children)
+                if (author) return;
                 const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
-                
                 if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
-                    // Strategy A: Check the next sibling element
                     let next = $(el).next();
                     if (next.length && next.text().trim().length > 2) {
                         author = next.text().trim();
                         return;
                     }
-                    
-                    // Strategy B: Check the parent's next sibling (common in grid layouts)
                     let parentNext = $(el).parent().next();
                     if (parentNext.length && parentNext.text().trim().length > 2) {
                         author = parentNext.text().trim();
@@ -134,23 +126,22 @@ export default async function handler(req, res) {
         
         if (date && date.includes('T')) date = date.split('T')[0];
 
-        // Inject spaces to prevent word mashing
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
         // --- 8. FINAL REGEX FALLBACKS ---
-        // Author: Look for "Author [Name]" or "By [Name]"
         if (!author) {
             const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z]+\s[A-Z][a-z]+)/i;
             const match = bodyText.substring(0, 800).match(authorRegex);
             if (match) author = match[1];
         }
 
-        // Date: Look for "December 16, 2025" style dates
+        // --- UPDATED DATE REGEX (Supports "Nov 27, 2024") ---
         if (!date) {
-            const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
+            // Matches: "November 27, 2024", "Nov 27, 2024", "Nov. 27, 2024", "2024-11-27"
+            const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
         }
