@@ -36,107 +36,93 @@ export default async function handler(req, res) {
         let site = "";
         let title = "";
 
-        // --- HELPER: Validate Name ---
-        const isValidName = (name) => {
-            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up", "Share", "Follow", "Twitter", "Facebook"];
-            return name && name.length > 2 && name.length < 50 && !badNames.includes(name) && !name.includes("...");
-        };
-
         // --- 1. EXTRACT TITLE ---
         title = $('meta[property="og:title"]').attr('content') || 
                 $('meta[name="twitter:title"]').attr('content') || 
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. JSON-LD EXTRACTION ---
-        $('script[type="application/ld+json"]').each((i, el) => {
-            try {
-                const json = JSON.parse($(el).html());
-                let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
+        // --- 2. META TAGS (Standard & Academic) ---
+        const authors = [];
+        $('meta[name="citation_author"]').each((i, el) => {
+            const val = $(el).attr('content');
+            if (val && !authors.includes(val)) authors.push(val);
+        });
+        $('meta[name="dc.creator"]').each((i, el) => {
+            const val = $(el).attr('content');
+            if (val && !authors.includes(val)) authors.push(val);
+        });
+        
+        if (authors.length > 0) author = authors.join(', ');
+
+        // Fallback Meta
+        if (!author) {
+            const authorTags = ['author', 'article:author', 'parsely-author', 'sailthru.author'];
+            authorTags.forEach(tag => {
+                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                    const val = $(el).attr('content');
+                    if (val && !authors.includes(val)) authors.push(val);
+                });
+            });
+            if (authors.length > 0) author = authors.join(', ');
+        }
+
+        // --- 3. LABEL-VALUE SCRAPER (Fix for UNH / Modern CMS) ---
+        // Looks for elements containing "Author" and grabs the NEXT element's text
+        if (!author) {
+            // Find elements that contain exactly "Author" or "Author:" or "Written By"
+            $('*').each((i, el) => {
+                if (author) return; // Stop if found
                 
-                const article = objects.find(o => 
-                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
-                );
-
-                if (article) {
-                    if (!date && (article.datePublished || article.dateCreated)) {
-                        date = article.datePublished || article.dateCreated;
+                // Check direct text of the element (ignoring children)
+                const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
+                
+                if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
+                    // Strategy A: Check the next sibling element
+                    let next = $(el).next();
+                    if (next.length && next.text().trim().length > 2) {
+                        author = next.text().trim();
+                        return;
                     }
-                    if (!site && article.publisher) {
-                        site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
+                    
+                    // Strategy B: Check the parent's next sibling (common in grid layouts)
+                    let parentNext = $(el).parent().next();
+                    if (parentNext.length && parentNext.text().trim().length > 2) {
+                        author = parentNext.text().trim();
+                        return;
                     }
                 }
-            } catch(e) {}
-        });
-
-        // --- 3. META TAGS (Date/Site) ---
-        if (!date) {
-            const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time', 'parsely-pub-date'];
-            for (const tag of dateTags) {
-                const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
-                if (val) { date = val; break; }
-            }
-        }
-
-        // --- 4. AUTHOR EXTRACTION (Multi-Strategy) ---
-        let collectedAuthors = new Set();
-
-        // Strategy A: Explicit Meta Tags
-        const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
-        authorTags.forEach(tag => {
-            $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                const val = $(el).attr('content');
-                if (isValidName(val)) collectedAuthors.add(val);
-            });
-        });
-
-        // Strategy B: Hyperlinks & IDs (Enhanced for Brookings)
-        // 1. Look for URL patterns
-        $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
-            const name = $(el).text().trim();
-            if (isValidName(name)) collectedAuthors.add(name);
-        });
-
-        // 2. Look for ID/Class patterns (Fix for 'person-hover-1', 'person-hover-2')
-        $('a[id^="person-"], a[class*="person-"], a[class*="author-"], .author a, .byline a').each((i, el) => {
-             const name = $(el).text().trim();
-             if (isValidName(name)) collectedAuthors.add(name);
-        });
-
-        // Strategy C: JSON-LD (Fallback)
-        if (collectedAuthors.size === 0) {
-             $('script[type="application/ld+json"]').each((i, el) => {
-                try {
-                    const json = JSON.parse($(el).html());
-                    let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
-                    const article = objects.find(o => ['Article', 'NewsArticle'].includes(o['@type']));
-                    if (article && article.author) {
-                        if (typeof article.author === 'string') collectedAuthors.add(article.author);
-                        else if (Array.isArray(article.author)) article.author.forEach(a => collectedAuthors.add(a.name || a));
-                        else if (article.author.name) collectedAuthors.add(article.author.name);
-                    }
-                } catch(e) {}
             });
         }
 
-        // Strategy D: CSS Selectors (Last Resort)
-        if (collectedAuthors.size === 0) {
-            const selectors = ['.author-name', '.byline', '.author', '.contributors', '.article-author', '.entry-author'];
-            for (const sel of selectors) {
-                const text = $(sel).first().text().trim();
-                if (isValidName(text)) {
-                    collectedAuthors.add(text.replace(/\s+/g, ' ').trim());
-                    break;
+        // --- 4. HYPERLINK STRATEGY ---
+        if (!author) {
+            const collectedAuthors = new Set();
+            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
+            
+            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
+                const name = $(el).text().trim();
+                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
+                    collectedAuthors.add(name);
                 }
-            }
+            });
+            
+            if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
         }
 
-        // Combine Authors
-        if (collectedAuthors.size > 0) {
-            author = Array.from(collectedAuthors).join(', ');
-        }
+        // --- 5. EXTRACT DATE ---
+        date = $('meta[name="citation_publication_date"]').attr('content') || 
+               $('meta[name="citation_date"]').attr('content') || 
+               $('meta[name="dc.date"]').attr('content') ||
+               $('meta[name="date"]').attr('content') || 
+               $('meta[property="article:published_time"]').attr('content');
 
-        // --- 5. CLEANUP ---
+        // --- 6. EXTRACT SITE NAME ---
+        site = $('meta[property="og:site_name"]').attr('content') || 
+               $('meta[name="citation_journal_title"]').attr('content') ||
+               $('meta[name="application-name"]').attr('content');
+
+        // --- 7. CLEANUP & TEXT EXTRACTION ---
         if (author) {
             author = author
                 .replace(/Author links open overlay panel/gi, '')
@@ -148,25 +134,28 @@ export default async function handler(req, res) {
         
         if (date && date.includes('T')) date = date.split('T')[0];
 
-        if (!site) {
-            site = $('meta[property="og:site_name"]').attr('content') || 
-                   $('meta[name="citation_journal_title"]').attr('content') ||
-                   $('meta[name="application-name"]').attr('content');
-        }
-
-        // --- 6. TEXT EXTRACTION ---
+        // Inject spaces to prevent word mashing
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 7. FINAL REGEX FALLBACK ---
+        // --- 8. FINAL REGEX FALLBACKS ---
+        // Author: Look for "Author [Name]" or "By [Name]"
         if (!author) {
-            const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
-            if (byMatch) author = byMatch[1];
+            const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z]+\s[A-Z][a-z]+)/i;
+            const match = bodyText.substring(0, 800).match(authorRegex);
+            if (match) author = match[1];
         }
 
-        // --- 8. CONSTRUCT RICH CONTENT ---
+        // Date: Look for "December 16, 2025" style dates
+        if (!date) {
+            const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
+            const match = bodyText.substring(0, 1000).match(dateRegex);
+            if (match) date = match[0];
+        }
+
+        // --- 9. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
