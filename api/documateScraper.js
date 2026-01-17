@@ -35,9 +35,9 @@ export default async function handler(req, res) {
         let date = "";
         let site = "";
 
-        // --- 1. META TAG EXTRACTION ---
-        // Collect ALL authors from academic tags
+        // --- 1. META TAGS (Academic & Standard) ---
         const authors = [];
+        // ScienceDirect / Academic
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
             if (val && !authors.includes(val)) authors.push(val);
@@ -56,21 +56,14 @@ export default async function handler(req, res) {
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content');
 
-        // Standard Meta Fallbacks
-        if (!author) {
-            author = $('meta[name="author"]').attr('content') || 
-                     $('meta[property="article:author"]').attr('content');
-        }
-        if (!date) {
-            date = $('meta[name="date"]').attr('content') || 
-                   $('meta[property="article:published_time"]').attr('content') || 
-                   $('meta[name="publish-date"]').attr('content');
-        }
+        // Standard Fallbacks
+        if (!author) author = $('meta[name="author"]').attr('content');
+        if (!date) date = $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content');
         
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // JSON-LD Fallback
+        // --- 2. JSON-LD EXTRACTION ---
         if (!date || !author) {
             $('script[type="application/ld+json"]').each((i, el) => {
                 try {
@@ -82,64 +75,67 @@ export default async function handler(req, res) {
                     }
                     if (!author && data.author) {
                         if (typeof data.author === 'string') author = data.author;
-                        else if (data.author.name) author = data.author.name;
                         else if (Array.isArray(data.author)) {
-                            author = data.author.map(a => a.name).join(', ');
+                            author = data.author.map(a => a.name || a).join(', ');
+                        } else if (data.author.name) {
+                            author = data.author.name;
                         }
                     }
                 } catch(e) {}
             });
         }
 
-        // --- 2. TEXT CLEANUP ---
+        // --- 3. TEXT PRE-PROCESSING (Fix Mashed Text) ---
+        // Inject spaces after block elements so "contentSkip" becomes "content Skip"
+        $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, header, aside, button, .ad, .advertisement').remove();
+        
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 3. AUTHOR FALLBACK (First 300 Chars) ---
-        if (!author) {
-            const introText = fullText.substring(0, 300);
-            
-            // Pattern 1: "By [Name]"
-            const byMatch = introText.match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
-            if (byMatch) {
-                author = byMatch[1];
-            } 
-            // Pattern 2: ScienceDirect/Academic style (Names often appear before "Abstract" or "Show more")
-            // We look for capitalized words separated by commas or "and" early in the text
-            else {
-                // This is a heuristic: Look for a sequence of names
-                // e.g. "Adib Bin Rashid, MD Ashfakul Karim Kausik"
-                const nameListMatch = introText.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}(?:,\s[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3})*)/);
-                if (nameListMatch && nameListMatch[0].length > 10 && !nameListMatch[0].includes("Skip")) {
-                    author = nameListMatch[0];
+        // --- 4. SCIENCEDIRECT SPECIFIC HACK ---
+        // ScienceDirect puts authors right after "Author links open overlay panel"
+        if (!author && fullText.includes("Author links open overlay panel")) {
+            const parts = fullText.split("Author links open overlay panel");
+            if (parts[1]) {
+                // Take text until "Show more" or "Get rights"
+                const potentialAuthors = parts[1].split(/Show more|Get rights|Abstract/)[0].trim();
+                if (potentialAuthors.length > 3 && potentialAuthors.length < 100) {
+                    author = potentialAuthors;
                 }
             }
         }
 
-        // --- 4. DATE FALLBACK (Regex) ---
+        // --- 5. GENERIC TEXT FALLBACKS ---
+        if (!author) {
+            // Look for "By [Name]"
+            const byMatch = fullText.substring(0, 500).match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
+            if (byMatch) author = byMatch[1];
+        }
+
         if (!date) {
             const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = fullText.substring(0, 800).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 5. SKIP-STEP CONTENT EXTRACTION ---
-        // Scrape 100 chars, skip 100 chars, repeat.
+        // --- 6. BAD AUTHOR FILTER ---
+        // If the "author" we found is actually UI text, kill it.
+        const badWords = ["Search", "Skip", "Login", "Sign in", "Menu", "Home", "PDF", "View", "Download"];
+        if (author && badWords.some(w => author.includes(w))) {
+            author = ""; // Reset if it contains garbage
+        }
+
+        // --- 7. SKIP-STEP CONTENT EXTRACTION ---
         let finalContent = "";
-        const maxSourceScan = 4000; // Scan up to 4000 chars of source text
-        const outputLimit = 1500;   // But stop if we hit 1500 chars of output
+        const maxSourceScan = 4000; 
+        const outputLimit = 1500;   
 
         for (let i = 0; i < Math.min(fullText.length, maxSourceScan); i += 200) {
             if (finalContent.length >= outputLimit) break;
-
-            // Take 100 characters
             const chunk = fullText.substring(i, i + 100);
-            
-            // Only add if it looks like real text (not just punctuation/numbers)
             if (chunk.length > 10) {
                 finalContent += chunk + " ... ";
             }
-            // The loop increments by 200, effectively skipping the next 100 characters
         }
 
         return { 
