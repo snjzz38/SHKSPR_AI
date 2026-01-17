@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
         // --- 3. EXTRACT AUTHORS (CSS Selectors Fallback) ---
         if (!author) {
-            const authorSelectors = ['.authors', '.author-group', '.author-list', '.contributors', '.article-author', '#author-group'];
+            const authorSelectors = ['.authors', '.author-group', '.author-list', '.contributors', '.article-author', '#author-group', '.byline'];
             for (const sel of authorSelectors) {
                 const text = $(sel).text().trim();
                 if (text && text.length > 3 && text.length < 300) {
@@ -67,18 +67,16 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- 4. CLEAN AUTHOR STRING (Crucial Fix) ---
+        // --- 4. CLEAN AUTHOR STRING ---
         if (author) {
             author = author
-                .replace(/Author links open overlay panel/gi, '') // ScienceDirect Fix
+                .replace(/Author links open overlay panel/gi, '')
                 .replace(/Show more/gi, '')
                 .replace(/Get rights and content/gi, '')
                 .replace(/Open access/gi, '')
                 .replace(/Search/gi, '')
                 .replace(/Menu/gi, '')
                 .trim();
-            
-            // Remove leading commas or "By " if left over
             author = author.replace(/^,\s*/, '').replace(/^By\s+/i, '');
         }
 
@@ -94,14 +92,18 @@ export default async function handler(req, res) {
                $('meta[name="citation_journal_title"]').attr('content');
 
         // --- 7. CLEAN TEXT EXTRACTION ---
-        $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
+        // Inject spaces after block elements AND inline elements that might merge text
+        $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
+        
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
         // --- 8. TEXT FALLBACKS ---
         if (!author) {
-            const byMatch = bodyText.substring(0, 500).match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
+            // Updated Regex to handle "ByVictor" (missing space)
+            // Looks for "By" followed by optional space, then Capital letter
+            const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
             if (byMatch) author = byMatch[1];
         }
 
