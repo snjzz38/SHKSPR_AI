@@ -19,7 +19,6 @@ export default async function handler(req, res) {
 
         const response = await fetch(url, { 
             headers: { 
-                // Use a standard browser UA
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
             },
@@ -57,57 +56,62 @@ export default async function handler(req, res) {
         if (authors.length > 0) author = authors.join(', ');
 
         // --- 3. EXTRACT AUTHORS (CSS Selectors Fallback) ---
-        // If meta tags failed, look for common author class names
         if (!author) {
-            const authorSelectors = ['.authors', '.author-group', '.author-list', '.contributors', '.article-author'];
+            const authorSelectors = ['.authors', '.author-group', '.author-list', '.contributors', '.article-author', '#author-group'];
             for (const sel of authorSelectors) {
                 const text = $(sel).text().trim();
-                if (text && text.length > 3 && text.length < 200) {
-                    // Clean up "Search" or "Menu" garbage if it got caught
-                    if (!text.includes("Search") && !text.includes("Menu")) {
-                        author = text.replace(/\s+/g, ' ').trim();
-                        break;
-                    }
+                if (text && text.length > 3 && text.length < 300) {
+                    author = text.replace(/\s+/g, ' ').trim();
+                    break;
                 }
             }
         }
 
-        // --- 4. EXTRACT DATE ---
+        // --- 4. CLEAN AUTHOR STRING (Crucial Fix) ---
+        if (author) {
+            author = author
+                .replace(/Author links open overlay panel/gi, '') // ScienceDirect Fix
+                .replace(/Show more/gi, '')
+                .replace(/Get rights and content/gi, '')
+                .replace(/Open access/gi, '')
+                .replace(/Search/gi, '')
+                .replace(/Menu/gi, '')
+                .trim();
+            
+            // Remove leading commas or "By " if left over
+            author = author.replace(/^,\s*/, '').replace(/^By\s+/i, '');
+        }
+
+        // --- 5. EXTRACT DATE ---
         date = $('meta[name="citation_publication_date"]').attr('content') || 
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content') ||
                $('meta[name="date"]').attr('content') || 
                $('meta[property="article:published_time"]').attr('content');
 
-        // --- 5. EXTRACT SITE NAME ---
+        // --- 6. EXTRACT SITE NAME ---
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // --- 6. CLEAN TEXT EXTRACTION ---
-        // Inject spaces to prevent word mashing
+        // --- 7. CLEAN TEXT EXTRACTION ---
         $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
-        
-        // CRITICAL FIX: Do NOT remove 'button' tags, as ScienceDirect puts authors inside them.
-        // Only remove non-content technical elements.
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 7. TEXT FALLBACKS (If still missing) ---
+        // --- 8. TEXT FALLBACKS ---
         if (!author) {
-            // Look for "By [Name]"
             const byMatch = bodyText.substring(0, 500).match(/By\s+([A-Z][a-z]+\s[A-Z][a-z]+)/);
             if (byMatch) author = byMatch[1];
         }
 
-        // --- 8. CONSTRUCT RICH CONTENT ---
+        // --- 9. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
         if (date) richContent += `Date: ${date}. `;
         if (site) richContent += `Source: ${site}. `;
         
-        // Append the first 2000 characters of clean text
         richContent += "\n\n" + bodyText.substring(0, 2000);
 
         return { 
