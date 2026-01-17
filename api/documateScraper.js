@@ -17,10 +17,10 @@ export default async function handler(req, res) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        // Use a generic User-Agent to avoid blocking
         const response = await fetch(url, { 
             headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
             },
             signal: controller.signal
         });
@@ -35,15 +35,27 @@ export default async function handler(req, res) {
         let date = "";
         let site = "";
 
-        // --- STRATEGY 1: ACADEMIC META TAGS (ScienceDirect, JSTOR, etc.) ---
-        author = $('meta[name="citation_author"]').first().attr('content') || 
-                 $('meta[name="dc.creator"]').attr('content');
-        
+        // --- 1. ACADEMIC META TAGS (Collect ALL authors) ---
+        const authors = [];
+        $('meta[name="citation_author"]').each((i, el) => {
+            const val = $(el).attr('content');
+            if (val && !authors.includes(val)) authors.push(val);
+        });
+        $('meta[name="dc.creator"]').each((i, el) => {
+            const val = $(el).attr('content');
+            if (val && !authors.includes(val)) authors.push(val);
+        });
+
+        if (authors.length > 0) {
+            author = authors.join(', ');
+        }
+
+        // Dates
         date = $('meta[name="citation_publication_date"]').attr('content') || 
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content');
 
-        // --- STRATEGY 2: STANDARD META TAGS ---
+        // --- 2. STANDARD META TAGS ---
         if (!author) {
             author = $('meta[name="author"]').attr('content') || 
                      $('meta[property="article:author"]').attr('content');
@@ -57,7 +69,7 @@ export default async function handler(req, res) {
         site = $('meta[property="og:site_name"]').attr('content') || 
                $('meta[name="citation_journal_title"]').attr('content');
 
-        // --- STRATEGY 3: JSON-LD (Rich Snippets) ---
+        // --- 3. JSON-LD (Rich Snippets) ---
         if (!date || !author) {
             $('script[type="application/ld+json"]').each((i, el) => {
                 try {
@@ -70,7 +82,9 @@ export default async function handler(req, res) {
                     if (!author && data.author) {
                         if (typeof data.author === 'string') author = data.author;
                         else if (data.author.name) author = data.author.name;
-                        else if (Array.isArray(data.author) && data.author[0].name) author = data.author[0].name;
+                        else if (Array.isArray(data.author)) {
+                            author = data.author.map(a => a.name).join(', ');
+                        }
                     }
                 } catch(e) {}
             });
@@ -80,15 +94,44 @@ export default async function handler(req, res) {
         $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
         const fullText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- STRATEGY 4: REGEX FALLBACK (Find date in text) ---
-        // If date is still missing, look for patterns like "December 2024" or "2024-12-01" in the first 500 chars
+        // --- 4. TEXT FALLBACKS (If Meta Failed) ---
+        
+        // Author Fallback: Look for "Authors: ..." or "Written by ..."
+        if (!author) {
+            const authorRegex = /(?:Authors?|Written by)[:\s]+([A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3}(?:,\s[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,3})*)/i;
+            const match = fullText.substring(0, 500).match(authorRegex);
+            if (match) author = match[1];
+        }
+
+        // Date Fallback: Regex search in text
         if (!date) {
             const dateRegex = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}|(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = fullText.substring(0, 800).match(dateRegex);
-            if (match) {
-                date = match[0];
-            }
+            if (match) date = match[0];
         }
+
+        // --- 5. VARIED CONTENT EXTRACTION ---
+        // Extract chunks: 100-300, 500-700, 800-1000
+        let contentChunks = [];
+        const ranges = [[100, 300], [500, 700], [800, 1000]];
+        
+        ranges.forEach(([start, end]) => {
+            if (fullText.length > start) {
+                // Ensure we don't go out of bounds
+                const actualEnd = Math.min(fullText.length, end);
+                const chunk = fullText.substring(start, actualEnd).trim();
+                if (chunk.length > 20) { // Only add substantial chunks
+                    contentChunks.push(chunk);
+                }
+            }
+        });
+
+        // If text is very short, just take what we have
+        if (contentChunks.length === 0) {
+            contentChunks.push(fullText.substring(0, 500));
+        }
+
+        const finalContent = contentChunks.join(" ... ");
 
         return { 
             url, 
@@ -98,7 +141,7 @@ export default async function handler(req, res) {
                 date: date || "", 
                 site: site || "" 
             }, 
-            content: fullText.substring(0, 1500) 
+            content: finalContent
         };
 
       } catch (e) {
