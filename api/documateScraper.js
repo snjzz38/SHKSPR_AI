@@ -42,100 +42,48 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. JSON-LD EXTRACTION ---
-        $('script[type="application/ld+json"]').each((i, el) => {
-            try {
-                const json = JSON.parse($(el).html());
-                let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
-                
-                const article = objects.find(o => 
-                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
-                );
-
-                if (article) {
-                    if (!date && (article.datePublished || article.dateCreated)) {
-                        date = article.datePublished || article.dateCreated;
-                    }
-                    if (!author && article.author) {
-                        if (typeof article.author === 'string') author = article.author;
-                        else if (Array.isArray(article.author)) {
-                            author = article.author.map(a => a.name || a).join(', ');
-                        } else if (article.author.name) {
-                            author = article.author.name;
-                        }
-                    }
-                    if (!site && article.publisher) {
-                        site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
-                    }
-                }
-            } catch(e) {}
+        // --- 2. META TAGS ---
+        const authors = [];
+        $('meta[name="citation_author"]').each((i, el) => {
+            const val = $(el).attr('content');
+            if (val && !authors.includes(val)) authors.push(val);
         });
+        if (authors.length > 0) author = authors.join(', ');
 
-        // --- 3. META TAGS ---
+        // --- 3. CSS SELECTORS (ScienceDirect & Academic Fix) ---
+        // If meta tags failed, look for specific class names from your screenshot
         if (!author) {
-            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
-            const found = [];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val && !found.includes(val)) found.push(val);
-                });
+            const sdAuthors = [];
+            // Look for .given-name and .surname (ScienceDirect standard)
+            // We iterate over the container to keep names paired correctly
+            $('.author, .author-group .author, .react-xocs-alternative-link').each((i, el) => {
+                const given = $(el).find('.given-name').text().trim();
+                const surname = $(el).find('.surname').text().trim();
+                if (given && surname) {
+                    sdAuthors.push(`${given} ${surname}`);
+                }
             });
-            if (found.length > 0) author = found.join(', ');
-        }
-
-        // --- 4. HYPERLINK STRATEGY (Expanded for Substack/Medium) ---
-        if (!author) {
-            const collectedAuthors = new Set();
-            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up", "Share"];
             
-            // Added: /profile/ and /@/ (Common on Substack, Medium, YouTube, Twitter)
-            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[href*="/profile/"], a[href*="/@"], a[rel="author"]').each((i, el) => {
-                const name = $(el).text().trim();
-                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
-                    collectedAuthors.add(name);
+            // If that didn't work, try just finding all given-names/surnames globally
+            if (sdAuthors.length === 0) {
+                const givens = $('.given-name').map((i, el) => $(el).text().trim()).get();
+                const surnames = $('.surname').map((i, el) => $(el).text().trim()).get();
+                if (givens.length > 0 && givens.length === surnames.length) {
+                    givens.forEach((g, i) => sdAuthors.push(`${g} ${surnames[i]}`));
                 }
-            });
-            if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
-        }
+            }
 
-        // --- 5. LABEL-VALUE STRATEGY ---
-        if (!author) {
-            $('*').each((i, el) => {
-                if (author) return;
-                const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
-                if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
-                    let next = $(el).next();
-                    if (next.length && next.text().trim().length > 2) {
-                        author = next.text().trim();
-                        return;
-                    }
-                    let parentNext = $(el).parent().next();
-                    if (parentNext.length && parentNext.text().trim().length > 2) {
-                        author = parentNext.text().trim();
-                        return;
-                    }
-                }
-            });
-        }
-
-        // --- 6. EXTRACT DATE ---
-        if (!date) {
-            const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time', 'parsely-pub-date'];
-            for (const tag of dateTags) {
-                const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
-                if (val) { date = val; break; }
+            if (sdAuthors.length > 0) {
+                author = sdAuthors.join(', ');
             }
         }
 
-        // --- 7. EXTRACT SITE NAME ---
-        if (!site) {
-            site = $('meta[property="og:site_name"]').attr('content') || 
-                   $('meta[name="citation_journal_title"]').attr('content') ||
-                   $('meta[name="application-name"]').attr('content');
-        }
+        // --- 4. EXTRACT SITE NAME ---
+        site = $('meta[property="og:site_name"]').attr('content') || 
+               $('meta[name="citation_journal_title"]').attr('content') ||
+               $('meta[name="application-name"]').attr('content');
 
-        // URL Fallback for Site
+        // URL Fallback
         if (!site) {
             try {
                 const hostname = new URL(url).hostname;
@@ -149,55 +97,53 @@ export default async function handler(req, res) {
             } catch (e) {}
         }
 
-        // --- 8. CLEANUP & TEXT EXTRACTION ---
+        // --- 5. EXTRACT DATE ---
+        date = $('meta[name="citation_publication_date"]').attr('content') || 
+               $('meta[name="citation_date"]').attr('content') || 
+               $('meta[name="dc.date"]').attr('content') ||
+               $('meta[name="date"]').attr('content') || 
+               $('meta[property="article:published_time"]').attr('content');
+
+        // --- 6. CLEANUP & TEXT EXTRACTION ---
         if (author) {
             author = author
                 .replace(/Author links open overlay panel/gi, '')
+                .replace(/links open/gi, '') // <--- Fix for your specific issue
                 .replace(/Show more/gi, '')
-                .replace(/By\s+/i, '')
-                .replace(/^,\s*/, '')
+                .replace(/Get rights/gi, '')
+                .replace(/Open access/gi, '')
+                .replace(/Search/gi, '')
+                .replace(/Menu/gi, '')
                 .trim();
+            author = author.replace(/^,\s*/, '').replace(/^By\s+/i, '');
         }
-        if (date && date.includes('T')) date = date.split('T')[0];
 
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 9. FINAL REGEX FALLBACKS ---
-        
-        // Strategy A: "By [Name]"
+        // --- 7. BYLINE OVERRIDE ---
         if (!author) {
-            const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z.-]+\s+[A-Z][a-z.-]+(?:,\s+(?:and\s+)?[A-Z][a-z.-]+\s+[A-Z][a-z.-]+|(?:\s+and\s+)[A-Z][a-z.-]+\s+[A-Z][a-z.-]+)*)/i;
-            const match = bodyText.substring(0, 1000).match(authorRegex);
-            if (match) {
-                let clean = match[1].trim();
-                clean = clean.replace(/,\s*and$/, '').replace(/\s+and$/, '');
-                if (clean.length < 100 && !clean.includes(".")) {
-                    author = clean;
+            const bylineRegex = /(?:By|Written by)\s+([A-Z][a-z.-]+\s+[A-Z][a-z.-]+(?:,\s+[A-Z][a-z.-]+\s+[A-Z][a-z.-]+)*)/i;
+            const byMatch = bodyText.substring(0, 1500).match(bylineRegex);
+            if (byMatch) {
+                const textAuthor = byMatch[1].trim();
+                const badStarts = ["The", "Contrast", "Comparison", "Definition", "Click", "Subscribe"];
+                if (!badStarts.some(b => textAuthor.startsWith(b)) && textAuthor.length < 50) {
+                    author = textAuthor;
                 }
             }
         }
 
-        // Strategy B: "Name's Substack" (Specific Fix)
-        if (!author && url.includes('substack.com')) {
-            // Look for "David Shapiro's Substack"
-            const substackRegex = /([A-Z][a-z]+ [A-Z][a-z]+)’s Substack/i;
-            const match = bodyText.substring(0, 500).match(substackRegex);
-            if (match) {
-                author = match[1];
-            }
-        }
-
-        // Date Regex
+        // --- 8. DATE FALLBACK ---
         if (!date) {
             const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(?:\d{1,2},?\s+)?\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 10. CONSTRUCT RICH CONTENT ---
+        // --- 9. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
@@ -210,11 +156,7 @@ export default async function handler(req, res) {
             url, 
             status: "ok", 
             title: title || "", 
-            meta: { 
-                author: author || "", 
-                date: date || "", 
-                site: site || "" 
-            }, 
+            meta: { author: author || "", date: date || "", site: site || "" }, 
             content: richContent 
         };
 
