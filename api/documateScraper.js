@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       
       // ============================================================
-      // STRATEGY 1: PUBMED API (Bypass 403 Blocking entirely)
+      // STRATEGY 1: PUBMED API (Bypass 403 Blocking)
       // ============================================================
       if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
           try {
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       }
 
       // ============================================================
-      // STRATEGY 2: DOI LOOKUP (Crossref API for Academic Papers)
+      // STRATEGY 2: DOI LOOKUP (Crossref API)
       // ============================================================
       const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
       if (doiMatch) {
@@ -70,11 +70,11 @@ export default async function handler(req, res) {
       }
 
       // ============================================================
-      // STRATEGY 3: ROBUST SCRAPER (McKinsey, News, Blogs)
+      // STRATEGY 3: ROBUST SCRAPER (Fixed for Headers/Sidebars)
       // ============================================================
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch(url, { 
             headers: { 
@@ -101,10 +101,10 @@ export default async function handler(req, res) {
         let site = "";
         let title = "";
 
-        // 1. Title
+        // --- 1. TITLE ---
         title = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
 
-        // 2. JSON-LD (Best for McKinsey/News)
+        // --- 2. JSON-LD ---
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
                 const json = JSON.parse($(el).html());
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
             } catch(e) {}
         });
 
-        // 3. Meta Tags
+        // --- 3. META TAGS ---
         if (!author) {
             const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author'];
             const found = [];
@@ -144,9 +144,9 @@ export default async function handler(req, res) {
             site = $('meta[property="og:site_name"]').attr('content') || "Website";
         }
 
-        // 4. DOM Fallbacks (McKinsey often puts authors in .text-link or .author-name)
+        // --- 4. DOM FALLBACKS ---
         if (!author) {
-            const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors'];
+            const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors', '.meta-author'];
             for (const sel of selectors) {
                 const text = $(sel).first().text().trim();
                 if (text && text.length > 3 && text.length < 100) {
@@ -156,22 +156,41 @@ export default async function handler(req, res) {
             }
         }
 
-        // 5. Cleanup
+        // --- 5. CLEANUP ---
         if (author) author = author.replace(/Author links open overlay panel/gi, '').trim();
         if (date && date.includes('T')) date = date.split('T')[0];
 
-        // 6. Text Extraction
-        $('script, style, nav, footer, svg, noscript, iframe, aside').remove();
-        $('br, div, p, h1, h2, li').after(' ');
-        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+        // --- 6. TEXT EXTRACTION (Scoped to Main Content First) ---
+        // Remove junk
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
+        // Inject spaces to prevent "AuthorName" mashing
+        $('br, div, p, h1, h2, h3, li, strong, b, em, span').after(' ');
 
-        // 7. Regex Fallback
+        // Try to find the "Main" content to avoid Header/Sidebar promos (like "Speech by Putin")
+        let mainContent = $('main, article, [role="main"], .content, #content').text();
+        if (mainContent.length < 200) mainContent = $('body').text(); // Fallback to body if main is empty
+        
+        let bodyText = mainContent.replace(/\s+/g, ' ').trim();
+
+        // --- 7. REGEX FALLBACK (With "Speech" Protection) ---
         if (!author) {
-            const byMatch = bodyText.substring(0, 1000).match(/(?:By|Written by)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s+[A-Z][a-z]+)*)/i);
-            if (byMatch) author = byMatch[1];
+            // Look for "By [Name]" or "Author: [Name]"
+            // EXCLUDE: "Speech by", "Statement by"
+            const authorRegex = /(?:By|Author|Written by)[:\s]+([A-Z][a-z]+\s+[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s+[A-Z][a-z]+)*)/i;
+            const match = bodyText.substring(0, 1500).match(authorRegex);
+            
+            if (match) {
+                // Check if the match was preceded by "Speech" or "Statement" in the raw text
+                const index = match.index;
+                const preceding = bodyText.substring(Math.max(0, index - 15), index).toLowerCase();
+                
+                if (!preceding.includes("speech") && !preceding.includes("statement")) {
+                    author = match[1];
+                }
+            }
         }
 
-        // 8. Construct Content
+        // --- 8. CONSTRUCT CONTENT ---
         let richContent = `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
         if (date) richContent += `Date: ${date}. `;
