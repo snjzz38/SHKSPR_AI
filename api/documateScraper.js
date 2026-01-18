@@ -42,41 +42,38 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. META TAGS (Initial Attempt) ---
-        const authors = [];
-        $('meta[name="citation_author"]').each((i, el) => {
-            const val = $(el).attr('content');
-            if (val && !authors.includes(val)) authors.push(val);
+        // --- 2. JSON-LD EXTRACTION (Deep Search) ---
+        $('script[type="application/ld+json"]').each((i, el) => {
+            try {
+                const json = JSON.parse($(el).html());
+                let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
+                const article = objects.find(o => ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type']));
+
+                if (article) {
+                    if (!date && (article.datePublished || article.dateCreated)) date = article.datePublished || article.dateCreated;
+                    if (!site && article.publisher) site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
+                    // We don't set author here immediately to allow multi-strategy collection below
+                }
+            } catch(e) {}
         });
-        $('meta[name="dc.creator"]').each((i, el) => {
-            const val = $(el).attr('content');
-            if (val && !authors.includes(val)) authors.push(val);
+
+        // --- 3. META TAGS ---
+        const authors = [];
+        const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
+        authorTags.forEach(tag => {
+            $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                const val = $(el).attr('content');
+                if (val && !authors.includes(val)) authors.push(val);
+            });
         });
         if (authors.length > 0) author = authors.join(', ');
 
-        // Fallback Meta
-        if (!author) {
-            const authorTags = ['author', 'article:author', 'parsely-author', 'sailthru.author'];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val && !authors.includes(val)) authors.push(val);
-                });
-            });
-            if (authors.length > 0) author = authors.join(', ');
-        }
-
-        // --- 3. EXTRACT DATE ---
-        date = $('meta[name="citation_publication_date"]').attr('content') || 
-               $('meta[name="citation_date"]').attr('content') || 
-               $('meta[name="dc.date"]').attr('content') ||
-               $('meta[name="date"]').attr('content') || 
-               $('meta[property="article:published_time"]').attr('content');
-
         // --- 4. EXTRACT SITE NAME ---
-        site = $('meta[property="og:site_name"]').attr('content') || 
-               $('meta[name="citation_journal_title"]').attr('content') ||
-               $('meta[name="application-name"]').attr('content');
+        if (!site) {
+            site = $('meta[property="og:site_name"]').attr('content') || 
+                   $('meta[name="citation_journal_title"]').attr('content') ||
+                   $('meta[name="application-name"]').attr('content');
+        }
 
         // URL Fallback for Site
         if (!site) {
@@ -92,36 +89,96 @@ export default async function handler(req, res) {
             } catch (e) {}
         }
 
-        // --- 5. CLEANUP & TEXT EXTRACTION ---
+        // --- 5. GENERIC AUTHOR CHECK ---
+        // If author is same as site (e.g. "ABC News"), clear it to force text fallback
+        if (author && site && author.toLowerCase().trim() === site.toLowerCase().trim()) {
+            author = "";
+        }
+
+        // --- 6. HYPERLINK STRATEGY (Brookings/News) ---
+        if (!author) {
+            const collectedAuthors = new Set();
+            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
+            
+            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
+                const name = $(el).text().trim();
+                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
+                    collectedAuthors.add(name);
+                }
+            });
+            if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
+        }
+
+        // --- 7. LABEL-VALUE STRATEGY (UNH/CMS) ---
+        if (!author) {
+            $('*').each((i, el) => {
+                if (author) return;
+                const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
+                if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
+                    let next = $(el).next();
+                    if (next.length && next.text().trim().length > 2) {
+                        author = next.text().trim();
+                        return;
+                    }
+                    let parentNext = $(el).parent().next();
+                    if (parentNext.length && parentNext.text().trim().length > 2) {
+                        author = parentNext.text().trim();
+                        return;
+                    }
+                }
+            });
+        }
+
+        // --- 8. EXTRACT DATE ---
+        if (!date) {
+            const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time', 'parsely-pub-date'];
+            for (const tag of dateTags) {
+                const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
+                if (val) { date = val; break; }
+            }
+        }
+
+        // --- 9. CLEANUP & TEXT EXTRACTION ---
+        if (author) {
+            author = author
+                .replace(/Author links open overlay panel/gi, '')
+                .replace(/Show more/gi, '')
+                .replace(/By\s+/i, '')
+                .replace(/^,\s*/, '')
+                .trim();
+        }
+        if (date && date.includes('T')) date = date.split('T')[0];
+
+        // Inject spaces
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
+        // CRITICAL: Do NOT remove buttons (ScienceDirect authors are in buttons)
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 6. BYLINE OVERRIDE (CRITICAL FIX) ---
-        // Even if we found an author in Meta, the text "By [Name]" is usually more accurate for news/blogs.
-        // We look for "By [Name]" in the first 1000 characters.
-        const bylineRegex = /(?:By|Written by)\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s[A-Z][a-z]+)*)/i;
-        const byMatch = bodyText.substring(0, 1000).match(bylineRegex);
+        // --- 10. FINAL REGEX FALLBACKS ---
         
-        if (byMatch) {
-            const textAuthor = byMatch[1].trim();
-            // Filter out garbage like "By The Way" or "By Contrast"
-            const badStarts = ["The", "Contrast", "Comparison", "Definition", "Click", "Subscribe"];
-            if (!badStarts.some(b => textAuthor.startsWith(b)) && textAuthor.length < 40) {
-                // If the text author is different and valid, use it (it overrides the "Subject" often found in meta)
-                author = textAuthor;
+        // Author: "By Name, Name, and Name"
+        if (!author) {
+            const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z.-]+\s+[A-Z][a-z.-]+(?:,\s+(?:and\s+)?[A-Z][a-z.-]+\s+[A-Z][a-z.-]+|(?:\s+and\s+)[A-Z][a-z.-]+\s+[A-Z][a-z.-]+)*)/i;
+            const match = bodyText.substring(0, 1000).match(authorRegex);
+            if (match) {
+                let clean = match[1].trim();
+                clean = clean.replace(/,\s*and$/, '').replace(/\s+and$/, '');
+                if (clean.length < 100 && !clean.includes(".")) {
+                    author = clean;
+                }
             }
         }
 
-        // --- 7. DATE FALLBACK ---
+        // Date: "Nov 27, 2024" or "November 27, 2024"
         if (!date) {
             const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 8. CONSTRUCT RICH CONTENT ---
+        // --- 11. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
