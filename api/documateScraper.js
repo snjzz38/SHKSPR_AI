@@ -42,7 +42,7 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. META TAGS ---
+        // --- 2. META TAGS (Initial Attempt) ---
         const authors = [];
         $('meta[name="citation_author"]').each((i, el) => {
             const val = $(el).attr('content');
@@ -54,6 +54,7 @@ export default async function handler(req, res) {
         });
         if (authors.length > 0) author = authors.join(', ');
 
+        // Fallback Meta
         if (!author) {
             const authorTags = ['author', 'article:author', 'parsely-author', 'sailthru.author'];
             authorTags.forEach(tag => {
@@ -65,74 +66,62 @@ export default async function handler(req, res) {
             if (authors.length > 0) author = authors.join(', ');
         }
 
-        // --- 3. EXTRACT SITE NAME ---
-        site = $('meta[property="og:site_name"]').attr('content') || 
-               $('meta[name="citation_journal_title"]').attr('content') ||
-               $('meta[name="application-name"]').attr('content');
-
-        // --- 4. GENERIC AUTHOR CHECK (Fix for ABC News) ---
-        // If author is same as site (e.g. "ABC News"), clear it to force text fallback
-        if (author && site && author.toLowerCase().trim() === site.toLowerCase().trim()) {
-            author = "";
-        }
-
-        // --- 5. HYPERLINK STRATEGY ---
-        if (!author) {
-            const collectedAuthors = new Set();
-            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up"];
-            
-            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[rel="author"]').each((i, el) => {
-                const name = $(el).text().trim();
-                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
-                    collectedAuthors.add(name);
-                }
-            });
-            if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
-        }
-
-        // --- 6. EXTRACT DATE ---
+        // --- 3. EXTRACT DATE ---
         date = $('meta[name="citation_publication_date"]').attr('content') || 
                $('meta[name="citation_date"]').attr('content') || 
                $('meta[name="dc.date"]').attr('content') ||
                $('meta[name="date"]').attr('content') || 
                $('meta[property="article:published_time"]').attr('content');
 
-        // --- 7. CLEANUP & TEXT EXTRACTION ---
-        if (author) {
-            author = author
-                .replace(/Author links open overlay panel/gi, '')
-                .replace(/Show more/gi, '')
-                .replace(/By\s+/i, '')
-                .replace(/^,\s*/, '')
-                .trim();
-        }
-        if (date && date.includes('T')) date = date.split('T')[0];
+        // --- 4. EXTRACT SITE NAME ---
+        site = $('meta[property="og:site_name"]').attr('content') || 
+               $('meta[name="citation_journal_title"]').attr('content') ||
+               $('meta[name="application-name"]').attr('content');
 
+        // URL Fallback for Site
+        if (!site) {
+            try {
+                const hostname = new URL(url).hostname;
+                if (hostname.includes('substack.com')) {
+                    const subdomain = hostname.split('.')[0];
+                    site = subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + " Substack";
+                } else {
+                    const parts = hostname.replace('www.', '').split('.');
+                    if (parts.length > 0) site = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+                }
+            } catch (e) {}
+        }
+
+        // --- 5. CLEANUP & TEXT EXTRACTION ---
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 8. FINAL REGEX FALLBACK (Updated for Multiple Authors) ---
-        if (!author) {
-            // Matches: "By Name Name", "By Name, Name, and Name"
-            // Looks for capitalized words separated by commas/and
-            const authorRegex = /(?:Author|By|Written by)[:\s]+((?:[A-Z][a-z]+\s[A-Z][a-z]+(?:,\s+|,\s+and\s+|\s+and\s+)?)+)/i;
-            const match = bodyText.substring(0, 800).match(authorRegex);
-            if (match) {
-                author = match[1].trim();
-                // Remove trailing "and" if regex overshot
-                author = author.replace(/,\s*and$/, '').replace(/\s+and$/, '');
+        // --- 6. BYLINE OVERRIDE (CRITICAL FIX) ---
+        // Even if we found an author in Meta, the text "By [Name]" is usually more accurate for news/blogs.
+        // We look for "By [Name]" in the first 1000 characters.
+        const bylineRegex = /(?:By|Written by)\s+([A-Z][a-z]+\s[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s[A-Z][a-z]+)*)/i;
+        const byMatch = bodyText.substring(0, 1000).match(bylineRegex);
+        
+        if (byMatch) {
+            const textAuthor = byMatch[1].trim();
+            // Filter out garbage like "By The Way" or "By Contrast"
+            const badStarts = ["The", "Contrast", "Comparison", "Definition", "Click", "Subscribe"];
+            if (!badStarts.some(b => textAuthor.startsWith(b)) && textAuthor.length < 40) {
+                // If the text author is different and valid, use it (it overrides the "Subject" often found in meta)
+                author = textAuthor;
             }
         }
 
+        // --- 7. DATE FALLBACK ---
         if (!date) {
             const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 9. CONSTRUCT RICH CONTENT ---
+        // --- 8. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
