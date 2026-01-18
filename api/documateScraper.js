@@ -14,9 +14,7 @@ export default async function handler(req, res) {
 
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       
-      // ============================================================
-      // STRATEGY 1: PUBMED API (Bypass 403 Blocking)
-      // ============================================================
+      // 1. PUBMED API (Metadata Only + Abstract)
       if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
           try {
               const idMatch = url.match(/\/(\d+)\/?/);
@@ -29,23 +27,18 @@ export default async function handler(req, res) {
                       const result = data.result[id];
                       if (result) {
                           const authorStr = result.authors ? result.authors.map(a => a.name).join(', ') : "";
-                          const dateStr = result.pubdate || "";
                           return {
-                              url,
-                              status: "ok",
-                              title: result.title,
-                              meta: { author: authorStr, date: dateStr, site: "PubMed" },
-                              content: `Title: ${result.title}. Author: ${authorStr}. Date: ${dateStr}. Source: PubMed.`
+                              url, status: "ok", title: result.title,
+                              meta: { author: authorStr, date: result.pubdate || "", site: "PubMed" },
+                              content: result.title // PubMed usually doesn't give full text via API, just title/meta
                           };
                       }
                   }
               }
-          } catch (e) { console.warn("PubMed API failed", e); }
+          } catch (e) {}
       }
 
-      // ============================================================
-      // STRATEGY 2: DOI LOOKUP (Crossref API)
-      // ============================================================
+      // 2. DOI LOOKUP (Crossref)
       const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
       if (doiMatch) {
           try {
@@ -59,19 +52,15 @@ export default async function handler(req, res) {
                   if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
                   
                   return {
-                      url,
-                      status: "ok",
-                      title: item.title ? item.title[0] : "",
+                      url, status: "ok", title: item.title ? item.title[0] : "",
                       meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
-                      content: `Title: ${item.title}. Author: ${authors}. Date: ${date}. Abstract: ${item.abstract || ""}`
+                      content: item.abstract || item.title // Return abstract if available
                   };
               }
-          } catch (e) { console.warn("DOI Lookup failed", e); }
+          } catch (e) {}
       }
 
-      // ============================================================
-      // STRATEGY 3: ROBUST SCRAPER (Fixed for Headers/Sidebars)
-      // ============================================================
+      // 3. STANDARD SCRAPER (Middle Text Only)
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -79,13 +68,10 @@ export default async function handler(req, res) {
         const response = await fetch(url, { 
             headers: { 
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Referer': 'https://www.google.com/',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'cross-site'
+                'Upgrade-Insecure-Requests': '1'
             },
             signal: controller.signal
         });
@@ -99,12 +85,11 @@ export default async function handler(req, res) {
         let author = "";
         let date = "";
         let site = "";
-        let title = "";
+        let title = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
 
-        // --- 1. TITLE ---
-        title = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
-
-        // --- 2. JSON-LD ---
+        // --- METADATA EXTRACTION (Keep this for Bibliography) ---
+        
+        // JSON-LD
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
                 const json = JSON.parse($(el).html());
@@ -121,7 +106,7 @@ export default async function handler(req, res) {
             } catch(e) {}
         });
 
-        // --- 3. META TAGS ---
+        // Meta Tags
         if (!author) {
             const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author'];
             const found = [];
@@ -134,19 +119,12 @@ export default async function handler(req, res) {
             if (found.length > 0) author = found.join(', ');
         }
 
-        if (!date) {
-            date = $('meta[name="citation_publication_date"]').attr('content') || 
-                   $('meta[name="date"]').attr('content') || 
-                   $('meta[property="article:published_time"]').attr('content');
-        }
+        if (!date) date = $('meta[name="citation_publication_date"]').attr('content') || $('meta[name="date"]').attr('content');
+        if (!site) site = $('meta[property="og:site_name"]').attr('content');
 
-        if (!site) {
-            site = $('meta[property="og:site_name"]').attr('content') || "Website";
-        }
-
-        // --- 4. DOM FALLBACKS ---
+        // DOM Fallbacks for Author
         if (!author) {
-            const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors', '.meta-author'];
+            const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors'];
             for (const sel of selectors) {
                 const text = $(sel).first().text().trim();
                 if (text && text.length > 3 && text.length < 100) {
@@ -156,53 +134,34 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- 5. CLEANUP ---
+        // Cleanup Metadata
         if (author) author = author.replace(/Author links open overlay panel/gi, '').trim();
         if (date && date.includes('T')) date = date.split('T')[0];
 
-        // --- 6. TEXT EXTRACTION (Scoped to Main Content First) ---
-        // Remove junk
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
-        // Inject spaces to prevent "AuthorName" mashing
-        $('br, div, p, h1, h2, h3, li, strong, b, em, span').after(' ');
-
-        // Try to find the "Main" content to avoid Header/Sidebar promos (like "Speech by Putin")
-        let mainContent = $('main, article, [role="main"], .content, #content').text();
-        if (mainContent.length < 200) mainContent = $('body').text(); // Fallback to body if main is empty
+        // --- CONTENT EXTRACTION (Middle 1000 Chars Only) ---
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation').remove();
+        $('br, div, p, h1, h2, li').after(' ');
         
-        let bodyText = mainContent.replace(/\s+/g, ' ').trim();
+        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+        let middleContent = "";
 
-        // --- 7. REGEX FALLBACK (With "Speech" Protection) ---
-        if (!author) {
-            // Look for "By [Name]" or "Author: [Name]"
-            // EXCLUDE: "Speech by", "Statement by"
-            const authorRegex = /(?:By|Author|Written by)[:\s]+([A-Z][a-z]+\s+[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s+[A-Z][a-z]+)*)/i;
-            const match = bodyText.substring(0, 1500).match(authorRegex);
-            
-            if (match) {
-                // Check if the match was preceded by "Speech" or "Statement" in the raw text
-                const index = match.index;
-                const preceding = bodyText.substring(Math.max(0, index - 15), index).toLowerCase();
-                
-                if (!preceding.includes("speech") && !preceding.includes("statement")) {
-                    author = match[1];
-                }
-            }
+        if (bodyText.length <= 1000) {
+            middleContent = bodyText;
+        } else {
+            // Calculate start index for the middle 1000 chars
+            const start = Math.max(0, Math.floor(bodyText.length / 2) - 500);
+            middleContent = bodyText.substring(start, start + 1000);
         }
 
-        // --- 8. CONSTRUCT CONTENT ---
-        let richContent = `Title: ${title}. `;
-        if (author) richContent += `Author: ${author}. `;
-        if (date) richContent += `Date: ${date}. `;
-        if (site) richContent += `Source: ${site}. `;
-        richContent += "\n\n" + bodyText.substring(0, 2000);
+        // Add ellipses to indicate it's a snippet
+        if (bodyText.length > 1000) middleContent = "... " + middleContent + " ...";
 
         return { 
             url, 
             status: "ok", 
             title: title || "", 
             meta: { author: author || "", date: date || "", site: site || "" }, 
-            content: richContent 
+            content: middleContent // ONLY the text chunk, no "Title:" prefix
         };
 
       } catch (e) {
