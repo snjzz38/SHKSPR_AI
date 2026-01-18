@@ -42,28 +42,40 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. JSON-LD EXTRACTION (Deep Search) ---
+        // --- 2. JSON-LD EXTRACTION (Structured Metadata - High Confidence) ---
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
                 const json = JSON.parse($(el).html());
+                // Normalize to array to handle @graph or single objects
                 let objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
                 
+                // Find the main Article object
                 const article = objects.find(o => 
-                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
+                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle', 'TechArticle'].includes(o['@type'])
                 );
 
                 if (article) {
+                    // Date
                     if (!date && (article.datePublished || article.dateCreated)) {
                         date = article.datePublished || article.dateCreated;
                     }
+                    
+                    // Authors (Handle Arrays correctly!)
                     if (!author && article.author) {
-                        if (typeof article.author === 'string') author = article.author;
-                        else if (Array.isArray(article.author)) {
-                            author = article.author.map(a => a.name || a).join(', ');
-                        } else if (article.author.name) {
+                        if (Array.isArray(article.author)) {
+                            // Map over array: [{name: "Victor"}, {name: "Taylor"}] -> "Victor, Taylor"
+                            author = article.author
+                                .map(a => (typeof a === 'string' ? a : a.name))
+                                .filter(n => n && !n.includes('http')) // Filter out URLs
+                                .join(', ');
+                        } else if (typeof article.author === 'object' && article.author.name) {
                             author = article.author.name;
+                        } else if (typeof article.author === 'string') {
+                            author = article.author;
                         }
                     }
+                    
+                    // Site
                     if (!site && article.publisher) {
                         site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
                     }
@@ -71,73 +83,63 @@ export default async function handler(req, res) {
             } catch(e) {}
         });
 
-        // --- 3. META TAGS (Academic + Standard) ---
-        const authors = [];
-        const authorTags = ['citation_author', 'dc.creator', 'author', 'authors', 'article:author', 'parsely-author', 'sailthru.author'];
-        
-        authorTags.forEach(tag => {
-            $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                const val = $(el).attr('content');
-                if (val && !authors.includes(val)) authors.push(val);
-            });
-        });
-        
-        if (authors.length > 0) author = authors.join(', ');
-
-        // --- 4. CSS SELECTORS (ScienceDirect & Academic Fix) ---
-        // If meta tags failed, look for specific class names
+        // --- 3. DOM BYLINE EXTRACTION (Controlled Scraping - Medium Confidence) ---
+        // If JSON-LD failed, look for specific "byline" classes (common in news sites like ABC)
         if (!author) {
-            const sdAuthors = [];
-            // Look for .given-name and .surname (ScienceDirect standard)
-            $('.author, .author-group .author, .react-xocs-alternative-link').each((i, el) => {
-                const given = $(el).find('.given-name').text().trim();
-                const surname = $(el).find('.surname').text().trim();
-                if (given && surname) {
-                    sdAuthors.push(`${given} ${surname}`);
+            // Selectors for byline containers
+            const bylineSelectors = [
+                '[data-testid="prism-byline"]', // ABC News specific
+                '.byline', 
+                '.author-list', 
+                '.contributors',
+                '[class*="byline"]',
+                '[class*="author-"]'
+            ];
+
+            for (const sel of bylineSelectors) {
+                const container = $(sel).first();
+                if (container.length) {
+                    // Strategy A: Look for links inside the byline (usually authors)
+                    const links = container.find('a');
+                    if (links.length > 0) {
+                        const names = [];
+                        links.each((i, link) => {
+                            const txt = $(link).text().trim();
+                            // Filter out "Twitter", "Email", etc.
+                            if (txt.length > 2 && !['Follow', 'Email', 'Twitter'].includes(txt)) {
+                                names.push(txt);
+                            }
+                        });
+                        if (names.length > 0) {
+                            author = names.join(', ');
+                            break; 
+                        }
+                    }
+                    
+                    // Strategy B: Just get the text if no links
+                    const text = container.text().replace(/By\s+/i, '').trim();
+                    if (text.length > 3 && text.length < 100) {
+                        author = text;
+                        break;
+                    }
                 }
-            });
-            
-            if (sdAuthors.length > 0) {
-                author = sdAuthors.join(', ');
             }
         }
 
-        // --- 5. HYPERLINK STRATEGY (Brookings/Substack) ---
+        // --- 4. META TAGS (Low Confidence) ---
         if (!author) {
-            const collectedAuthors = new Set();
-            const badNames = ["Experts", "People", "Authors", "Contributors", "View all", "All", "Search", "Menu", "Home", "About", "Log in", "Sign up", "Share"];
-            
-            // Added: /profile/ and /@/ (Common on Substack, Medium)
-            $('a[href*="/author/"], a[href*="/experts/"], a[href*="/people/"], a[href*="/profile/"], a[href*="/@"], a[rel="author"]').each((i, el) => {
-                const name = $(el).text().trim();
-                if (name && name.length > 2 && name.length < 50 && !badNames.includes(name)) {
-                    collectedAuthors.add(name);
-                }
+            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author', 'sailthru.author'];
+            const found = [];
+            authorTags.forEach(tag => {
+                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                    const val = $(el).attr('content');
+                    if (val && !found.includes(val)) found.push(val);
+                });
             });
-            if (collectedAuthors.size > 0) author = Array.from(collectedAuthors).join(', ');
+            if (found.length > 0) author = found.join(', ');
         }
 
-        // --- 6. LABEL-VALUE STRATEGY (UNH) ---
-        if (!author) {
-            $('*').each((i, el) => {
-                if (author) return;
-                const text = $(el).clone().children().remove().end().text().trim().toUpperCase();
-                if (text === 'AUTHOR' || text === 'AUTHOR:' || text === 'WRITTEN BY') {
-                    let next = $(el).next();
-                    if (next.length && next.text().trim().length > 2) {
-                        author = next.text().trim();
-                        return;
-                    }
-                    let parentNext = $(el).parent().next();
-                    if (parentNext.length && parentNext.text().trim().length > 2) {
-                        author = parentNext.text().trim();
-                        return;
-                    }
-                }
-            });
-        }
-
-        // --- 7. EXTRACT DATE ---
+        // --- 5. DATE & SITE FALLBACKS ---
         if (!date) {
             const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time', 'parsely-pub-date'];
             for (const tag of dateTags) {
@@ -146,71 +148,61 @@ export default async function handler(req, res) {
             }
         }
 
-        // --- 8. EXTRACT SITE NAME ---
-        site = $('meta[property="og:site_name"]').attr('content') || 
-               $('meta[name="citation_journal_title"]').attr('content') ||
-               $('meta[name="application-name"]').attr('content');
-
+        if (!site) {
+            site = $('meta[property="og:site_name"]').attr('content') || 
+                   $('meta[name="citation_journal_title"]').attr('content') ||
+                   $('meta[name="application-name"]').attr('content');
+        }
+        
         // URL Fallback for Site
         if (!site) {
             try {
                 const hostname = new URL(url).hostname;
-                if (hostname.includes('substack.com')) {
-                    const subdomain = hostname.split('.')[0];
-                    site = subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + " Substack";
-                } else {
-                    const parts = hostname.replace('www.', '').split('.');
-                    if (parts.length > 0) site = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-                }
+                const parts = hostname.replace('www.', '').split('.');
+                if (parts.length > 0) site = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
             } catch (e) {}
         }
 
-        // --- 9. CLEANUP & TEXT EXTRACTION ---
+        // --- 6. CLEANUP ---
         if (author) {
             author = author
                 .replace(/Author links open overlay panel/gi, '')
-                .replace(/links open/gi, '')
                 .replace(/Show more/gi, '')
-                .replace(/Get rights/gi, '')
-                .replace(/Open access/gi, '')
-                .replace(/Search/gi, '')
-                .replace(/Menu/gi, '')
+                .replace(/By\s+/i, '')
+                .replace(/\s+and\s+/gi, ', ') // Normalize " and " to comma
+                .replace(/^,\s*/, '')
                 .trim();
-            author = author.replace(/^,\s*/, '').replace(/^By\s+/i, '');
         }
         
         if (date && date.includes('T')) date = date.split('T')[0];
 
-        // Inject spaces
+        // --- 7. TEXT EXTRACTION ---
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
-        // CRITICAL: Do NOT remove buttons (ScienceDirect authors are in buttons)
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
         
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 10. BYLINE OVERRIDE (HBS/News Fix) ---
-        // If we found an author in Meta, but the text explicitly says "By [Name]", trust the text.
-        const bylineRegex = /(?:By|Written by)\s+([A-Z][a-z.-]+\s+[A-Z][a-z.-]+(?:,\s+(?:and\s+)?[A-Z][a-z.-]+\s+[A-Z][a-z.-]+|(?:\s+and\s+)[A-Z][a-z.-]+\s+[A-Z][a-z.-]+)*)/i;
-        const byMatch = bodyText.substring(0, 1500).match(bylineRegex);
-        
-        if (byMatch) {
-            const textAuthor = byMatch[1].trim();
-            const badStarts = ["The", "Contrast", "Comparison", "Definition", "Click", "Subscribe"];
-            if (!badStarts.some(b => textAuthor.startsWith(b)) && textAuthor.length < 100) {
-                // Only override if the text author looks valid and different
-                author = textAuthor;
+        // --- 8. FINAL REGEX FALLBACK (If all else fails) ---
+        if (!author) {
+            const authorRegex = /(?:Author|By|Written by)[:\s]+([A-Z][a-z.-]+\s+[A-Z][a-z.-]+(?:,\s+(?:and\s+)?[A-Z][a-z.-]+\s+[A-Z][a-z.-]+|(?:\s+and\s+)[A-Z][a-z.-]+\s+[A-Z][a-z.-]+)*)/i;
+            const match = bodyText.substring(0, 1000).match(authorRegex);
+            if (match) {
+                let clean = match[1].trim();
+                clean = clean.replace(/,\s*and$/, '').replace(/\s+and$/, '');
+                if (clean.length < 100 && !clean.includes(".")) {
+                    author = clean;
+                }
             }
         }
 
-        // --- 11. DATE FALLBACK (Regex) ---
+        // Date Regex Fallback
         if (!date) {
-            // Matches: "Nov 27, 2024", "November 27, 2024", "2024-11-27"
             const dateRegex = /(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(?:\d{1,2},?\s+)?\d{4}|\d{4}-\d{2}-\d{2}/i;
             const match = bodyText.substring(0, 1000).match(dateRegex);
             if (match) date = match[0];
         }
 
-        // --- 12. CONSTRUCT RICH CONTENT ---
+        // --- 9. CONSTRUCT RICH CONTENT ---
         let richContent = "";
         if (title) richContent += `Title: ${title}. `;
         if (author) richContent += `Author: ${author}. `;
