@@ -3,6 +3,70 @@ import * as cheerio from 'cheerio';
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
+/* ============================================================
+   DOMAIN STRATEGIES
+============================================================ */
+function getDomain(url) {
+  return new URL(url).hostname.replace(/^www\./, '');
+}
+
+/* ============================================================
+   MCKINSEY SCRAPER (JSON-LD ONLY, RANGE FETCH)
+============================================================ */
+async function scrapeMcKinsey(url) {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 3000);
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html',
+      'Range': 'bytes=0-6000'
+    },
+    signal: controller.signal
+  });
+
+  if (!res.ok) throw new Error('McKinsey fetch failed');
+
+  const html = await res.text();
+  const $ = cheerio.load(html);
+
+  let title = '';
+  let author = '';
+  let date = '';
+  const site = 'McKinsey & Company';
+
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const json = JSON.parse($(el).text());
+      const objs = json['@graph'] || [json];
+      const article = objs.find(o => o['@type'] === 'Article');
+      if (article) {
+        title = article.headline || '';
+        date = article.datePublished || '';
+        if (article.author) {
+          author = Array.isArray(article.author)
+            ? article.author.map(a => a.name).join(', ')
+            : article.author.name;
+        }
+      }
+    } catch {}
+  });
+
+  if (!author) author = 'McKinsey Global Institute';
+
+  return {
+    url,
+    status: 'ok',
+    title,
+    meta: { author, date, site },
+    content: `Title: ${title}. Author: ${author}. Date: ${date}. Source: McKinsey & Company.`
+  };
+}
+
+/* ============================================================
+   MAIN HANDLER
+============================================================ */
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,13 +84,23 @@ export default async function handler(req, res) {
     const results = await Promise.all(
       urls.slice(0, 10).map(async (url) => {
         try {
+          const domain = getDomain(url);
+
           /* ============================================================
-             STRATEGY 1: PUBMED API
+             DOMAIN OVERRIDES
           ============================================================ */
-          if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
+          if (domain.includes('mckinsey.com')) {
+            return await scrapeMcKinsey(url);
+          }
+
+          /* ============================================================
+             PUBMED
+          ============================================================ */
+          if (domain.includes('ncbi.nlm.nih.gov')) {
             const idMatch = url.match(/\/(\d+)\/?/);
             if (idMatch) {
-              const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idMatch[1]}&retmode=json`;
+              const apiUrl =
+                `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idMatch[1]}&retmode=json`;
               const r = await fetch(apiUrl);
               if (r.ok) {
                 const j = await r.json();
@@ -38,7 +112,7 @@ export default async function handler(req, res) {
                     status: 'ok',
                     title: item.title,
                     meta: { author: authors, date: item.pubdate || '', site: 'PubMed' },
-                    content: `Title: ${item.title}. Author: ${authors}. Date: ${item.pubdate || ''}. Source: PubMed.`
+                    content: `Title: ${item.title}. Author: ${authors}. Date: ${item.pubdate}. Source: PubMed.`
                   };
                 }
               }
@@ -46,7 +120,7 @@ export default async function handler(req, res) {
           }
 
           /* ============================================================
-             STRATEGY 2: DOI / CROSSREF
+             DOI / CROSSREF
           ============================================================ */
           const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
           if (doiMatch) {
@@ -67,12 +141,12 @@ export default async function handler(req, res) {
           }
 
           /* ============================================================
-             STRATEGY 3: HEAD REQUEST (FAST METADATA)
+             HEAD REQUEST (FAST FAIL)
           ============================================================ */
           try {
             const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
             if (head.ok) {
-              const date = head.headers.get('last-modified') || '';
+              const date = head.headers.get('last-modified');
               if (date) {
                 return {
                   url,
@@ -86,7 +160,7 @@ export default async function handler(req, res) {
           } catch {}
 
           /* ============================================================
-             STRATEGY 4: HTML (HEAD-FIRST, AMP-AWARE)
+             HTML FETCH (HEAD-FIRST)
           ============================================================ */
           const controller = new AbortController();
           setTimeout(() => controller.abort(), 6000);
@@ -111,24 +185,12 @@ export default async function handler(req, res) {
             if (html.includes('</head>')) break;
           }
 
-          if (
-            html.includes('cf-browser-verification') ||
-            html.includes('Attention Required')
-          ) {
+          if (html.includes('cf-browser-verification') || html.includes('Attention Required')) {
             throw new Error('Bot protection');
           }
 
           const $ = cheerio.load(html);
 
-          // AMP redirect
-          const amp = $('link[rel="amphtml"]').attr('href');
-          if (amp && amp !== url) {
-            return await handler({ body: { urls: [amp] } }, res);
-          }
-
-          /* ============================================================
-             METADATA EXTRACTION
-          ============================================================ */
           let title =
             $('meta[property="og:title"]').attr('content') ||
             $('meta[name="citation_title"]').attr('content') ||
@@ -145,14 +207,12 @@ export default async function handler(req, res) {
             '';
 
           let site =
-            $('meta[property="og:site_name"]').attr('content') ||
-            '';
+            $('meta[property="og:site_name"]').attr('content') || '';
 
-          /* JSON-LD */
           $('script[type="application/ld+json"]').each((_, el) => {
             try {
               const json = JSON.parse($(el).text());
-              const objs = Array.isArray(json) ? json : (json['@graph'] || [json]);
+              const objs = json['@graph'] || [json];
               const art = objs.find(o =>
                 ['Article', 'NewsArticle', 'BlogPosting', 'Report'].includes(o['@type'])
               );
@@ -199,6 +259,7 @@ export default async function handler(req, res) {
     );
 
     return res.status(200).json({ results });
+
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
