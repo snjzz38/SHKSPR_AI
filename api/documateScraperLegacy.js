@@ -1,5 +1,7 @@
-
 import * as cheerio from 'cheerio';
+
+const UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -11,190 +13,193 @@ export default async function handler(req, res) {
 
   try {
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
+    if (!urls || !Array.isArray(urls)) {
+      return res.status(400).json({ error: 'No URLs provided' });
+    }
 
-    const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
-      
-      // ============================================================
-      // STRATEGY 1: PUBMED API (Bypass 403 Blocking entirely)
-      // ============================================================
-      if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
-          try {
-              const idMatch = url.match(/\/(\d+)\/?/);
-              if (idMatch) {
-                  const id = idMatch[1];
-                  const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${id}&retmode=json`;
-                  const apiRes = await fetch(apiUrl);
-                  if (apiRes.ok) {
-                      const data = await apiRes.json();
-                      const result = data.result[id];
-                      if (result) {
-                          const authorStr = result.authors ? result.authors.map(a => a.name).join(', ') : "";
-                          const dateStr = result.pubdate || "";
-                          return {
-                              url,
-                              status: "ok",
-                              title: result.title,
-                              meta: { author: authorStr, date: dateStr, site: "PubMed" },
-                              content: `Title: ${result.title}. Author: ${authorStr}. Date: ${dateStr}. Source: PubMed.`
-                          };
-                      }
-                  }
-              }
-          } catch (e) { console.warn("PubMed API failed", e); }
-      }
-
-      // ============================================================
-      // STRATEGY 2: DOI LOOKUP (Crossref API for Academic Papers)
-      // ============================================================
-      const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
-      if (doiMatch) {
-          try {
-              const crossrefUrl = `https://api.crossref.org/works/${doiMatch[1]}`;
-              const resp = await fetch(crossrefUrl);
-              if (resp.ok) {
-                  const data = await resp.json();
-                  const item = data.message;
-                  const authors = item.author ? item.author.map(a => `${a.given} ${a.family}`).join(', ') : "";
-                  let date = "";
-                  if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
-                  
+    const results = await Promise.all(
+      urls.slice(0, 10).map(async (url) => {
+        try {
+          /* ============================================================
+             STRATEGY 1: PUBMED API
+          ============================================================ */
+          if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
+            const idMatch = url.match(/\/(\d+)\/?/);
+            if (idMatch) {
+              const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idMatch[1]}&retmode=json`;
+              const r = await fetch(apiUrl);
+              if (r.ok) {
+                const j = await r.json();
+                const item = j.result[idMatch[1]];
+                if (item) {
+                  const authors = item.authors?.map(a => a.name).join(', ') || '';
                   return {
-                      url,
-                      status: "ok",
-                      title: item.title ? item.title[0] : "",
-                      meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
-                      content: `Title: ${item.title}. Author: ${authors}. Date: ${date}. Abstract: ${item.abstract || ""}`
+                    url,
+                    status: 'ok',
+                    title: item.title,
+                    meta: { author: authors, date: item.pubdate || '', site: 'PubMed' },
+                    content: `Title: ${item.title}. Author: ${authors}. Date: ${item.pubdate || ''}. Source: PubMed.`
                   };
+                }
               }
-          } catch (e) { console.warn("DOI Lookup failed", e); }
-      }
-
-      // ============================================================
-      // STRATEGY 3: ROBUST SCRAPER (McKinsey, News, Blogs)
-      // ============================================================
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-        const response = await fetch(url, { 
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.google.com/',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'cross-site'
-            },
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) throw new Error(`Status ${response.status}`);
-        
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        let author = "";
-        let date = "";
-        let site = "";
-        let title = "";
-
-        // 1. Title
-        title = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
-
-        // 2. JSON-LD (Best for McKinsey/News)
-        $('script[type="application/ld+json"]').each((i, el) => {
-            try {
-                const json = JSON.parse($(el).html());
-                const objects = Array.isArray(json) ? json : (json['@graph'] || [json]);
-                const article = objects.find(o => ['Article', 'NewsArticle', 'Report', 'BlogPosting'].includes(o['@type']));
-                if (article) {
-                    if (!date) date = article.datePublished || article.dateCreated;
-                    if (!author && article.author) {
-                        if (Array.isArray(article.author)) author = article.author.map(a => a.name || a).join(', ');
-                        else author = article.author.name || article.author;
-                    }
-                    if (!site && article.publisher) site = article.publisher.name || article.publisher;
-                }
-            } catch(e) {}
-        });
-
-        // 3. Meta Tags
-        if (!author) {
-            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'parsely-author'];
-            const found = [];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val && !found.includes(val)) found.push(val);
-                });
-            });
-            if (found.length > 0) author = found.join(', ');
-        }
-
-        if (!date) {
-            date = $('meta[name="citation_publication_date"]').attr('content') || 
-                   $('meta[name="date"]').attr('content') || 
-                   $('meta[property="article:published_time"]').attr('content');
-        }
-
-        if (!site) {
-            site = $('meta[property="og:site_name"]').attr('content') || "Website";
-        }
-
-        // 4. DOM Fallbacks (McKinsey often puts authors in .text-link or .author-name)
-        if (!author) {
-            const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors'];
-            for (const sel of selectors) {
-                const text = $(sel).first().text().trim();
-                if (text && text.length > 3 && text.length < 100) {
-                    author = text.replace(/^By\s+/i, '').trim();
-                    break;
-                }
             }
+          }
+
+          /* ============================================================
+             STRATEGY 2: DOI / CROSSREF
+          ============================================================ */
+          const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
+          if (doiMatch) {
+            const r = await fetch(`https://api.crossref.org/works/${doiMatch[1]}`);
+            if (r.ok) {
+              const j = await r.json();
+              const m = j.message;
+              const authors = m.author?.map(a => `${a.given} ${a.family}`).join(', ') || '';
+              const date = m.published?.['date-parts']?.[0]?.join('-') || '';
+              return {
+                url,
+                status: 'ok',
+                title: m.title?.[0] || '',
+                meta: { author: authors, date, site: m['container-title']?.[0] || 'Journal' },
+                content: `Title: ${m.title?.[0]}. Author: ${authors}. Date: ${date}.`
+              };
+            }
+          }
+
+          /* ============================================================
+             STRATEGY 3: HEAD REQUEST (FAST METADATA)
+          ============================================================ */
+          try {
+            const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+            if (head.ok) {
+              const date = head.headers.get('last-modified') || '';
+              if (date) {
+                return {
+                  url,
+                  status: 'ok',
+                  title: '',
+                  meta: { author: '', date, site: '' },
+                  content: `Source URL: ${url}. Date: ${date}.`
+                };
+              }
+            }
+          } catch {}
+
+          /* ============================================================
+             STRATEGY 4: HTML (HEAD-FIRST, AMP-AWARE)
+          ============================================================ */
+          const controller = new AbortController();
+          setTimeout(() => controller.abort(), 6000);
+
+          const response = await fetch(url, {
+            headers: { 'User-Agent': UA, Accept: 'text/html' },
+            redirect: 'follow',
+            signal: controller.signal
+          });
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const ct = response.headers.get('content-type') || '';
+          if (!ct.includes('text/html')) throw new Error('Non-HTML');
+
+          const reader = response.body.getReader();
+          let html = '';
+          while (html.length < 12000) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            html += new TextDecoder().decode(value);
+            if (html.includes('</head>')) break;
+          }
+
+          if (
+            html.includes('cf-browser-verification') ||
+            html.includes('Attention Required')
+          ) {
+            throw new Error('Bot protection');
+          }
+
+          const $ = cheerio.load(html);
+
+          // AMP redirect
+          const amp = $('link[rel="amphtml"]').attr('href');
+          if (amp && amp !== url) {
+            return await handler({ body: { urls: [amp] } }, res);
+          }
+
+          /* ============================================================
+             METADATA EXTRACTION
+          ============================================================ */
+          let title =
+            $('meta[property="og:title"]').attr('content') ||
+            $('meta[name="citation_title"]').attr('content') ||
+            $('title').text().trim();
+
+          let author =
+            $('meta[name="citation_author"]').attr('content') ||
+            $('meta[name="author"]').attr('content') ||
+            '';
+
+          let date =
+            $('meta[name="citation_publication_date"]').attr('content') ||
+            $('meta[property="article:published_time"]').attr('content') ||
+            '';
+
+          let site =
+            $('meta[property="og:site_name"]').attr('content') ||
+            '';
+
+          /* JSON-LD */
+          $('script[type="application/ld+json"]').each((_, el) => {
+            try {
+              const json = JSON.parse($(el).text());
+              const objs = Array.isArray(json) ? json : (json['@graph'] || [json]);
+              const art = objs.find(o =>
+                ['Article', 'NewsArticle', 'BlogPosting', 'Report'].includes(o['@type'])
+              );
+              if (art) {
+                if (!author && art.author)
+                  author = Array.isArray(art.author)
+                    ? art.author.map(a => a.name).join(', ')
+                    : art.author.name;
+                if (!date) date = art.datePublished || '';
+                if (!site && art.publisher) site = art.publisher.name || '';
+              }
+            } catch {}
+          });
+
+          /* ============================================================
+             FULL SCRAPE (LAST RESORT, 1000 CHAR LIMIT)
+          ============================================================ */
+          let bodyText = '';
+          if (!author && !date) {
+            const fullHtml = html + (await response.text());
+            const $$ = cheerio.load(fullHtml);
+            $$('script, style, nav, footer, noscript').remove();
+            bodyText = $$('body').text().replace(/\s+/g, ' ').trim().slice(0, 1000);
+          }
+
+          let content = `Title: ${title}. `;
+          if (author) content += `Author: ${author}. `;
+          if (date) content += `Date: ${date}. `;
+          if (site) content += `Source: ${site}. `;
+          if (bodyText) content += `\n\n${bodyText}`;
+
+          return {
+            url,
+            status: 'ok',
+            title: title || '',
+            meta: { author: author || '', date: date || '', site: site || '' },
+            content
+          };
+
+        } catch (e) {
+          return { url, status: 'failed', error: e.message };
         }
-
-        // 5. Cleanup
-        if (author) author = author.replace(/Author links open overlay panel/gi, '').trim();
-        if (date && date.includes('T')) date = date.split('T')[0];
-
-        // 6. Text Extraction
-        $('script, style, nav, footer, svg, noscript, iframe, aside').remove();
-        $('br, div, p, h1, h2, li').after(' ');
-        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-
-        // 7. Regex Fallback
-        if (!author) {
-            const byMatch = bodyText.substring(0, 1000).match(/(?:By|Written by)\s+([A-Z][a-z]+\s+[A-Z][a-z]+(?:,\s+[A-Z][a-z]+\s+[A-Z][a-z]+)*)/i);
-            if (byMatch) author = byMatch[1];
-        }
-
-        // 8. Construct Content
-        let richContent = `Title: ${title}. `;
-        if (author) richContent += `Author: ${author}. `;
-        if (date) richContent += `Date: ${date}. `;
-        if (site) richContent += `Source: ${site}. `;
-        richContent += "\n\n" + bodyText.substring(0, 2000);
-
-        return { 
-            url, 
-            status: "ok", 
-            title: title || "", 
-            meta: { author: author || "", date: date || "", site: site || "" }, 
-            content: richContent 
-        };
-
-      } catch (e) {
-        return { url, status: "failed", error: e.message };
-      }
-    }));
+      })
+    );
 
     return res.status(200).json({ results });
-
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 }
