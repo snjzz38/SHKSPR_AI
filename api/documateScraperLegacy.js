@@ -1,72 +1,5 @@
 import * as cheerio from 'cheerio';
 
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
-
-/* ============================================================
-   DOMAIN STRATEGIES
-============================================================ */
-function getDomain(url) {
-  return new URL(url).hostname.replace(/^www\./, '');
-}
-
-/* ============================================================
-   MCKINSEY SCRAPER (JSON-LD ONLY, RANGE FETCH)
-============================================================ */
-async function scrapeMcKinsey(url) {
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), 3000);
-
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': UA,
-      'Accept': 'text/html',
-      'Range': 'bytes=0-6000'
-    },
-    signal: controller.signal
-  });
-
-  if (!res.ok) throw new Error('McKinsey fetch failed');
-
-  const html = await res.text();
-  const $ = cheerio.load(html);
-
-  let title = '';
-  let author = '';
-  let date = '';
-  const site = 'McKinsey & Company';
-
-  $('script[type="application/ld+json"]').each((_, el) => {
-    try {
-      const json = JSON.parse($(el).text());
-      const objs = json['@graph'] || [json];
-      const article = objs.find(o => o['@type'] === 'Article');
-      if (article) {
-        title = article.headline || '';
-        date = article.datePublished || '';
-        if (article.author) {
-          author = Array.isArray(article.author)
-            ? article.author.map(a => a.name).join(', ')
-            : article.author.name;
-        }
-      }
-    } catch {}
-  });
-
-  if (!author) author = 'McKinsey Global Institute';
-
-  return {
-    url,
-    status: 'ok',
-    title,
-    meta: { author, date, site },
-    content: `Title: ${title}. Author: ${author}. Date: ${date}. Source: McKinsey & Company.`
-  };
-}
-
-/* ============================================================
-   MAIN HANDLER
-============================================================ */
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -77,190 +10,131 @@ export default async function handler(req, res) {
 
   try {
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) {
-      return res.status(400).json({ error: 'No URLs provided' });
-    }
+    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    const results = await Promise.all(
-      urls.slice(0, 10).map(async (url) => {
+    const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
+      let scrapedData = null;
+
+      // -------------------------------
+      // 1. PUBMED API
+      // -------------------------------
+      if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
         try {
-          const domain = getDomain(url);
-
-          /* ============================================================
-             DOMAIN OVERRIDES
-          ============================================================ */
-          if (domain.includes('mckinsey.com')) {
-            return await scrapeMcKinsey(url);
-          }
-
-          /* ============================================================
-             PUBMED
-          ============================================================ */
-          if (domain.includes('ncbi.nlm.nih.gov')) {
-            const idMatch = url.match(/\/(\d+)\/?/);
-            if (idMatch) {
-              const apiUrl =
-                `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idMatch[1]}&retmode=json`;
-              const r = await fetch(apiUrl);
-              if (r.ok) {
-                const j = await r.json();
-                const item = j.result[idMatch[1]];
-                if (item) {
-                  const authors = item.authors?.map(a => a.name).join(', ') || '';
-                  return {
-                    url,
-                    status: 'ok',
-                    title: item.title,
-                    meta: { author: authors, date: item.pubdate || '', site: 'PubMed' },
-                    content: `Title: ${item.title}. Author: ${authors}. Date: ${item.pubdate}. Source: PubMed.`
-                  };
-                }
-              }
-            }
-          }
-
-          /* ============================================================
-             DOI / CROSSREF
-          ============================================================ */
-          const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
-          if (doiMatch) {
-            const r = await fetch(`https://api.crossref.org/works/${doiMatch[1]}`);
-            if (r.ok) {
-              const j = await r.json();
-              const m = j.message;
-              const authors = m.author?.map(a => `${a.given} ${a.family}`).join(', ') || '';
-              const date = m.published?.['date-parts']?.[0]?.join('-') || '';
-              return {
-                url,
-                status: 'ok',
-                title: m.title?.[0] || '',
-                meta: { author: authors, date, site: m['container-title']?.[0] || 'Journal' },
-                content: `Title: ${m.title?.[0]}. Author: ${authors}. Date: ${date}.`
-              };
-            }
-          }
-
-          /* ============================================================
-             HEAD REQUEST (FAST FAIL)
-          ============================================================ */
-          try {
-            const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-            if (head.ok) {
-              const date = head.headers.get('last-modified');
-              if (date) {
-                return {
+          const idMatch = url.match(/\/(\d+)\/?/);
+          if (idMatch) {
+            const id = idMatch[1];
+            const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${id}&retmode=json`;
+            const apiRes = await fetch(apiUrl);
+            if (apiRes.ok) {
+              const data = await apiRes.json();
+              const result = data.result[id];
+              if (result) {
+                const authorStr = result.authors ? result.authors.map(a => a.name).join(', ') : "";
+                const dateStr = result.pubdate || "";
+                scrapedData = {
                   url,
-                  status: 'ok',
-                  title: '',
-                  meta: { author: '', date, site: '' },
-                  content: `Source URL: ${url}. Date: ${date}.`
+                  status: "ok",
+                  title: result.title,
+                  meta: { author: authorStr, date: dateStr, site: "PubMed" },
+                  content: `Title: ${result.title}. Author: ${authorStr}. Date: ${dateStr}. Source: PubMed.`
                 };
+                return scrapedData;
               }
             }
-          } catch {}
-
-          /* ============================================================
-             HTML FETCH (HEAD-FIRST)
-          ============================================================ */
-          const controller = new AbortController();
-          setTimeout(() => controller.abort(), 6000);
-
-          const response = await fetch(url, {
-            headers: { 'User-Agent': UA, Accept: 'text/html' },
-            redirect: 'follow',
-            signal: controller.signal
-          });
-
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-          const ct = response.headers.get('content-type') || '';
-          if (!ct.includes('text/html')) throw new Error('Non-HTML');
-
-          const reader = response.body.getReader();
-          let html = '';
-          while (html.length < 12000) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            html += new TextDecoder().decode(value);
-            if (html.includes('</head>')) break;
           }
+        } catch(e) { console.warn("PubMed API failed", e); }
+      }
 
-          if (html.includes('cf-browser-verification') || html.includes('Attention Required')) {
-            throw new Error('Bot protection');
+      // -------------------------------
+      // 2. DOI / Crossref API
+      // -------------------------------
+      const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
+      if (doiMatch) {
+        try {
+          const doi = doiMatch[1];
+          const crossrefUrl = `https://api.crossref.org/works/${doi}`;
+          const resp = await fetch(crossrefUrl);
+          if (resp.ok) {
+            const data = await resp.json();
+            const item = data.message;
+            const authors = item.author ? item.author.map(a => `${a.given} ${a.family}`).join(', ') : "";
+            let date = "";
+            if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
+            scrapedData = {
+              url,
+              status: "ok",
+              title: item.title ? item.title[0] : "",
+              meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
+              content: `Title: ${item.title}. Author: ${authors}. Date: ${date}. Abstract: ${item.abstract || ""}`
+            };
+            return scrapedData;
           }
+        } catch(e) { console.warn("Crossref lookup failed", e); }
+      }
 
-          const $ = cheerio.load(html);
-
-          let title =
-            $('meta[property="og:title"]').attr('content') ||
-            $('meta[name="citation_title"]').attr('content') ||
-            $('title').text().trim();
-
-          let author =
-            $('meta[name="citation_author"]').attr('content') ||
-            $('meta[name="author"]').attr('content') ||
-            '';
-
-          let date =
-            $('meta[name="citation_publication_date"]').attr('content') ||
-            $('meta[property="article:published_time"]').attr('content') ||
-            '';
-
-          let site =
-            $('meta[property="og:site_name"]').attr('content') || '';
-
-          $('script[type="application/ld+json"]').each((_, el) => {
-            try {
-              const json = JSON.parse($(el).text());
-              const objs = json['@graph'] || [json];
-              const art = objs.find(o =>
-                ['Article', 'NewsArticle', 'BlogPosting', 'Report'].includes(o['@type'])
-              );
-              if (art) {
-                if (!author && art.author)
-                  author = Array.isArray(art.author)
-                    ? art.author.map(a => a.name).join(', ')
-                    : art.author.name;
-                if (!date) date = art.datePublished || '';
-                if (!site && art.publisher) site = art.publisher.name || '';
+      // -------------------------------
+      // 3. OpenAlex fallback (hard-to-scrape sources)
+      // -------------------------------
+      try {
+        if (!scrapedData && process.env.OPENALEX_1) {
+          if (doiMatch) {
+            const doi = doiMatch[1];
+            const openAlexUrl = `https://api.openalex.org/works?filter=doi:${encodeURIComponent(doi)}&mailto=${process.env.OPENALEX_1}`;
+            const resp = await fetch(openAlexUrl);
+            if (resp.ok) {
+              const json = await resp.json();
+              const work = json.results && json.results[0];
+              if (work) {
+                const authors = work.authorships ? work.authorships.map(a => a.author.display_name).join(', ') : "";
+                const date = work.publication_date || "";
+                scrapedData = {
+                  url,
+                  status: "ok",
+                  title: work.title,
+                  meta: { author: authors, date, site: work.host_venue?.display_name || "OpenAlex" },
+                  content: `Title: ${work.title}. Author: ${authors}. Date: ${date}. Source: OpenAlex.`
+                };
+                return scrapedData;
               }
-            } catch {}
-          });
-
-          /* ============================================================
-             FULL SCRAPE (LAST RESORT, 1000 CHAR LIMIT)
-          ============================================================ */
-          let bodyText = '';
-          if (!author && !date) {
-            const fullHtml = html + (await response.text());
-            const $$ = cheerio.load(fullHtml);
-            $$('script, style, nav, footer, noscript').remove();
-            bodyText = $$('body').text().replace(/\s+/g, ' ').trim().slice(0, 1000);
+            }
           }
-
-          let content = `Title: ${title}. `;
-          if (author) content += `Author: ${author}. `;
-          if (date) content += `Date: ${date}. `;
-          if (site) content += `Source: ${site}. `;
-          if (bodyText) content += `\n\n${bodyText}`;
-
-          return {
-            url,
-            status: 'ok',
-            title: title || '',
-            meta: { author: author || '', date: date || '', site: site || '' },
-            content
-          };
-
-        } catch (e) {
-          return { url, status: 'failed', error: e.message };
         }
-      })
-    );
+      } catch(e) { console.warn("OpenAlex lookup failed", e); }
+
+      // -------------------------------
+      // 4. General HTML scraper fallback (first 1000 chars)
+      // -------------------------------
+      try {
+        if (!scrapedData) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!response.ok) throw new Error(`Status ${response.status}`);
+          const html = await response.text();
+          const snippet = html.substring(0, 1000);
+          const $ = cheerio.load(snippet);
+
+          let title = $('meta[property="og:title"]').attr('content') || $('title').text().trim() || "Unknown";
+          let author = $('meta[name="author"]').attr('content') || "";
+          let date = $('meta[name="date"]').attr('content') || "";
+
+          scrapedData = {
+            url,
+            status: "ok",
+            title,
+            meta: { author, date, site: "HTML fallback" },
+            content: snippet
+          };
+        }
+      } catch(e) { return { url, status: "failed", error: e.message }; }
+
+      return scrapedData;
+    }));
 
     return res.status(200).json({ results });
 
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 }
