@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       
-      // 1. PUBMED API (Metadata Only + Abstract)
+      // 1. PUBMED API
       if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
           try {
               const idMatch = url.match(/\/(\d+)\/?/);
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
                           return {
                               url, status: "ok", title: result.title,
                               meta: { author: authorStr, date: result.pubdate || "", site: "PubMed" },
-                              content: result.title // PubMed usually doesn't give full text via API, just title/meta
+                              content: result.title
                           };
                       }
                   }
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
           } catch (e) {}
       }
 
-      // 2. DOI LOOKUP (Crossref)
+      // 2. DOI LOOKUP
       const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
       if (doiMatch) {
           try {
@@ -51,16 +51,22 @@ export default async function handler(req, res) {
                   let date = "";
                   if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
                   
+                  // Ensure site is string
+                  let siteName = "Journal";
+                  if (item['container-title']) {
+                      siteName = Array.isArray(item['container-title']) ? item['container-title'][0] : item['container-title'];
+                  }
+
                   return {
                       url, status: "ok", title: item.title ? item.title[0] : "",
-                      meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
-                      content: item.abstract || item.title // Return abstract if available
+                      meta: { author: authors, date: date, site: siteName },
+                      content: item.abstract || item.title
                   };
               }
           } catch (e) {}
       }
 
-      // 3. STANDARD SCRAPER (Middle Text Only)
+      // 3. STANDARD SCRAPER
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -87,8 +93,6 @@ export default async function handler(req, res) {
         let site = "";
         let title = $('meta[property="og:title"]').attr('content') || $('title').text().trim();
 
-        // --- METADATA EXTRACTION (Keep this for Bibliography) ---
-        
         // JSON-LD
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
@@ -101,7 +105,9 @@ export default async function handler(req, res) {
                         if (Array.isArray(article.author)) author = article.author.map(a => a.name || a).join(', ');
                         else author = article.author.name || article.author;
                     }
-                    if (!site && article.publisher) site = article.publisher.name || article.publisher;
+                    if (!site && article.publisher) {
+                        site = (typeof article.publisher === 'string') ? article.publisher : article.publisher.name;
+                    }
                 }
             } catch(e) {}
         });
@@ -122,7 +128,7 @@ export default async function handler(req, res) {
         if (!date) date = $('meta[name="citation_publication_date"]').attr('content') || $('meta[name="date"]').attr('content');
         if (!site) site = $('meta[property="og:site_name"]').attr('content');
 
-        // DOM Fallbacks for Author
+        // DOM Fallbacks
         if (!author) {
             const selectors = ['.author-name', '.byline', '.text-link', '.author', '.contributors'];
             for (const sel of selectors) {
@@ -134,11 +140,15 @@ export default async function handler(req, res) {
             }
         }
 
-        // Cleanup Metadata
+        // Cleanup
         if (author) author = author.replace(/Author links open overlay panel/gi, '').trim();
         if (date && date.includes('T')) date = date.split('T')[0];
+        
+        // FIX: Ensure site is string
+        if (typeof site === 'object') site = site.name || "";
+        if (!site) site = "Website";
 
-        // --- CONTENT EXTRACTION (Middle 1000 Chars Only) ---
+        // Content Extraction
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation').remove();
         $('br, div, p, h1, h2, li').after(' ');
         
@@ -148,20 +158,17 @@ export default async function handler(req, res) {
         if (bodyText.length <= 1000) {
             middleContent = bodyText;
         } else {
-            // Calculate start index for the middle 1000 chars
             const start = Math.max(0, Math.floor(bodyText.length / 2) - 500);
             middleContent = bodyText.substring(start, start + 1000);
         }
-
-        // Add ellipses to indicate it's a snippet
         if (bodyText.length > 1000) middleContent = "... " + middleContent + " ...";
 
         return { 
             url, 
             status: "ok", 
             title: title || "", 
-            meta: { author: author || "", date: date || "", site: site || "" }, 
-            content: middleContent // ONLY the text chunk, no "Title:" prefix
+            meta: { author: author || "", date: date || "", site: site }, 
+            content: middleContent 
         };
 
       } catch (e) {
