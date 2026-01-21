@@ -1,81 +1,59 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
+  // 1. Force CORS Headers (Must happen first)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // 2. Handle Preflight
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
+    // 3. Validate Request
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
+    if (!urls || !Array.isArray(urls)) {
+        return res.status(400).json({ error: "No URLs provided" });
+    }
 
-    // Limit to 8 to prevent timeouts
-    const targetUrls = urls.slice(0, 8);
-
-    const results = await Promise.all(targetUrls.map(async (url) => {
+    // 4. Scrape in Parallel (Limit 10)
+    // We catch errors INSIDE the map so one bad URL doesn't crash the whole function
+    const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       try {
-        // --- 1. FETCH METADATA (CiteAs API) ---
-        // This is much better than scraping meta tags
-        let citeData = {};
-        try {
-            const citeRes = await fetch(`https://api.citeas.org/product/${encodeURIComponent(url)}?email=test@example.com`);
-            if (citeRes.ok) {
-                const json = await citeRes.json();
-                // CiteAs returns a list of citations, we usually want the metadata object
-                citeData = json.metadata || {};
-                // Fallback: try to parse the citation string if metadata is sparse
-                if (!citeData.title && json.citations && json.citations.length > 0) {
-                    citeData.citationString = json.citations[0].citation;
-                }
-            }
-        } catch (e) { console.warn("CiteAs failed for", url); }
-
-        // --- 2. FETCH CONTENT (Scraping) ---
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout per page
 
         const response = await fetch(url, { 
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DocuMate/1.0)' },
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
+            },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         
-        let content = "";
-        let scrapedMeta = {};
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-        if (response.ok) {
-            const html = await response.text();
-            const $ = cheerio.load(html);
-
-            // Fallback Metadata from HTML tags
-            scrapedMeta = {
-                title: $('h1').first().text().trim() || $('title').text(),
-                author: $('meta[name="author"]').attr('content') || "",
-                date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || ""
-            };
-
-            // Clean Text
-            $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
-            const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-            content = fullText.substring(0, 1500);
-        }
-
-        // --- 3. MERGE DATA ---
-        // Prefer CiteAs data, fallback to Scraper data
-        const finalMeta = {
-            title: citeData.title || scrapedMeta.title || "",
-            // CiteAs authors are a list of objects {family, given}
-            author: citeData.author ? citeData.author.map(a => `${a.given} ${a.family}`).join(', ') : (scrapedMeta.author || ""),
-            date: citeData.year ? String(citeData.year) : (scrapedMeta.date || ""),
-            site: new URL(url).hostname.replace('www.', '')
+        // Extract Metadata
+        const meta = {
+            title: $('h1').first().text().trim() || $('title').text() || "",
+            author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
+            date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
+            site: $('meta[property="og:site_name"]').attr('content') || ""
         };
 
-        return { url, status: "ok", meta: finalMeta, content };
+        // Clean Text
+        $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
+        const fullText = $('body').text().replace(/\s+/g, ' ').trim();
+        const content = fullText.substring(0, 1500); // Limit to 1500 chars
+
+        return { url, status: "ok", meta, content };
 
       } catch (e) {
+        // Return failed status instead of crashing
         return { url, status: "failed", error: e.message };
       }
     }));
@@ -83,6 +61,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ results });
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Scraper Critical Error:", error);
+    // Return 200 with error info so frontend handles it gracefully
+    return res.status(200).json({ results: [], error: error.message });
   }
 }
