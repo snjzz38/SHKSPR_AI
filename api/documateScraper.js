@@ -1,68 +1,141 @@
+
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  // 1. Force CORS Headers (Must happen first)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // 2. Handle Preflight
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // 3. Validate Request
     const { urls } = req.body;
-    if (!urls || !Array.isArray(urls)) {
-        return res.status(400).json({ error: "No URLs provided" });
-    }
+    if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
-    // 4. Scrape in Parallel (Limit 10)
-    // We catch errors INSIDE the map so one bad URL doesn't crash the whole function
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout per page
+      let scrapedData = null;
 
-        const response = await fetch(url, { 
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' 
-            },
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        // Extract Metadata
-        const meta = {
-            title: $('h1').first().text().trim() || $('title').text() || "",
-            author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content') || "",
-            date: $('meta[name="date"]').attr('content') || $('meta[property="article:published_time"]').attr('content') || "",
-            site: $('meta[property="og:site_name"]').attr('content') || ""
-        };
-
-        // Clean Text
-        $('script, style, nav, footer, svg, noscript, iframe, header, aside').remove();
-        const fullText = $('body').text().replace(/\s+/g, ' ').trim();
-        const content = fullText.substring(0, 1500); // Limit to 1500 chars
-
-        return { url, status: "ok", meta, content };
-
-      } catch (e) {
-        // Return failed status instead of crashing
-        return { url, status: "failed", error: e.message };
+      // -------------------------------
+      // 1. PUBMED API
+      // -------------------------------
+      if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
+        try {
+          const idMatch = url.match(/\/(\d+)\/?/);
+          if (idMatch) {
+            const id = idMatch[1];
+            const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${id}&retmode=json`;
+            const apiRes = await fetch(apiUrl);
+            if (apiRes.ok) {
+              const data = await apiRes.json();
+              const result = data.result[id];
+              if (result) {
+                const authorStr = result.authors ? result.authors.map(a => a.name).join(', ') : "";
+                const dateStr = result.pubdate || "";
+                scrapedData = {
+                  url,
+                  status: "ok",
+                  title: result.title,
+                  meta: { author: authorStr, date: dateStr, site: "PubMed" },
+                  content: `Title: ${result.title}. Author: ${authorStr}. Date: ${dateStr}. Source: PubMed.`
+                };
+                return scrapedData;
+              }
+            }
+          }
+        } catch(e) { console.warn("PubMed API failed", e); }
       }
+
+      // -------------------------------
+      // 2. DOI / Crossref API
+      // -------------------------------
+      const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
+      if (doiMatch) {
+        try {
+          const doi = doiMatch[1];
+          const crossrefUrl = `https://api.crossref.org/works/${doi}`;
+          const resp = await fetch(crossrefUrl);
+          if (resp.ok) {
+            const data = await resp.json();
+            const item = data.message;
+            const authors = item.author ? item.author.map(a => `${a.given} ${a.family}`).join(', ') : "";
+            let date = "";
+            if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
+            scrapedData = {
+              url,
+              status: "ok",
+              title: item.title ? item.title[0] : "",
+              meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
+              content: `Title: ${item.title}. Author: ${authors}. Date: ${date}. Abstract: ${item.abstract || ""}`
+            };
+            return scrapedData;
+          }
+        } catch(e) { console.warn("Crossref lookup failed", e); }
+      }
+
+      // -------------------------------
+      // 3. OpenAlex fallback (hard-to-scrape sources)
+      // -------------------------------
+      try {
+        if (!scrapedData && process.env.OPENALEX_1) {
+          if (doiMatch) {
+            const doi = doiMatch[1];
+            const openAlexUrl = `https://api.openalex.org/works?filter=doi:${encodeURIComponent(doi)}&mailto=${process.env.OPENALEX_1}`;
+            const resp = await fetch(openAlexUrl);
+            if (resp.ok) {
+              const json = await resp.json();
+              const work = json.results && json.results[0];
+              if (work) {
+                const authors = work.authorships ? work.authorships.map(a => a.author.display_name).join(', ') : "";
+                const date = work.publication_date || "";
+                scrapedData = {
+                  url,
+                  status: "ok",
+                  title: work.title,
+                  meta: { author: authors, date, site: work.host_venue?.display_name || "OpenAlex" },
+                  content: `Title: ${work.title}. Author: ${authors}. Date: ${date}. Source: OpenAlex.`
+                };
+                return scrapedData;
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn("OpenAlex lookup failed", e); }
+
+      // -------------------------------
+      // 4. General HTML scraper fallback (first 1000 chars)
+      // -------------------------------
+      try {
+        if (!scrapedData) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!response.ok) throw new Error(`Status ${response.status}`);
+          const html = await response.text();
+          const snippet = html.substring(0, 1000);
+          const $ = cheerio.load(snippet);
+
+          let title = $('meta[property="og:title"]').attr('content') || $('title').text().trim() || "Unknown";
+          let author = $('meta[name="author"]').attr('content') || "";
+          let date = $('meta[name="date"]').attr('content') || "";
+
+          scrapedData = {
+            url,
+            status: "ok",
+            title,
+            meta: { author, date, site: "HTML fallback" },
+            content: snippet
+          };
+        }
+      } catch(e) { return { url, status: "failed", error: e.message }; }
+
+      return scrapedData;
     }));
 
     return res.status(200).json({ results });
 
   } catch (error) {
-    console.error("Scraper Critical Error:", error);
-    // Return 200 with error info so frontend handles it gracefully
-    return res.status(200).json({ results: [], error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 }
