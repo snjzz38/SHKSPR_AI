@@ -1,6 +1,7 @@
 {
   "name": "serverless-api",
   "version": "1.0.0",
+  "type": "module",
   "description": "Serverless APIs for Shkspr and Documate deployed on Vercel",
   "main": "api/index.js",
   "scripts": {
