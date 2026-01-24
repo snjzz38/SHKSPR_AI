@@ -13,123 +13,189 @@ export default async function handler(req, res) {
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
-      let scrapedData = null;
-
-      // -------------------------------
-      // 1. PUBMED API
-      // -------------------------------
-      if (url.includes('pubmed.ncbi.nlm.nih.gov')) {
-        try {
-          const idMatch = url.match(/\/(\d+)\/?/);
-          if (idMatch) {
-            const id = idMatch[1];
-            const apiUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${id}&retmode=json`;
-            const apiRes = await fetch(apiUrl);
-            if (apiRes.ok) {
-              const data = await apiRes.json();
-              const result = data.result[id];
-              if (result) {
-                const authorStr = result.authors ? result.authors.map(a => a.name).join(', ') : "";
-                const dateStr = result.pubdate || "";
-                scrapedData = {
-                  url,
-                  status: "ok",
-                  title: result.title,
-                  meta: { author: authorStr, date: dateStr, site: "PubMed" },
-                  content: `Title: ${result.title}. Author: ${authorStr}. Date: ${dateStr}. Source: PubMed.`
-                };
-                return scrapedData;
-              }
-            }
-          }
-        } catch(e) { console.warn("PubMed API failed", e); }
-      }
-
-      // -------------------------------
-      // 2. DOI / Crossref API
-      // -------------------------------
-      const doiMatch = url.match(/(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)/i);
-      if (doiMatch) {
-        try {
-          const doi = doiMatch[1];
-          const crossrefUrl = `https://api.crossref.org/works/${doi}`;
-          const resp = await fetch(crossrefUrl);
-          if (resp.ok) {
-            const data = await resp.json();
-            const item = data.message;
-            const authors = item.author ? item.author.map(a => `${a.given} ${a.family}`).join(', ') : "";
-            let date = "";
-            if (item.published && item.published['date-parts']) date = item.published['date-parts'][0].join('-');
-            scrapedData = {
-              url,
-              status: "ok",
-              title: item.title ? item.title[0] : "",
-              meta: { author: authors, date: date, site: item['container-title'] ? item['container-title'][0] : "Journal" },
-              content: `Title: ${item.title}. Author: ${authors}. Date: ${date}. Abstract: ${item.abstract || ""}`
-            };
-            return scrapedData;
-          }
-        } catch(e) { console.warn("Crossref lookup failed", e); }
-      }
-
-      // -------------------------------
-      // 3. OpenAlex fallback (hard-to-scrape sources)
-      // -------------------------------
       try {
-        if (!scrapedData && process.env.OPENALEX_1) {
-          if (doiMatch) {
-            const doi = doiMatch[1];
-            const openAlexUrl = `https://api.openalex.org/works?filter=doi:${encodeURIComponent(doi)}&mailto=${process.env.OPENALEX_1}`;
-            const resp = await fetch(openAlexUrl);
-            if (resp.ok) {
-              const json = await resp.json();
-              const work = json.results && json.results[0];
-              if (work) {
-                const authors = work.authorships ? work.authorships.map(a => a.author.display_name).join(', ') : "";
-                const date = work.publication_date || "";
-                scrapedData = {
-                  url,
-                  status: "ok",
-                  title: work.title,
-                  meta: { author: authors, date, site: work.host_venue?.display_name || "OpenAlex" },
-                  content: `Title: ${work.title}. Author: ${authors}. Date: ${date}. Source: OpenAlex.`
-                };
-                return scrapedData;
-              }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased to 8s for heavy sites
+
+        const response = await fetch(url, { 
+            headers: { 
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error(`Status ${response.status}`);
+        
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        let author = "";
+        let date = "";
+        let site = "";
+        let title = "";
+
+        // --- 1. EXTRACT TITLE ---
+        title = $('meta[property="og:title"]').attr('content') || 
+                $('meta[name="twitter:title"]').attr('content') || 
+                $('h1').first().text().trim() || 
+                $('title').text().trim();
+
+        // --- 2. DEEP JSON-LD EXTRACTION (The Gold Standard) ---
+        // Many sites (Brookings, WordPress) use a @graph array.
+        $('script[type="application/ld+json"]').each((i, el) => {
+            try {
+                const json = JSON.parse($(el).html());
+                
+                // Normalize to an array of objects to search
+                let objects = [];
+                if (Array.isArray(json)) {
+                    objects = json;
+                } else if (json['@graph'] && Array.isArray(json['@graph'])) {
+                    objects = json['@graph'];
+                } else {
+                    objects = [json];
+                }
+
+                // Find the object that looks like an Article
+                const article = objects.find(o => 
+                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
+                );
+
+                if (article) {
+                    // Extract Date
+                    if (!date && (article.datePublished || article.dateCreated || article.dateModified)) {
+                        date = article.datePublished || article.dateCreated || article.dateModified;
+                    }
+                    
+                    // Extract Author
+                    if (!author && article.author) {
+                        if (typeof article.author === 'string') {
+                            author = article.author;
+                        } else if (Array.isArray(article.author)) {
+                            author = article.author.map(a => a.name || a).join(', ');
+                        } else if (article.author.name) {
+                            author = article.author.name;
+                        }
+                    }
+
+                    // Extract Publisher/Site
+                    if (!site && article.publisher) {
+                        if (typeof article.publisher === 'string') site = article.publisher;
+                        else if (article.publisher.name) site = article.publisher.name;
+                    }
+                }
+            } catch(e) {}
+        });
+
+        // --- 3. META TAGS (Expanded Support) ---
+        if (!author) {
+            // Check all common author tags
+            const authorTags = [
+                'citation_author', 'dc.creator', 'author', 'article:author', 
+                'parsely-author', 'sailthru.author', 'twitter:creator'
+            ];
+            const authorsFound = [];
+            authorTags.forEach(tag => {
+                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
+                    const val = $(el).attr('content');
+                    if (val && !authorsFound.includes(val)) authorsFound.push(val);
+                });
+            });
+            if (authorsFound.length > 0) author = authorsFound.join(', ');
+        }
+
+        if (!date) {
+            const dateTags = [
+                'citation_publication_date', 'citation_date', 'dc.date', 'date', 
+                'article:published_time', 'parsely-pub-date', 'sailthru.date', 'publish-date'
+            ];
+            for (const tag of dateTags) {
+                const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
+                if (val) { date = val; break; }
             }
-          }
         }
-      } catch(e) { console.warn("OpenAlex lookup failed", e); }
 
-      // -------------------------------
-      // 4. General HTML scraper fallback (first 1000 chars)
-      // -------------------------------
-      try {
-        if (!scrapedData) {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-          const response = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          if (!response.ok) throw new Error(`Status ${response.status}`);
-          const html = await response.text();
-          const snippet = html.substring(0, 1000);
-          const $ = cheerio.load(snippet);
-
-          let title = $('meta[property="og:title"]').attr('content') || $('title').text().trim() || "Unknown";
-          let author = $('meta[name="author"]').attr('content') || "";
-          let date = $('meta[name="date"]').attr('content') || "";
-
-          scrapedData = {
-            url,
-            status: "ok",
-            title,
-            meta: { author, date, site: "HTML fallback" },
-            content: snippet
-          };
+        if (!site) {
+            site = $('meta[property="og:site_name"]').attr('content') || 
+                   $('meta[name="citation_journal_title"]').attr('content') ||
+                   $('meta[name="application-name"]').attr('content');
         }
-      } catch(e) { return { url, status: "failed", error: e.message }; }
 
-      return scrapedData;
+        // --- 4. HTML SELECTORS (Fallback) ---
+        if (!author) {
+            const authorSelectors = [
+                'a[rel="author"]', '.author-name', '.byline', '.author', 
+                '.contributors', '.article-author', '.entry-author'
+            ];
+            for (const sel of authorSelectors) {
+                const text = $(sel).first().text().trim();
+                if (text && text.length > 2 && text.length < 100) {
+                    author = text.replace(/\s+/g, ' ').trim();
+                    break;
+                }
+            }
+        }
+
+        if (!date) {
+            const timeVal = $('time').first().attr('datetime') || $('time').first().text().trim();
+            if (timeVal) date = timeVal;
+        }
+
+        // --- 5. CLEANUP & FORMATTING ---
+        if (author) {
+            author = author
+                .replace(/Author links open overlay panel/gi, '')
+                .replace(/Show more/gi, '')
+                .replace(/By\s+/i, '')
+                .replace(/^,\s*/, '')
+                .trim();
+        }
+
+        // Clean Date (Keep YYYY-MM-DD if possible)
+        if (date) {
+            // If it's a full ISO string, try to shorten it
+            if (date.includes('T')) date = date.split('T')[0];
+        }
+
+        // --- 6. TEXT EXTRACTION ---
+        // Inject spaces
+        $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
+        
+        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+
+        // --- 7. FINAL REGEX FALLBACKS ---
+        if (!author) {
+            const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
+            if (byMatch) author = byMatch[1];
+        }
+
+        // --- 8. CONSTRUCT RICH CONTENT ---
+        let richContent = "";
+        if (title) richContent += `Title: ${title}. `;
+        if (author) richContent += `Author: ${author}. `;
+        if (date) richContent += `Date: ${date}. `;
+        if (site) richContent += `Source: ${site}. `;
+        
+        richContent += "\n\n" + bodyText.substring(0, 2000);
+
+        return { 
+            url, 
+            status: "ok", 
+            title: title || "", 
+            meta: { 
+                author: author || "", 
+                date: date || "", 
+                site: site || "" 
+            }, 
+            content: richContent 
+        };
+
+      } catch (e) {
+        return { url, status: "failed", error: e.message };
+      }
     }));
 
     return res.status(200).json({ results });
