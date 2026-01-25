@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
+  // 1. CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -9,14 +10,19 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { urls } = req.body;
+    const { urls, apiKey } = req.body; // Now accepts apiKey
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
+    // Use Server Key if client didn't provide one (Ensure this ENV is set in Vercel)
+    const GROQ_KEY = apiKey || process.env.GROQ_API_KEY; 
+
+    // 2. Process URLs (Max 10)
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased to 8s for heavy sites
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
 
+        // A. Fetch HTML
         const response = await fetch(url, { 
             headers: { 
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -31,166 +37,64 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        let author = "";
-        let date = "";
-        let site = "";
-        let title = "";
+        // B. Clean Text for LLM
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu').remove();
+        const title = $('title').text().trim().substring(0, 100);
+        const bodyText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 2500); // Limit context
 
-        // --- 1. EXTRACT TITLE ---
-        title = $('meta[property="og:title"]').attr('content') || 
-                $('meta[name="twitter:title"]').attr('content') || 
-                $('h1').first().text().trim() || 
-                $('title').text().trim();
-
-        // --- 2. DEEP JSON-LD EXTRACTION (The Gold Standard) ---
-        // Many sites (Brookings, WordPress) use a @graph array.
-        $('script[type="application/ld+json"]').each((i, el) => {
+        // C. Groq Metadata Extraction
+        let meta = { author: "Unknown", date: "n.d.", site: "" };
+        
+        if (GROQ_KEY) {
             try {
-                const json = JSON.parse($(el).html());
-                
-                // Normalize to an array of objects to search
-                let objects = [];
-                if (Array.isArray(json)) {
-                    objects = json;
-                } else if (json['@graph'] && Array.isArray(json['@graph'])) {
-                    objects = json['@graph'];
-                } else {
-                    objects = [json];
-                }
-
-                // Find the object that looks like an Article
-                const article = objects.find(o => 
-                    ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
-                );
-
-                if (article) {
-                    // Extract Date
-                    if (!date && (article.datePublished || article.dateCreated || article.dateModified)) {
-                        date = article.datePublished || article.dateCreated || article.dateModified;
-                    }
-                    
-                    // Extract Author
-                    if (!author && article.author) {
-                        if (typeof article.author === 'string') {
-                            author = article.author;
-                        } else if (Array.isArray(article.author)) {
-                            author = article.author.map(a => a.name || a).join(', ');
-                        } else if (article.author.name) {
-                            author = article.author.name;
-                        }
-                    }
-
-                    // Extract Publisher/Site
-                    if (!site && article.publisher) {
-                        if (typeof article.publisher === 'string') site = article.publisher;
-                        else if (article.publisher.name) site = article.publisher.name;
-                    }
-                }
-            } catch(e) {}
-        });
-
-        // --- 3. META TAGS (Expanded Support) ---
-        if (!author) {
-            // Check all common author tags
-            const authorTags = [
-                'citation_author', 'dc.creator', 'author', 'article:author', 
-                'parsely-author', 'sailthru.author', 'twitter:creator'
-            ];
-            const authorsFound = [];
-            authorTags.forEach(tag => {
-                $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
-                    const val = $(el).attr('content');
-                    if (val && !authorsFound.includes(val)) authorsFound.push(val);
+                const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${GROQ_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.1-8b-instant",
+                        messages: [{
+                            role: "system",
+                            content: `Extract metadata from the text. Return JSON ONLY.
+                            Rules:
+                            1. Author: "First Last" or "Organization". No "By".
+                            2. Date: YYYY-MM-DD format if possible, else YYYY.
+                            3. Site: The publication/website name.
+                            
+                            JSON Format: { "author": "string", "date": "string", "site": "string" }`
+                        }, {
+                            role: "user",
+                            content: `Title: ${title}\nText: ${bodyText}`
+                        }],
+                        temperature: 0.1,
+                        response_format: { type: "json_object" }
+                    })
                 });
-            });
-            if (authorsFound.length > 0) author = authorsFound.join(', ');
-        }
 
-        if (!date) {
-            const dateTags = [
-                'citation_publication_date', 'citation_date', 'dc.date', 'date', 
-                'article:published_time', 'parsely-pub-date', 'sailthru.date', 'publish-date'
-            ];
-            for (const tag of dateTags) {
-                const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
-                if (val) { date = val; break; }
-            }
-        }
-
-        if (!site) {
-            site = $('meta[property="og:site_name"]').attr('content') || 
-                   $('meta[name="citation_journal_title"]').attr('content') ||
-                   $('meta[name="application-name"]').attr('content');
-        }
-
-        // --- 4. HTML SELECTORS (Fallback) ---
-        if (!author) {
-            const authorSelectors = [
-                'a[rel="author"]', '.author-name', '.byline', '.author', 
-                '.contributors', '.article-author', '.entry-author'
-            ];
-            for (const sel of authorSelectors) {
-                const text = $(sel).first().text().trim();
-                if (text && text.length > 2 && text.length < 100) {
-                    author = text.replace(/\s+/g, ' ').trim();
-                    break;
+                if (groqRes.ok) {
+                    const groqJson = await groqRes.json();
+                    const extracted = JSON.parse(groqJson.choices[0].message.content);
+                    meta = {
+                        author: extracted.author || "Unknown",
+                        date: extracted.date || "n.d.",
+                        site: extracted.site || new URL(url).hostname.replace('www.', '')
+                    };
                 }
+            } catch (e) {
+                console.error("Groq Extraction Failed:", e);
+                // Fallback to basic domain parsing if LLM fails
+                meta.site = new URL(url).hostname;
             }
         }
-
-        if (!date) {
-            const timeVal = $('time').first().attr('datetime') || $('time').first().text().trim();
-            if (timeVal) date = timeVal;
-        }
-
-        // --- 5. CLEANUP & FORMATTING ---
-        if (author) {
-            author = author
-                .replace(/Author links open overlay panel/gi, '')
-                .replace(/Show more/gi, '')
-                .replace(/By\s+/i, '')
-                .replace(/^,\s*/, '')
-                .trim();
-        }
-
-        // Clean Date (Keep YYYY-MM-DD if possible)
-        if (date) {
-            // If it's a full ISO string, try to shorten it
-            if (date.includes('T')) date = date.split('T')[0];
-        }
-
-        // --- 6. TEXT EXTRACTION ---
-        // Inject spaces
-        $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
-        
-        let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-
-        // --- 7. FINAL REGEX FALLBACKS ---
-        if (!author) {
-            const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
-            if (byMatch) author = byMatch[1];
-        }
-
-        // --- 8. CONSTRUCT RICH CONTENT ---
-        let richContent = "";
-        if (title) richContent += `Title: ${title}. `;
-        if (author) richContent += `Author: ${author}. `;
-        if (date) richContent += `Date: ${date}. `;
-        if (site) richContent += `Source: ${site}. `;
-        
-        richContent += "\n\n" + bodyText.substring(0, 2000);
 
         return { 
             url, 
             status: "ok", 
-            title: title || "", 
-            meta: { 
-                author: author || "", 
-                date: date || "", 
-                site: site || "" 
-            }, 
-            content: richContent 
+            title: title, 
+            meta: meta, 
+            content: bodyText.substring(0, 1000) 
         };
 
       } catch (e) {
