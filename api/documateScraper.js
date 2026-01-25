@@ -35,24 +35,21 @@ export default async function handler(req, res) {
         const $ = cheerio.load(html);
 
         // B. Clean Text
-        // Remove non-content elements
         $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu, .cookie-banner').remove();
         
-        // Extract Title for reference
         const title = $('title').text().trim().substring(0, 150) || 
                       $('h1').first().text().trim() || 
                       "Untitled Source";
 
-        // Extract Body Text
-        // Inject spaces after block elements to prevent word merging
+        // Inject spaces to prevent word merging
         $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
         
         const bodyText = $('body').text()
-            .replace(/\s+/g, ' ') // Collapse whitespace
+            .replace(/\s+/g, ' ')
             .trim()
-            .substring(0, 3000); // Limit to 3000 chars to save tokens
+            .substring(0, 3000); // Limit context
 
-        // C. Return ONLY Content (and essentials)
+        // C. Return Content-Only (plus title/url for reference)
         return { 
             url, 
             status: "ok", 
