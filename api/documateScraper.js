@@ -17,7 +17,8 @@ export default async function handler(req, res) {
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+        // 8 Second Timeout - Fast enough to avoid Vercel limits, slow enough for most sites
+        const timeoutId = setTimeout(() => controller.abort(), 8000); 
 
         // A. Fetch HTML
         const response = await fetch(url, { 
@@ -34,22 +35,25 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // B. Clean Text
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu, .cookie-banner').remove();
+        // B. Clean Text (Aggressive Cleaning)
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu, .cookie-banner, .popup').remove();
         
-        const title = $('title').text().trim().substring(0, 150) || 
+        // Extract Title
+        const title = $('title').text().trim().substring(0, 200) || 
                       $('h1').first().text().trim() || 
                       "Untitled Source";
 
-        // Inject spaces to prevent word merging
+        // Extract Body
+        // Inject spaces to separate blocks
         $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
         
         const bodyText = $('body').text()
-            .replace(/\s+/g, ' ')
+            .replace(/\s+/g, ' ') // Collapse multiple spaces
             .trim()
-            .substring(0, 3000); // Limit context
+            .substring(0, 3500); // Limit to ~3500 chars for the LLM
 
-        // C. Return Content-Only (plus title/url for reference)
+        // C. Return Content-Only
+        // We pack everything into 'content' so Groq can parse it.
         return { 
             url, 
             status: "ok", 
@@ -58,6 +62,7 @@ export default async function handler(req, res) {
         };
 
       } catch (e) {
+        // Return failed status instead of crashing
         return { url, status: "failed", error: e.message };
       }
     }));
