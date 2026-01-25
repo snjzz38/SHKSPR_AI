@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
+  // 1. CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -12,10 +13,12 @@ export default async function handler(req, res) {
     const { urls } = req.body;
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
 
+    // 2. Process URLs (Max 10)
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased to 8s for heavy sites
+        // Increased timeout to 8s as requested for heavy sites
+        const timeoutId = setTimeout(() => controller.abort(), 8000); 
 
         const response = await fetch(url, { 
             headers: { 
@@ -42,45 +45,28 @@ export default async function handler(req, res) {
                 $('h1').first().text().trim() || 
                 $('title').text().trim();
 
-        // --- 2. DEEP JSON-LD EXTRACTION (The Gold Standard) ---
-        // Many sites (Brookings, WordPress) use a @graph array.
+        // --- 2. DEEP JSON-LD EXTRACTION ---
         $('script[type="application/ld+json"]').each((i, el) => {
             try {
                 const json = JSON.parse($(el).html());
-                
-                // Normalize to an array of objects to search
                 let objects = [];
-                if (Array.isArray(json)) {
-                    objects = json;
-                } else if (json['@graph'] && Array.isArray(json['@graph'])) {
-                    objects = json['@graph'];
-                } else {
-                    objects = [json];
-                }
+                if (Array.isArray(json)) objects = json;
+                else if (json['@graph'] && Array.isArray(json['@graph'])) objects = json['@graph'];
+                else objects = [json];
 
-                // Find the object that looks like an Article
                 const article = objects.find(o => 
                     ['Article', 'NewsArticle', 'BlogPosting', 'Report', 'ScholarlyArticle'].includes(o['@type'])
                 );
 
                 if (article) {
-                    // Extract Date
-                    if (!date && (article.datePublished || article.dateCreated || article.dateModified)) {
-                        date = article.datePublished || article.dateCreated || article.dateModified;
-                    }
+                    if (!date) date = article.datePublished || article.dateCreated || article.dateModified;
                     
-                    // Extract Author
                     if (!author && article.author) {
-                        if (typeof article.author === 'string') {
-                            author = article.author;
-                        } else if (Array.isArray(article.author)) {
-                            author = article.author.map(a => a.name || a).join(', ');
-                        } else if (article.author.name) {
-                            author = article.author.name;
-                        }
+                        if (typeof article.author === 'string') author = article.author;
+                        else if (Array.isArray(article.author)) author = article.author.map(a => a.name || a).join(', ');
+                        else if (article.author.name) author = article.author.name;
                     }
 
-                    // Extract Publisher/Site
                     if (!site && article.publisher) {
                         if (typeof article.publisher === 'string') site = article.publisher;
                         else if (article.publisher.name) site = article.publisher.name;
@@ -89,13 +75,9 @@ export default async function handler(req, res) {
             } catch(e) {}
         });
 
-        // --- 3. META TAGS (Expanded Support) ---
+        // --- 3. META TAGS FALLBACK ---
         if (!author) {
-            // Check all common author tags
-            const authorTags = [
-                'citation_author', 'dc.creator', 'author', 'article:author', 
-                'parsely-author', 'sailthru.author', 'twitter:creator'
-            ];
+            const authorTags = ['citation_author', 'dc.creator', 'author', 'article:author', 'twitter:creator'];
             const authorsFound = [];
             authorTags.forEach(tag => {
                 $(`meta[name="${tag}"], meta[property="${tag}"]`).each((i, el) => {
@@ -107,10 +89,7 @@ export default async function handler(req, res) {
         }
 
         if (!date) {
-            const dateTags = [
-                'citation_publication_date', 'citation_date', 'dc.date', 'date', 
-                'article:published_time', 'parsely-pub-date', 'sailthru.date', 'publish-date'
-            ];
+            const dateTags = ['citation_publication_date', 'citation_date', 'dc.date', 'date', 'article:published_time'];
             for (const tag of dateTags) {
                 const val = $(`meta[name="${tag}"], meta[property="${tag}"]`).attr('content');
                 if (val) { date = val; break; }
@@ -123,12 +102,9 @@ export default async function handler(req, res) {
                    $('meta[name="application-name"]').attr('content');
         }
 
-        // --- 4. HTML SELECTORS (Fallback) ---
+        // --- 4. HTML SELECTORS FALLBACK ---
         if (!author) {
-            const authorSelectors = [
-                'a[rel="author"]', '.author-name', '.byline', '.author', 
-                '.contributors', '.article-author', '.entry-author'
-            ];
+            const authorSelectors = ['a[rel="author"]', '.author-name', '.byline', '.author', '.contributors'];
             for (const sel of authorSelectors) {
                 const text = $(sel).first().text().trim();
                 if (text && text.length > 2 && text.length < 100) {
@@ -143,30 +119,16 @@ export default async function handler(req, res) {
             if (timeVal) date = timeVal;
         }
 
-        // --- 5. CLEANUP & FORMATTING ---
-        if (author) {
-            author = author
-                .replace(/Author links open overlay panel/gi, '')
-                .replace(/Show more/gi, '')
-                .replace(/By\s+/i, '')
-                .replace(/^,\s*/, '')
-                .trim();
-        }
-
-        // Clean Date (Keep YYYY-MM-DD if possible)
-        if (date) {
-            // If it's a full ISO string, try to shorten it
-            if (date.includes('T')) date = date.split('T')[0];
-        }
+        // --- 5. CLEANUP ---
+        if (author) author = author.replace(/By\s+/i, '').replace(/^,\s*/, '').trim();
+        if (date && date.includes('T')) date = date.split('T')[0]; // ISO to YYYY-MM-DD
 
         // --- 6. TEXT EXTRACTION ---
-        // Inject spaces
         $('br, div, p, h1, h2, h3, h4, li, tr, span, a, time').after(' ');
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, .menu, .navigation, .cookie-banner').remove();
-        
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement').remove();
         let bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        // --- 7. FINAL REGEX FALLBACKS ---
+        // --- 7. FINAL REGEX FALLBACK ---
         if (!author) {
             const byMatch = bodyText.substring(0, 500).match(/By\s*([A-Z][a-z]+\s[A-Z][a-z]+)/);
             if (byMatch) author = byMatch[1];
@@ -178,18 +140,13 @@ export default async function handler(req, res) {
         if (author) richContent += `Author: ${author}. `;
         if (date) richContent += `Date: ${date}. `;
         if (site) richContent += `Source: ${site}. `;
-        
         richContent += "\n\n" + bodyText.substring(0, 2000);
 
         return { 
             url, 
             status: "ok", 
             title: title || "", 
-            meta: { 
-                author: author || "", 
-                date: date || "", 
-                site: site || "" 
-            }, 
+            meta: { author: author || "", date: date || "", site: site || "" }, 
             content: richContent 
         };
 
