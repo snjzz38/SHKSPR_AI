@@ -10,11 +10,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { urls, apiKey } = req.body; // Now accepts apiKey
+    const { urls } = req.body;
     if (!urls || !Array.isArray(urls)) return res.status(400).json({ error: "No URLs provided" });
-
-    // Use Server Key if client didn't provide one (Ensure this ENV is set in Vercel)
-    const GROQ_KEY = apiKey || process.env.GROQ_API_KEY; 
 
     // 2. Process URLs (Max 10)
     const results = await Promise.all(urls.slice(0, 10).map(async (url) => {
@@ -37,64 +34,30 @@ export default async function handler(req, res) {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // B. Clean Text for LLM
-        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu').remove();
-        const title = $('title').text().trim().substring(0, 100);
-        const bodyText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 2500); // Limit context
-
-        // C. Groq Metadata Extraction
-        let meta = { author: "Unknown", date: "n.d.", site: "" };
+        // B. Clean Text
+        // Remove non-content elements
+        $('script, style, nav, footer, svg, noscript, iframe, aside, .ad, .advertisement, header, .menu, .cookie-banner').remove();
         
-        if (GROQ_KEY) {
-            try {
-                const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${GROQ_KEY}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        model: "llama-3.1-8b-instant",
-                        messages: [{
-                            role: "system",
-                            content: `Extract metadata from the text. Return JSON ONLY.
-                            Rules:
-                            1. Author: "First Last" or "Organization". No "By".
-                            2. Date: YYYY-MM-DD format if possible, else YYYY.
-                            3. Site: The publication/website name.
-                            
-                            JSON Format: { "author": "string", "date": "string", "site": "string" }`
-                        }, {
-                            role: "user",
-                            content: `Title: ${title}\nText: ${bodyText}`
-                        }],
-                        temperature: 0.1,
-                        response_format: { type: "json_object" }
-                    })
-                });
+        // Extract Title for reference
+        const title = $('title').text().trim().substring(0, 150) || 
+                      $('h1').first().text().trim() || 
+                      "Untitled Source";
 
-                if (groqRes.ok) {
-                    const groqJson = await groqRes.json();
-                    const extracted = JSON.parse(groqJson.choices[0].message.content);
-                    meta = {
-                        author: extracted.author || "Unknown",
-                        date: extracted.date || "n.d.",
-                        site: extracted.site || new URL(url).hostname.replace('www.', '')
-                    };
-                }
-            } catch (e) {
-                console.error("Groq Extraction Failed:", e);
-                // Fallback to basic domain parsing if LLM fails
-                meta.site = new URL(url).hostname;
-            }
-        }
+        // Extract Body Text
+        // Inject spaces after block elements to prevent word merging
+        $('br, div, p, h1, h2, h3, h4, li, tr').after(' ');
+        
+        const bodyText = $('body').text()
+            .replace(/\s+/g, ' ') // Collapse whitespace
+            .trim()
+            .substring(0, 3000); // Limit to 3000 chars to save tokens
 
+        // C. Return ONLY Content (and essentials)
         return { 
             url, 
             status: "ok", 
-            title: title, 
-            meta: meta, 
-            content: bodyText.substring(0, 1000) 
+            title: title,
+            content: `TITLE: ${title}\nURL: ${url}\nCONTENT: ${bodyText}` 
         };
 
       } catch (e) {
