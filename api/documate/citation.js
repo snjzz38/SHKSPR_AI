@@ -1,16 +1,21 @@
 import * as cheerio from 'cheerio';
 
-// --- HELPER: SEARCH WEB (You need an API Key here, e.g., Serper.dev) ---
+// --- CONFIGURATION ---
+const DEFAULT_GROQ_MODELS = [
+  "qwen/qwen3-32b",
+  "llama-3.1-8b-instant",
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "meta-llama/llama-guard-4-12b",
+  "meta-llama/llama-prompt-guard-2-22m",
+  "meta-llama/llama-prompt-guard-2-86m",
+  "moonshotai/kimi-k2-instruct-0905”,
+];
+
+// --- HELPER: SEARCH WEB ---
 async function searchWeb(query, apiKey) {
-    // RECOMMENDED: Use Serper.dev or similar for server-side searching
-    // const res = await fetch('https://google.serper.dev/search', { ... })
-    
-    // FOR NOW: I will assume you have a search function or use a mock
-    // If you have a custom search endpoint, call it here.
     console.log(`[Backend] Searching for: ${query}`);
-    
-    // Mock result for demonstration if no API key provided
-    // REPLACE THIS WITH REAL SEARCH API CALL
+    // TODO: Integrate Serper.dev or Google Custom Search API here for production
     return [
         { title: "Example Source 1", link: "https://example.com/1" },
         { title: "Example Source 2", link: "https://example.com/2" }
@@ -46,38 +51,60 @@ async function scrapeUrls(urls) {
     return results.filter(r => r !== null).map((r, i) => ({ ...r, id: i + 1 }));
 }
 
+// --- HELPER: CALL GROQ WITH ROTATION ---
+async function callGroq(messages, apiKey, jsonMode = false) {
+    let lastError = null;
+    for (const model of DEFAULT_GROQ_MODELS) {
+        try {
+            const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    response_format: jsonMode ? { type: "json_object" } : undefined
+                })
+            });
+
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            const data = await res.json();
+            return data.choices[0].message.content;
+        } catch (e) {
+            console.warn(`Model ${model} failed: ${e.message}`);
+            lastError = e;
+        }
+    }
+    throw lastError || new Error("All Groq models failed");
+}
+
 export default async function handler(req, res) {
+    // CORS HEADERS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     try {
         const { context, style, outputType, apiKey } = req.body;
         const GROQ_KEY = apiKey || process.env.GROQ_API_KEY;
 
-        // 1. GENERATE QUERY (Groq)
-        const queryRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: `Generate a google search query for: "${context.substring(0, 200)}". Return ONLY the query string.` }]
-            })
-        });
-        const queryJson = await queryRes.json();
-        const query = queryJson.choices[0].message.content.replace(/"/g, '').trim();
+        // 1. GENERATE QUERY
+        const queryPrompt = `Generate a google search query for: "${context.substring(0, 200)}". Return ONLY the query string.`;
+        const queryRaw = await callGroq([{ role: "user", content: queryPrompt }], GROQ_KEY, false);
+        const query = queryRaw.replace(/"/g, '').trim();
 
         // 2. SEARCH
-        const searchResults = await searchWeb(query, GROQ_KEY); // Pass key if needed for search provider
+        const searchResults = await searchWeb(query, GROQ_KEY);
 
         // 3. SCRAPE
         const sources = await scrapeUrls(searchResults.map(s => s.link));
         const sourceContext = JSON.stringify(sources);
 
-        // 4. FORMAT (Groq)
+        // 4. FORMAT
         const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        
         let prompt = "";
+        
         if (outputType === 'bibliography') {
             prompt = `Create a bibliography in ${style} style for these sources. Include "Accessed ${today}". Return plain text list. Sources: ${sourceContext}`;
         } else {
@@ -88,23 +115,12 @@ export default async function handler(req, res) {
             `;
         }
 
-        const formatRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "llama-3.1-8b-instant",
-                messages: [{ role: "user", content: prompt }],
-                response_format: outputType === 'bibliography' ? undefined : { type: "json_object" }
-            })
-        });
-        
-        const formatJson = await formatRes.json();
-        const content = formatJson.choices[0].message.content;
+        const result = await callGroq([{ role: "user", content: prompt }], GROQ_KEY, outputType !== 'bibliography');
 
         return res.status(200).json({
             success: true,
             sources: sources,
-            result: outputType === 'bibliography' ? content : JSON.parse(content)
+            result: outputType === 'bibliography' ? result : JSON.parse(result)
         });
 
     } catch (error) {
