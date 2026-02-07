@@ -282,10 +282,15 @@
         let GEMINI_API_KEY = null; // Default key loaded from file
         let customApiKey = ''; // User-provided key
 
-    const ALL_GEMINI_MODELS = [
-      'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
-      'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite'
-    ];
+        const ALL_GEMINI_MODELS = [
+                      'gemma-3-27b-it',
+                      'gemini-3-flash-preview',
+                      'gemini-2.5-flash-lite',
+                      'gemini-2.5-flash',
+                      'gemma-3-12b-it',
+                      'gemma-3-4b-it',
+                      'gemma-3-1b-it'
+                    ];
         
         const shuffleArray = (array) => {
             for (let i = array.length - 1; i > 0; i--) {
