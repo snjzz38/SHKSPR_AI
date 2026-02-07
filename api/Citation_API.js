@@ -2,10 +2,14 @@
 const fetch = require('node-fetch');
 
 const ALL_GEMINI_MODELS = [
-  'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash',
-  'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b',
-];
-
+              'gemma-3-27b-it',
+              'gemini-3-flash-preview',
+              'gemini-2.5-flash-lite',
+              'gemini-2.5-flash',
+              'gemma-3-12b-it',
+              'gemma-3-4b-it',
+              'gemma-3-1b-it'
+            ];
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
